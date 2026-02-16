@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出席管理 - ママさんバレー</title>
+<style>
+  :root {
+    --primary: #5b21b6;
+    --primary-light: #7c3aed;
+    --bg: #f5f3ff;
+    --card: #ffffff;
+    --text: #1e1b4b;
+    --text-light: #6b7280;
+    --border: #e5e7eb;
+    --present: #16a34a;
+    --absent: #dc2626;
+    --late: #f59e0b;
+    --early: #3b82f6;
+    --unset: #d1d5db;
+    --practice: #2563eb;
+    --match: #db2777;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* === Header === */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 20px 12px;
+    flex-shrink: 0;
+    z-index: 10;
+    box-shadow: 0 2px 12px rgba(91,33,182,0.2);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  header h1 { font-size: 17px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .title-edit-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  .title-edit-row input {
+    flex: 1; min-width: 0; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+    color: #fff; font-size: 16px; font-weight: 700; padding: 4px 8px; border-radius: 8px; outline: none;
+  }
+  .title-edit-row input:focus { border-color: rgba(255,255,255,0.7); }
+  .title-edit-row button {
+    background: rgba(255,255,255,0.2); border: none; color: #fff; width: 28px; height: 28px;
+    border-radius: 50%; font-size: 14px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .title-edit-row button:active { background: rgba(255,255,255,0.35); }
+
+  .settings-btn {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .settings-btn:active { background: rgba(255,255,255,0.3); }
+
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .date-row button {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .date-row button:active { background: rgba(255,255,255,0.3); }
+
+  #dateInput {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 15px;
+    flex: 1;
+    text-align: center;
+  }
+  #dateInput::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+  .today-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary);
+    background: #ede9fe;
+    border-radius: 8px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .mode-toggle {
+    display: flex;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 3px;
+  }
+
+  .mode-toggle button {
+    flex: 1;
+    padding: 6px 0;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .mode-toggle button.active {
+    background: #fff;
+    color: var(--primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  .header-none-count {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    text-align: center;
+  }
+  .header-none-count .count {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 3px 12px;
+  }
+
+  /* === Schedule Section === */
+  .schedule-section {
+    padding: 14px 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .schedule-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .schedule-row:last-child { margin-bottom: 0; }
+
+  .schedule-label {
+    font-size: 11px;
+    font-weight: 700;
+    width: 34px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .schedule-label-practice { color: var(--practice); }
+  .schedule-label-match { color: var(--match); }
+
+  .schedule-chip {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    line-height: 1.1;
+  }
+  .schedule-chip:active { transform: scale(0.92); }
+  .schedule-chip .chip-dow { font-size: 9px; font-weight: 400; opacity: 0.7; }
+
+  .chip-practice {
+    background: #eff6ff;
+    color: var(--practice);
+    border-color: #bfdbfe;
+  }
+  .chip-practice.chip-today {
+    background: var(--practice);
+    color: #fff;
+    border-color: var(--practice);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+  }
+
+  .chip-match {
+    background: #fdf2f8;
+    color: var(--match);
+    border-color: #fbcfe8;
+  }
+  .chip-match.chip-today {
+    background: var(--match);
+    color: #fff;
+    border-color: var(--match);
+    box-shadow: 0 2px 8px rgba(219,39,119,0.3);
+  }
+
+  .chip-selected {
+    outline: 3px solid var(--primary);
+    outline-offset: 1px;
+  }
+
+  .schedule-empty {
+    font-size: 12px;
+    color: var(--text-light);
+    padding: 4px 0;
+  }
+
+  /* === Context Bar (selected date info) === */
+  .context-bar {
+    padding: 12px 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .context-date {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .context-mode {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+  }
+  .context-mode-practice { background: #dbeafe; color: var(--practice); }
+  .context-mode-match { background: #fce7f3; color: var(--match); }
+
+  .context-deadline {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  .context-deadline.urgent {
+    color: var(--absent);
+    font-weight: 600;
+  }
+
+  /* === Summary === */
+  .summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 10px 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    transition: background 0.4s ease;
+    flex-shrink: 0;
+  }
+  .summary.flash { background: #ede9fe; }
+  .summary span { display: flex; align-items: center; gap: 4px; }
+  .summary .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-present { background: var(--present); }
+  .dot-absent { background: var(--absent); }
+  .dot-late { background: var(--late); }
+  .dot-early { background: var(--early); }
+  .dot-total { background: var(--primary); }
+  .dot-none { background: var(--unset); }
+
+  /* === Info lists (none / present) === */
+  .info-list {
+    padding: 8px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-light);
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    flex-shrink: 0;
+  }
+  .info-list strong { color: var(--text); font-weight: 600; font-size: 12px; }
+
+  .copy-btn {
+    margin-left: auto;
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 11px;
+    color: var(--text-light);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .copy-btn:active { background: var(--bg); }
+
+  /* === Member Cards === */
+  main {
+    padding: 10px 16px 100px;
+    max-width: 600px;
+    margin: 0 auto;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+    width: 100%;
+  }
+
+  .member-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    transition: background 0.6s ease;
+  }
+  .member-card.highlight { background: #ede9fe; }
+
+  .reorder-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-right: 8px;
+  }
+  .reorder-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-light);
+    font-size: 9px;
+    width: 20px; height: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .reorder-btn:active { background: var(--bg); }
+
+  .member-name {
+    font-size: 15px;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .badge-none {
+    font-size: 10px;
+    color: var(--text-light);
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1px 7px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+
+  .badge-time {
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 1px 7px;
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .badge-time-late { color: #92400e; background: #fef3c7; }
+  .badge-time-early { color: #1e40af; background: #dbeafe; }
+
+  .status-buttons { display: flex; gap: 5px; }
+
+  .status-btn {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: #fff;
+    font-size: 17px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .status-btn:active { transform: scale(0.92); }
+
+  .status-btn[data-status="present"] { font-size: 20px; }
+  .status-btn.active-present {
+    border-color: var(--present);
+    background: linear-gradient(135deg, #fef9c3, #dcfce7);
+    box-shadow: 0 2px 8px rgba(22,163,74,0.15);
+  }
+  .status-btn.active-absent { border-color: var(--absent); background: #fee2e2; }
+  .status-btn.active-late { border-color: var(--late); background: #fef3c7; }
+  .status-btn.active-early { border-color: var(--early); background: #dbeafe; }
+
+  .status-btn .btn-label {
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    padding: 1px 3px;
+    line-height: 1;
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 6px;
+    margin-left: 2px;
+    opacity: 0.3;
+  }
+  .delete-btn:hover { opacity: 1; color: var(--absent); }
+
+  .time-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-light);
+  }
+  .time-row input[type="time"] {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .member-meta {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 4px;
+    padding-left: 2px;
+  }
+
+  /* === FAB === */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(91,33,182,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .fab:active { background: var(--primary-light); transform: scale(0.95); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-light);
+  }
+  .empty-state p { font-size: 15px; margin-top: 8px; }
+
+  /* === Modal === */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    width: min(90vw, 360px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; }
+
+  .modal input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 16px;
+    outline: none;
+  }
+  .modal input[type="text"]:focus { border-color: var(--primary-light); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+  .modal-actions button {
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-cancel { background: var(--border); color: var(--text); }
+  .btn-confirm { background: var(--primary); color: #fff; }
+  .btn-confirm:active { background: var(--primary-light); }
+
+  .deadline-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .deadline-field label { width: 40px; font-weight: 500; flex-shrink: 0; }
+  .deadline-field input[type="number"] {
+    width: 52px;
+    padding: 6px 4px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    text-align: center;
+    outline: none;
+  }
+  .deadline-field input[type="number"]:focus { border-color: var(--primary-light); }
+  .deadline-field select {
+    padding: 6px 4px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    background: #fff;
+  }
+  .deadline-field select:focus { border-color: var(--primary-light); }
+
+  /* === Calendar Edit Modal === */
+  .cal-edit-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: var(--bg);
+    flex-direction: column;
+  }
+  .cal-edit-overlay.show { display: flex; }
+
+  .cal-edit-header {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-edit-header h2 { font-size: 17px; font-weight: 700; }
+
+  .cal-edit-body { flex: 1; overflow-y: auto; padding: 16px; }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    padding: 4px 0;
+  }
+  .cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    color: var(--text);
+    background: var(--card);
+  }
+  .cal-cell:active { transform: scale(0.92); }
+  .cal-cell.cal-empty { background: transparent; cursor: default; }
+  .cal-cell.cal-practice {
+    background: #dbeafe;
+    color: var(--practice);
+    border-color: var(--practice);
+  }
+  .cal-cell.cal-match {
+    background: #fce7f3;
+    color: var(--match);
+    border-color: var(--match);
+  }
+
+  .cal-legend {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin: 16px 0 8px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  .cal-legend span::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .cal-legend .leg-practice::before { background: var(--practice); }
+  .cal-legend .leg-match::before { background: var(--match); }
+
+  .cal-edit-actions {
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    background: var(--card);
+  }
+  .cal-edit-actions button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cal-edit-actions .btn-cancel { background: var(--bg); color: var(--text); }
+  .cal-edit-actions .btn-confirm { background: var(--primary); color: #fff; }
+
+  .schedule-edit-btn {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .schedule-edit-btn:active { opacity: 0.6; }
+  .schedule-title { display: flex; align-items: center; }
+
+  /* === Member Settings Modal === */
+  .ms-close-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .ms-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ms-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .ms-role {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+  }
+  .ms-delete {
+    background: transparent;
+    border: none;
+    color: var(--absent);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .ms-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .ms-add-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    outline: none;
+  }
+  .ms-add-input:focus { border-color: var(--primary); }
+  .ms-add-btn { padding: 10px 20px; border-radius: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1 id="appTitle" style="cursor:pointer"></h1>
+    <div style="display:flex;gap:6px">
+      <button class="settings-btn" id="memberSettingsBtn" title="メンバー管理"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+      <button class="settings-btn" id="gearBtn" title="締切設定"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+    </div>
+  </div>
+  <div class="date-row">
+    <button id="prevDay">‹</button>
+    <input type="date" id="dateInput">
+    <button id="nextDay">›</button>
+    <span class="today-badge" id="todayBadge" style="display:none">今日</span>
+  </div>
+  <div class="mode-toggle" id="modeToggle">
+    <button data-mode="practice" class="active">練習</button>
+    <button data-mode="match">試合</button>
+  </div>
+  <div class="header-none-count" id="headerNoneCount"></div>
+</header>
+
+<div class="schedule-section" id="scheduleSection"></div>
+
+<div class="context-bar" id="contextBar"></div>
+
+<div class="summary" id="summary"></div>
+<div class="info-list" id="noneList" style="display:none"></div>
+<div class="info-list" id="presentList" style="display:none"></div>
+
+<main id="memberList"></main>
+
+<button class="fab" id="addBtn" title="メンバー追加">+</button>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">メンバー追加</h2>
+    <input type="text" id="memberNameInput" placeholder="名前を入力">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">キャンセル</button>
+      <button class="btn-confirm" id="modalConfirm">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>締切設定</h2>
+    <div class="deadline-field">
+      <label>練習</label>
+      <input type="number" id="dlPracticeDays" min="0" max="30" value="1">
+      <span>日前</span>
+      <select id="dlPracticeHour"></select>
+      <span>時</span>
+    </div>
+    <div class="deadline-field">
+      <label>試合</label>
+      <input type="number" id="dlMatchDays" min="0" max="30" value="3">
+      <span>日前</span>
+      <select id="dlMatchHour"></select>
+      <span>時</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="settingsCancel">キャンセル</button>
+      <button class="btn-confirm" id="settingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="cal-edit-overlay" id="memberSettingsModal">
+  <div class="cal-edit-header">
+    <h2>メンバー管理</h2>
+    <button class="ms-close-btn" id="memberSettingsClose">✕</button>
+  </div>
+  <div class="cal-edit-body">
+    <div id="memberSettingsList"></div>
+    <div class="ms-add-row">
+      <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
+      <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="cal-edit-overlay" id="calEditModal">
+  <div class="cal-edit-header">
+    <h2 id="calEditTitle"></h2>
+  </div>
+  <div class="cal-edit-body">
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <span class="leg-practice">練習</span>
+      <span class="leg-match">試合</span>
+    </div>
+  </div>
+  <div class="cal-edit-actions">
+    <button class="btn-cancel" id="calEditCancel">キャンセル</button>
+    <button class="btn-confirm" id="calEditSave">保存</button>
+  </div>
+</div>
+
+<script>
+  window.onerror = function(msg, src, line, col) {
+    alert('エラー: ' + msg + '\n行: ' + line + ' 列: ' + col);
+  };
+
+  const STORAGE_MEMBERS = 'volley-members';
+  const STORAGE_MODE = 'volley-mode';
+  const STORAGE_EDITOR = 'volley-editor';
+  const STORAGE_ADMINS = 'volley-admins';
+
+  function isAdmin() {
+    const editor = localStorage.getItem(STORAGE_EDITOR);
+    if (!editor) return false;
+    const raw = localStorage.getItem(STORAGE_ADMINS) || '';
+    return raw.split(',').map(s => s.trim()).filter(Boolean).includes(editor);
+  }
+
+  const ATTENDANCE_KEYS = { practice: 'volley-attendance-practice', match: 'volley-attendance-match' };
+  let currentMode = localStorage.getItem(STORAGE_MODE) || 'practice';
+
+  (function migrate() {
+    const legacy = localStorage.getItem('volley-attendance');
+    if (legacy && !localStorage.getItem(ATTENDANCE_KEYS.practice)) {
+      localStorage.setItem(ATTENDANCE_KEYS.practice, legacy);
+    }
+  })();
+
+  function getAttendanceKey() { return ATTENDANCE_KEYS[currentMode]; }
+
+  const STATUSES = ['none', 'present', 'absent', 'late', 'early'];
+  const STATUS_LABELS = { none: '−', present: '🏐', absent: '✕', late: '遅', early: '早' };
+  const TIME_STATUSES = ['late', 'early'];
+  const STATUS_NAMES = { late: '遅刻', early: '早退' };
+  const MODE_NAMES = { practice: '練習', match: '試合' };
+  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21 }, match: { daysBefore: 3, hour: 21 } };
+  const STORAGE_DEADLINE = 'volley-deadline';
+
+  function getDeadlineRules() {
+    const saved = localStorage.getItem(STORAGE_DEADLINE);
+    return saved ? JSON.parse(saved) : DEADLINE_DEFAULTS;
+  }
+
+  const DEFAULT_MEMBERS = ['田中', '鈴木', '佐藤', '山田', '中村'];
+
+  // --- Schedule ---
+  const STORAGE_SCHEDULE = 'volley-schedule';
+  const DAYS = ['日','月','火','水','木','金','土'];
+
+  function generateDefaultSchedule() {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const items = [];
+    function fmt(d) {
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    for (let d = 1; d <= 31; d++) {
+      const dt = new Date(y, m, d);
+      if (dt.getMonth() !== m) break;
+      const dow = dt.getDay();
+      if (dow === 3 || dow === 6) items.push({ date: fmt(dt), mode: 'practice' });
+    }
+    let sunCount = 0;
+    for (let d = 1; d <= 31; d++) {
+      const dt = new Date(y, m, d);
+      if (dt.getMonth() !== m) break;
+      if (dt.getDay() === 0) {
+        sunCount++;
+        if (sunCount === 2 || sunCount === 4) items.push({ date: fmt(dt), mode: 'match' });
+      }
+    }
+    return items;
+  }
+
+  function loadSchedule() {
+    const raw = localStorage.getItem(STORAGE_SCHEDULE);
+    if (raw) return JSON.parse(raw);
+    const def = generateDefaultSchedule();
+    localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(def));
+    return def;
+  }
+
+  // --- Data ---
+  function loadMembers() {
+    const raw = localStorage.getItem(STORAGE_MEMBERS);
+    let arr = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
+    if (arr.length > 0 && typeof arr[0] === 'string') {
+      arr = arr.map(n => ({name: n, role: '一般'}));
+      saveMembers(arr);
+    }
+    return arr;
+  }
+  function saveMembers(members) { localStorage.setItem(STORAGE_MEMBERS, JSON.stringify(members)); }
+  function loadAttendance() {
+    const raw = localStorage.getItem(getAttendanceKey());
+    return raw ? JSON.parse(raw) : {};
+  }
+  function saveAttendance(data) { localStorage.setItem(getAttendanceKey(), JSON.stringify(data)); }
+  function getDateKey() { return dateInput.value; }
+  function getDayAttendance() { return loadAttendance()[getDateKey()] || {}; }
+
+  function requireEditor() { return !!localStorage.getItem(STORAGE_EDITOR); }
+
+  function stampEdit(dayObj, name) {
+    const editor = localStorage.getItem(STORAGE_EDITOR);
+    dayObj[name + '_editedBy'] = editor;
+    dayObj[name + '_editedAt'] = new Date().toISOString();
+  }
+
+  function setMemberStatus(name, status) {
+    const all = loadAttendance();
+    const key = getDateKey();
+    if (!all[key]) all[key] = {};
+    all[key][name] = status;
+    if (!TIME_STATUSES.includes(status)) delete all[key][name + '_time'];
+    stampEdit(all[key], name);
+    saveAttendance(all);
+  }
+
+  function setMemberTime(name, time) {
+    const all = loadAttendance();
+    const key = getDateKey();
+    if (!all[key]) all[key] = {};
+    if (time) { all[key][name + '_time'] = time; }
+    else { delete all[key][name + '_time']; }
+    stampEdit(all[key], name);
+    saveAttendance(all);
+  }
+
+  // --- Date ---
+  const dateInput = document.getElementById('dateInput');
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function shiftDate(days) {
+    const d = new Date(dateInput.value);
+    d.setDate(d.getDate() + days);
+    dateInput.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    render();
+  }
+
+  dateInput.value = todayStr();
+  dateInput.addEventListener('change', render);
+  document.getElementById('prevDay').addEventListener('click', () => shiftDate(-1));
+  document.getElementById('nextDay').addEventListener('click', () => shiftDate(1));
+
+  // --- Render Schedule ---
+  function renderSchedule() {
+    const section = document.getElementById('scheduleSection');
+    const schedule = loadSchedule();
+    const monthPrefix = dateInput.value.substring(0, 7);
+    const thisMonth = schedule.filter(s => s.date.startsWith(monthPrefix));
+
+    const practiceItems = thisMonth.filter(s => s.mode === 'practice').sort((a,b) => a.date.localeCompare(b.date));
+    const matchItems = thisMonth.filter(s => s.mode === 'match').sort((a,b) => a.date.localeCompare(b.date));
+
+    const today = todayStr();
+    const selectedDate = dateInput.value;
+
+    function chipHTML(item) {
+      const d = new Date(item.date + 'T00:00:00');
+      const day = d.getDate();
+      const dow = DAYS[d.getDay()];
+      const isToday = item.date === today;
+      const isSelected = item.date === selectedDate && currentMode === item.mode;
+      return `<button class="schedule-chip chip-${item.mode}${isToday ? ' chip-today' : ''}${isSelected ? ' chip-selected' : ''}"
+                      data-sdate="${item.date}" data-smode="${item.mode}">
+                ${day}<span class="chip-dow">${dow}</span>
+              </button>`;
+    }
+
+    const monthNum = parseInt(monthPrefix.split('-')[1]);
+    let html = `<div class="schedule-title">${monthNum}月の予定<button class="schedule-edit-btn" id="scheduleEditBtn">📅 編集</button></div>`;
+
+    if (practiceItems.length > 0) {
+      html += `<div class="schedule-row"><span class="schedule-label schedule-label-practice">練習</span>${practiceItems.map(chipHTML).join('')}</div>`;
+    }
+    if (matchItems.length > 0) {
+      html += `<div class="schedule-row"><span class="schedule-label schedule-label-match">試合</span>${matchItems.map(chipHTML).join('')}</div>`;
+    }
+    if (practiceItems.length === 0 && matchItems.length === 0) {
+      html += '<div class="schedule-empty">今月の予定はありません</div>';
+    }
+
+    section.innerHTML = html;
+
+    section.querySelectorAll('.schedule-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        dateInput.value = chip.dataset.sdate;
+        const newMode = chip.dataset.smode;
+        if (newMode !== currentMode) {
+          currentMode = newMode;
+          localStorage.setItem(STORAGE_MODE, currentMode);
+          modeToggle.querySelectorAll('button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === currentMode);
+          });
+        }
+        render._prevCounts = undefined;
+        render();
+      });
+    });
+
+    document.getElementById('scheduleEditBtn').addEventListener('click', () => openCalendarEdit());
+  }
+
+  // --- Render ---
+  function render() {
+    document.getElementById('todayBadge').style.display =
+      dateInput.value === todayStr() ? '' : 'none';
+
+    renderSchedule();
+
+    // --- Context Bar ---
+    const rule = getDeadlineRules()[currentMode];
+    const selected = new Date(dateInput.value + 'T00:00:00');
+    const deadlineDate = new Date(selected);
+    deadlineDate.setDate(deadlineDate.getDate() - rule.daysBefore);
+    const dlMonth = deadlineDate.getMonth() + 1;
+    const dlDay = deadlineDate.getDate();
+    const ruleLabel = rule.daysBefore === 1 ? '前日' : `${rule.daysBefore}日前`;
+
+    const deadlineTime = new Date(deadlineDate);
+    deadlineTime.setHours(rule.hour, 0, 0, 0);
+    const now = new Date();
+    render._isPastDeadline = now > deadlineTime;
+    const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
+    const dlUrgent = isDeadlineToday || render._isPastDeadline;
+
+    const selDate = new Date(dateInput.value + 'T00:00:00');
+    const contextBar = document.getElementById('contextBar');
+    contextBar.innerHTML =
+      `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>` +
+      `<span class="context-mode context-mode-${currentMode}">${MODE_NAMES[currentMode]}</span>` +
+      `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`;
+
+    // --- Members ---
+    const members = loadMembers();
+    const dayData = getDayAttendance();
+    const list = document.getElementById('memberList');
+    const summary = document.getElementById('summary');
+
+    if (members.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>メンバーがいません<br>＋ボタンから追加してください</p></div>';
+      summary.innerHTML = '';
+      document.getElementById('headerNoneCount').style.display = 'none';
+      return;
+    }
+
+    let counts = { present: 0, absent: 0, late: 0, early: 0, none: 0 };
+    members.forEach(m => { counts[dayData[m.name] || 'none']++; });
+
+    const headerNone = document.getElementById('headerNoneCount');
+    if (counts.none > 0) {
+      headerNone.style.display = '';
+      headerNone.innerHTML = `<span class="count">未入力: ${counts.none}人</span>`;
+    } else {
+      headerNone.style.display = 'none';
+    }
+
+    summary.innerHTML =
+      `<span><span class="dot dot-total"></span>合計 ${members.length}</span>` +
+      `<span><span class="dot dot-present"></span>出席 ${counts.present}</span>` +
+      `<span><span class="dot dot-absent"></span>欠席 ${counts.absent}</span>` +
+      `<span><span class="dot dot-late"></span>遅刻 ${counts.late}</span>` +
+      `<span><span class="dot dot-early"></span>早退 ${counts.early}</span>` +
+      `<span><span class="dot dot-none"></span>未入力 ${counts.none}</span>`;
+
+    const countKey = `${counts.present},${counts.absent},${counts.late},${counts.early}`;
+    if (render._prevCounts !== undefined && render._prevCounts !== countKey) {
+      summary.classList.add('flash');
+      setTimeout(() => summary.classList.remove('flash'), 500);
+    }
+    render._prevCounts = countKey;
+
+    // --- None list ---
+    const noneList = document.getElementById('noneList');
+    const noneNames = members.map(m => m.name).filter(name => { const s = dayData[name]; return !s || s === 'none'; });
+    if (noneNames.length > 0) {
+      noneList.style.display = '';
+      noneList.innerHTML = `<strong>未入力:</strong><span>${noneNames.map(escapeHTML).join(', ')}</span><button class="copy-btn" id="copyNoneBtn">コピー</button>`;
+      document.getElementById('copyNoneBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(noneNames.join('\n')).then(() => {
+          const btn = document.getElementById('copyNoneBtn');
+          btn.textContent = 'コピーしました';
+          setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+        });
+      });
+    } else { noneList.style.display = 'none'; }
+
+    // --- Present list ---
+    const presentList = document.getElementById('presentList');
+    const presentNames = members.map(m => m.name).filter(name => dayData[name] === 'present');
+    if (presentNames.length > 0) {
+      presentList.style.display = '';
+      presentList.innerHTML = `<strong>出席:</strong><span>${presentNames.map(escapeHTML).join(', ')}</span><button class="copy-btn" id="copyPresentBtn">コピー</button>`;
+      document.getElementById('copyPresentBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(presentNames.join('\n')).then(() => {
+          const btn = document.getElementById('copyPresentBtn');
+          btn.textContent = 'コピーしました';
+          setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+        });
+      });
+    } else { presentList.style.display = 'none'; }
+
+    // --- Monthly count ---
+    const monthPrefix = dateInput.value.substring(0, 7);
+    const allData = loadAttendance();
+    const monthlyPresent = {};
+    members.forEach(m => { monthlyPresent[m.name] = 0; });
+    Object.keys(allData).forEach(dateKey => {
+      if (dateKey.startsWith(monthPrefix)) {
+        const day = allData[dateKey];
+        members.forEach(m => { if (day[m.name] === 'present') monthlyPresent[m.name]++; });
+      }
+    });
+
+    // --- Cards ---
+    list.innerHTML = members.map((m, idx) => {
+      const name = m.name;
+      const current = dayData[name] || 'none';
+      const savedTime = dayData[name + '_time'] || '';
+      const hasTime = TIME_STATUSES.includes(current);
+      let nameBadge = '';
+      if (current === 'none') {
+        nameBadge = '<span class="badge-none">未入力</span>';
+      } else if (hasTime && savedTime) {
+        nameBadge = `<span class="badge-time badge-time-${current}">${STATUS_NAMES[current]} ${escapeHTML(savedTime)}</span>`;
+      }
+      return `
+        <div class="member-card">
+          <div class="reorder-btns">
+            <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="reorder-btn" data-move="${idx}" data-dir="1" ${idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
+          </div>
+          <span class="member-name">${escapeHTML(name)}${nameBadge}</span>
+          <div class="status-buttons">
+            ${['present', 'absent', 'late', 'early'].map(s =>
+              `<button class="status-btn ${current === s ? 'active-' + s : ''}"
+                       data-name="${escapeHTML(name)}" data-status="${s}">
+                ${['遅','早'].includes(STATUS_LABELS[s]) ? `<span class="btn-label">${STATUS_LABELS[s]}</span>` : STATUS_LABELS[s]}
+              </button>`
+            ).join('')}
+          </div>
+          <button class="delete-btn" data-delete="${escapeHTML(name)}" title="削除">×</button>
+          ${hasTime ? `
+          <div class="time-row">
+            <label>${STATUS_NAMES[current]}時刻:</label>
+            <input type="time" data-time-for="${escapeHTML(name)}" value="${escapeHTML(savedTime)}">
+          </div>` : ''}
+          ${(monthlyPresent[name] > 0 || dayData[name + '_editedBy']) ? `<div class="member-meta">
+            ${monthlyPresent[name] > 0 ? `<span>今月 出席: ${monthlyPresent[name]}回</span>` : ''}
+            ${dayData[name + '_editedBy'] ? `<span>更新: ${escapeHTML(dayData[name + '_editedBy'])} ${formatEditTime(dayData[name + '_editedAt'])}</span>` : ''}
+          </div>` : ''}
+        </div>`;
+    }).join('');
+
+    // --- Event handlers ---
+    list.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!requireEditor()) { alert('設定画面で編集者名を入力してください'); return; }
+        if (render._isPastDeadline) {
+          if (!isAdmin()) { alert('締切を過ぎています'); return; }
+          if (!confirm('締切を過ぎていますが更新しますか？')) return;
+        }
+        const name = btn.dataset.name;
+        const status = btn.dataset.status;
+        const dayData = getDayAttendance();
+        const current = dayData[name] || 'none';
+        const next = current === status ? 'none' : status;
+        if (next === 'absent' && !confirm('欠席に変更します。よろしいですか？')) return;
+        setMemberStatus(name, next);
+        render._highlightName = name;
+        render();
+      });
+    });
+
+    list.querySelectorAll('.time-row input[type="time"]').forEach(input => {
+      input.addEventListener('change', () => {
+        if (!requireEditor()) { alert('設定画面で編集者名を入力してください'); render(); return; }
+        if (render._isPastDeadline) {
+          if (!isAdmin()) { alert('締切を過ぎています'); render(); return; }
+          if (!confirm('締切を過ぎていますが更新しますか？')) { render(); return; }
+        }
+        setMemberTime(input.dataset.timeFor, input.value);
+        render._highlightName = input.dataset.timeFor;
+        render();
+      });
+    });
+
+    list.querySelectorAll('.reorder-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.move);
+        const dir = parseInt(btn.dataset.dir);
+        const m = loadMembers();
+        [m[i], m[i+dir]] = [m[i+dir], m[i]];
+        saveMembers(m);
+        render();
+      });
+    });
+
+    list.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.delete;
+        if (confirm(`「${name}」を削除しますか？`)) {
+          saveMembers(loadMembers().filter(m => m.name !== name));
+          render();
+        }
+      });
+    });
+
+    if (render._highlightName) {
+      const target = list.querySelector(`[data-name="${CSS.escape(render._highlightName)}"]`);
+      if (target) {
+        const card = target.closest('.member-card');
+        card.classList.add('highlight');
+        setTimeout(() => card.classList.remove('highlight'), 800);
+      }
+      render._highlightName = null;
+    }
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatEditTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
+  // --- Modal ---
+  const modal = document.getElementById('modal');
+  const nameInput = document.getElementById('memberNameInput');
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    nameInput.value = '';
+    modal.classList.add('show');
+    setTimeout(() => nameInput.focus(), 100);
+  });
+  document.getElementById('modalCancel').addEventListener('click', () => modal.classList.remove('show'));
+  document.getElementById('modalConfirm').addEventListener('click', addMember);
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+
+  function addMember() {
+    const name = nameInput.value.trim();
+    if (!name) return;
+    const members = loadMembers();
+    if (members.some(m => m.name === name)) { alert('同じ名前のメンバーが既にいます'); return; }
+    members.push({name, role: '一般'});
+    saveMembers(members);
+    modal.classList.remove('show');
+    render();
+  }
+
+  // --- Settings Modal ---
+  const settingsModal = document.getElementById('settingsModal');
+
+  ['dlPracticeHour', 'dlMatchHour'].forEach(id => {
+    const sel = document.getElementById(id);
+    for (let h = 0; h < 24; h++) {
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = String(h).padStart(2, '0');
+      sel.appendChild(opt);
+    }
+  });
+
+  function loadSettingsToModal() {
+    const rules = getDeadlineRules();
+    document.getElementById('dlPracticeDays').value = rules.practice.daysBefore;
+    document.getElementById('dlPracticeHour').value = rules.practice.hour;
+    document.getElementById('dlMatchDays').value = rules.match.daysBefore;
+    document.getElementById('dlMatchHour').value = rules.match.hour;
+  }
+
+  // --- Deadline Button ---
+  document.getElementById('gearBtn').addEventListener('click', () => {
+    loadSettingsToModal();
+    settingsModal.classList.add('show');
+  });
+  document.getElementById('settingsCancel').addEventListener('click', () => settingsModal.classList.remove('show'));
+
+  document.getElementById('settingsSave').addEventListener('click', () => {
+    const rules = {
+      practice: {
+        daysBefore: parseInt(document.getElementById('dlPracticeDays').value) || DEADLINE_DEFAULTS.practice.daysBefore,
+        hour: parseInt(document.getElementById('dlPracticeHour').value)
+      },
+      match: {
+        daysBefore: parseInt(document.getElementById('dlMatchDays').value) || DEADLINE_DEFAULTS.match.daysBefore,
+        hour: parseInt(document.getElementById('dlMatchHour').value)
+      }
+    };
+    localStorage.setItem(STORAGE_DEADLINE, JSON.stringify(rules));
+    settingsModal.classList.remove('show');
+    render();
+  });
+
+  settingsModal.addEventListener('click', e => {
+    if (e.target === settingsModal) settingsModal.classList.remove('show');
+  });
+
+  // --- Mode Toggle ---
+  const modeToggle = document.getElementById('modeToggle');
+
+  function applyMode() {
+    modeToggle.querySelectorAll('button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === currentMode);
+    });
+    render._prevCounts = undefined;
+    render();
+  }
+
+  modeToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentMode = btn.dataset.mode;
+      localStorage.setItem(STORAGE_MODE, currentMode);
+      applyMode();
+    });
+  });
+
+  // --- Calendar Edit ---
+  let calEditData = [];
+  let calEditOtherMonths = [];
+
+  function openCalendarEdit() {
+    const sel = new Date(dateInput.value + 'T00:00:00');
+    const y = sel.getFullYear(), mo = sel.getMonth();
+    const prefix = y + '-' + String(mo + 1).padStart(2, '0');
+    const all = loadSchedule();
+    calEditData = all.filter(s => s.date.startsWith(prefix)).map(s => ({...s}));
+    calEditOtherMonths = all.filter(s => !s.date.startsWith(prefix));
+    document.getElementById('calEditTitle').textContent = y + '年' + (mo + 1) + '月';
+    renderCalGrid(y, mo);
+    document.getElementById('calEditModal').classList.add('show');
+  }
+
+  function renderCalGrid(year, month) {
+    const grid = document.getElementById('calGrid');
+    const dows = ['日','月','火','水','木','金','土'];
+    let html = dows.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+    const firstDay = new Date(year, month, 1).getDay();
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell cal-empty"></div>';
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const item = calEditData.find(s => s.date === dateStr);
+      const cls = item ? 'cal-' + item.mode : '';
+      html += '<div class="cal-cell ' + cls + '" data-caldate="' + dateStr + '">' + d + '</div>';
+    }
+    grid.innerHTML = html;
+    grid.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const dateStr = cell.dataset.caldate;
+        const idx = calEditData.findIndex(s => s.date === dateStr);
+        if (idx === -1) {
+          calEditData.push({date: dateStr, mode: 'practice'});
+          cell.className = 'cal-cell cal-practice';
+        } else if (calEditData[idx].mode === 'practice') {
+          calEditData[idx].mode = 'match';
+          cell.className = 'cal-cell cal-match';
+        } else {
+          calEditData.splice(idx, 1);
+          cell.className = 'cal-cell';
+        }
+      });
+    });
+  }
+
+  function closeCalendarEdit() {
+    document.getElementById('calEditModal').classList.remove('show');
+  }
+
+  document.getElementById('calEditSave').addEventListener('click', () => {
+    const merged = calEditOtherMonths.concat(calEditData);
+    localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
+    render();
+    closeCalendarEdit();
+  });
+
+  document.getElementById('calEditCancel').addEventListener('click', closeCalendarEdit);
+
+  // --- Member Settings ---
+  const ROLES = ['一般', 'キャプテン', 'サブキャプテン', 'マネージャー', 'GM', 'SM'];
+
+  function renderMemberSettings() {
+    const members = loadMembers();
+    const list = document.getElementById('memberSettingsList');
+    list.innerHTML = members.map((m, i) =>
+      '<div class="ms-item">' +
+        '<span class="ms-name">' + escapeHTML(m.name) + '</span>' +
+        '<select class="ms-role" data-ms-idx="' + i + '">' +
+          ROLES.map(r => '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+        '</select>' +
+        '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' +
+      '</div>'
+    ).join('');
+    list.querySelectorAll('.ms-role').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const ms = loadMembers();
+        ms[parseInt(sel.dataset.msIdx)].role = sel.value;
+        saveMembers(ms);
+      });
+    });
+    list.querySelectorAll('.ms-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ms = loadMembers();
+        const idx = parseInt(btn.dataset.msDelete);
+        if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
+          ms.splice(idx, 1);
+          saveMembers(ms);
+          renderMemberSettings();
+        }
+      });
+    });
+  }
+
+  document.getElementById('memberSettingsBtn').addEventListener('click', () => {
+    renderMemberSettings();
+    document.getElementById('memberSettingsModal').classList.add('show');
+  });
+
+  document.getElementById('memberSettingsClose').addEventListener('click', () => {
+    document.getElementById('memberSettingsModal').classList.remove('show');
+    render();
+  });
+
+  document.getElementById('msAddBtn').addEventListener('click', () => {
+    const input = document.getElementById('msAddName');
+    const name = input.value.trim();
+    if (!name) return;
+    const members = loadMembers();
+    if (members.some(m => m.name === name)) { alert('同じ名前のメンバーが既にいます'); return; }
+    members.push({name, role: '一般'});
+    saveMembers(members);
+    input.value = '';
+    renderMemberSettings();
+  });
+
+  document.getElementById('msAddName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('msAddBtn').click();
+  });
+
+  // --- Editable Title ---
+  const STORAGE_TITLE = 'volley-app-title';
+  const DEFAULT_TITLE = 'ママさんバレー 出席管理';
+  const appTitleEl = document.getElementById('appTitle');
+  appTitleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
+
+  appTitleEl.addEventListener('click', () => {
+    if (document.querySelector('.title-edit-row')) return;
+    const current = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
+    const row = document.createElement('div');
+    row.className = 'title-edit-row';
+    row.innerHTML = '<input type="text" maxlength="30"><button title="保存">✓</button><button title="キャンセル">✕</button>';
+    const input = row.querySelector('input');
+    const [saveBtn, cancelBtn] = row.querySelectorAll('button');
+    input.value = current;
+    appTitleEl.style.display = 'none';
+    appTitleEl.parentNode.insertBefore(row, appTitleEl);
+    input.focus();
+    input.select();
+    function save() {
+      const v = input.value.trim() || DEFAULT_TITLE;
+      localStorage.setItem(STORAGE_TITLE, v);
+      appTitleEl.textContent = v;
+      close();
+    }
+    function close() { row.remove(); appTitleEl.style.display = ''; }
+    saveBtn.addEventListener('click', save);
+    cancelBtn.addEventListener('click', close);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); });
+  });
+
+  // --- Init ---
+  applyMode();
+</script>
+</body>
+</html>
