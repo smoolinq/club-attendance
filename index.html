@@ -121,32 +121,6 @@
     white-space: nowrap;
   }
 
-  .mode-toggle {
-    display: flex;
-    margin-top: 10px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 10px;
-    padding: 3px;
-  }
-
-  .mode-toggle button {
-    flex: 1;
-    padding: 6px 0;
-    border: none;
-    background: transparent;
-    color: rgba(255,255,255,0.5);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
-  .mode-toggle button.active {
-    background: #fff;
-    color: var(--primary);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  }
-
   .header-none-count {
     margin-top: 8px;
     font-size: 12px;
@@ -235,6 +209,13 @@
     color: #fff;
     border-color: var(--match);
     box-shadow: 0 2px 8px rgba(219,39,119,0.3);
+  }
+
+  .chip-past-deadline {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
   }
 
   .chip-selected {
@@ -358,6 +339,7 @@
     transition: background 0.6s ease;
   }
   .member-card.highlight { background: #ede9fe; }
+  .member-card.locked { opacity: 0.45; }
 
   .reorder-btns {
     display: flex;
@@ -436,13 +418,14 @@
   .status-btn.active-early { border-color: var(--early); background: #dbeafe; }
 
   .status-btn .btn-label {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
-    border: 1.5px solid currentColor;
-    border-radius: 4px;
-    padding: 1px 3px;
+    border: none;
+    padding: 0;
     line-height: 1;
   }
+  .status-btn.active-late .btn-label,
+  .status-btn.active-early .btn-label { font-weight: 900; }
 
   .delete-btn {
     background: none;
@@ -486,25 +469,6 @@
     padding-left: 2px;
   }
 
-  /* === FAB === */
-  .fab {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 52px; height: 52px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    font-size: 26px;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(91,33,182,0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-  }
-  .fab:active { background: var(--primary-light); transform: scale(0.95); }
 
   .empty-state {
     text-align: center;
@@ -632,6 +596,7 @@
   .cal-cell {
     aspect-ratio: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     border-radius: 12px;
@@ -655,6 +620,52 @@
     color: var(--match);
     border-color: var(--match);
   }
+
+  .cal-cell.cal-selected-day {
+    outline: 3px solid var(--primary);
+    outline-offset: 1px;
+  }
+  .cal-cell.cal-today-mark {
+    font-weight: 900;
+    text-decoration: underline;
+  }
+
+  .picker-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+  }
+  .picker-overlay.show { display: flex; }
+  .picker-modal {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 16px;
+    width: min(90vw, 360px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .picker-header h3 { font-size: 16px; font-weight: 700; flex: 1; text-align: center; }
+  .picker-nav {
+    background: none;
+    border: 1px solid var(--border);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .picker-nav:active { background: var(--bg); }
 
   .cal-legend {
     display: flex;
@@ -767,9 +778,11 @@
 <header>
   <div class="header-top">
     <h1 id="appTitle" style="cursor:pointer"></h1>
+    <span id="loginStatus" style="font-size:12px;padding:4px 8px;background:rgba(255,255,255,0.15);border-radius:8px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;cursor:pointer"></span>
     <div style="display:flex;gap:6px">
       <button class="settings-btn" id="memberSettingsBtn" title="メンバー管理"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
       <button class="settings-btn" id="gearBtn" title="締切設定"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+      <button class="settings-btn" id="adminBtn" title="管理者"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
     </div>
   </div>
   <div class="date-row">
@@ -778,12 +791,23 @@
     <button id="nextDay">›</button>
     <span class="today-badge" id="todayBadge" style="display:none">今日</span>
   </div>
-  <div class="mode-toggle" id="modeToggle">
-    <button data-mode="practice" class="active">練習</button>
-    <button data-mode="match">試合</button>
-  </div>
   <div class="header-none-count" id="headerNoneCount"></div>
 </header>
+
+<div class="picker-overlay" id="datePickerOverlay">
+  <div class="picker-modal">
+    <div class="picker-header">
+      <button class="picker-nav" id="pickerPrev">‹</button>
+      <h3 id="pickerTitle"></h3>
+      <button class="picker-nav" id="pickerNext">›</button>
+    </div>
+    <div class="cal-grid" id="pickerGrid"></div>
+    <div class="cal-legend" style="margin-bottom:0">
+      <span class="leg-practice">練習</span>
+      <span class="leg-match">試合</span>
+    </div>
+  </div>
+</div>
 
 <div class="schedule-section" id="scheduleSection"></div>
 
@@ -794,8 +818,6 @@
 <div class="info-list" id="presentList" style="display:none"></div>
 
 <main id="memberList"></main>
-
-<button class="fab" id="addBtn" title="メンバー追加">+</button>
 
 <div class="modal-overlay" id="modal">
   <div class="modal">
@@ -832,6 +854,73 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <h2>ログイン</h2>
+    <div id="loginStep1">
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">メンバーとしてログイン</label>
+        <select id="memberNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px"></select>
+        <button class="btn-confirm" id="memberLoginBtn" style="width:100%;padding:10px 16px">ログイン</button>
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">管理者用パスワード</label>
+        <div style="display:flex;gap:6px">
+          <input type="password" id="adminPwInput" placeholder="パスワード" style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
+          <button class="btn-confirm" id="adminLoginBtn" style="padding:10px 16px;white-space:nowrap">ログイン</button>
+        </div>
+      </div>
+      <div id="loginError" style="color:var(--absent);font-size:13px;margin-top:6px;display:none"></div>
+      <div class="modal-actions"><button class="btn-cancel" id="loginCancel">閉じる</button></div>
+    </div>
+    <div id="loginStep2" style="display:none">
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">名前を選択してください</label>
+      <select id="adminNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none"></select>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="memberSelectBack">戻る</button>
+        <button class="btn-confirm" id="memberSelectOk">確定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminModal">
+  <div class="modal">
+    <h2>管理者設定</h2>
+    <div style="margin-bottom:16px">
+      <label style="font-size:14px;font-weight:600;display:block;margin-bottom:6px">管理者パスワード変更</label>
+      <input type="password" id="adminNewPwInput" placeholder="新しいパスワード" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="adminModalCancel">閉じる</button>
+      <button class="btn-confirm" id="adminModalSave">保存</button>
+    </div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <button id="adminResetBtn" style="width:100%;padding:10px;border:1px solid var(--absent);border-radius:12px;background:#fff;color:var(--absent);font-size:14px;font-weight:600;cursor:pointer">管理者リセット</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal" style="max-width:340px">
+    <h2 style="margin-bottom:2px">このアプリについて</h2>
+    <p style="margin:0 0 14px;font-size:12px;color:var(--text-light)">ver.1.0.0</p>
+    <div style="font-size:13px;line-height:1.7;text-align:left">
+      <p style="font-weight:600;margin:0 0 4px">このアプリは端末に保存されます</p>
+      <ul style="margin:0 0 12px;padding-left:1.2em">
+        <li>機種変更 / ブラウザ削除でデータは消えます</li>
+        <li>他の人のスマホには自動共有されません</li>
+        <li>管理者パスワードを忘れた場合は初期化が必要です</li>
+      </ul>
+      <p style="font-weight:600;margin:0 0 4px">安心して使うために</p>
+      <p style="margin:0">管理者はスクリーンショットで記録を残してください</p>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-confirm" id="aboutClose">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div class="cal-edit-overlay" id="memberSettingsModal">
   <div class="cal-edit-header">
     <h2>メンバー管理</h2>
@@ -848,15 +937,23 @@
 
 <div class="cal-edit-overlay" id="calEditModal">
   <div class="cal-edit-header">
-    <h2 id="calEditTitle"></h2>
+    <button class="settings-btn" id="calPrevMonth" style="font-size:20px">‹</button>
+    <h2 id="calEditTitle" style="flex:1;text-align:center"></h2>
+    <button class="settings-btn" id="calNextMonth" style="font-size:20px">›</button>
   </div>
   <div class="cal-edit-body">
     <div class="cal-grid" id="calGrid"></div>
+    <div id="calTimeRow" style="display:none;margin:12px 0;align-items:center;gap:8px;justify-content:center;font-size:14px">
+      <span id="calTimeLabel"></span>
+      <input type="time" id="calTimeInput" style="padding:6px 10px;border:2px solid var(--border);border-radius:10px;font-size:15px;background:var(--bg)">
+      <button id="calTimeClear" style="padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:12px;cursor:pointer">クリア</button>
+    </div>
     <div class="cal-legend">
       <span class="leg-practice">練習</span>
       <span class="leg-match">試合</span>
     </div>
   </div>
+  <div id="calEditNotice" style="display:none;text-align:center;font-size:12px;color:#999;padding:4px 0 0">管理者のみ変更できます</div>
   <div class="cal-edit-actions">
     <button class="btn-cancel" id="calEditCancel">キャンセル</button>
     <button class="btn-confirm" id="calEditSave">保存</button>
@@ -874,10 +971,7 @@
   const STORAGE_ADMINS = 'volley-admins';
 
   function isAdmin() {
-    const editor = localStorage.getItem(STORAGE_EDITOR);
-    if (!editor) return false;
-    const raw = localStorage.getItem(STORAGE_ADMINS) || '';
-    return raw.split(',').map(s => s.trim()).filter(Boolean).includes(editor);
+    return localStorage.getItem('volley-login-type') === 'admin';
   }
 
   const ATTENDANCE_KEYS = { practice: 'volley-attendance-practice', match: 'volley-attendance-match' };
@@ -894,9 +988,10 @@
 
   const STATUSES = ['none', 'present', 'absent', 'late', 'early'];
   const STATUS_LABELS = { none: '−', present: '🏐', absent: '✕', late: '遅', early: '早' };
-  const TIME_STATUSES = ['late', 'early'];
+  const TIME_STATUSES = ['late', 'early', 'late_early'];
   const STATUS_NAMES = { late: '遅刻', early: '早退' };
   const MODE_NAMES = { practice: '練習', match: '試合' };
+
   const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21 }, match: { daysBefore: 3, hour: 21 } };
   const STORAGE_DEADLINE = 'volley-deadline';
 
@@ -963,7 +1058,7 @@
   function getDateKey() { return dateInput.value; }
   function getDayAttendance() { return loadAttendance()[getDateKey()] || {}; }
 
-  function requireEditor() { return !!localStorage.getItem(STORAGE_EDITOR); }
+  function requireEditor() { return !!localStorage.getItem(STORAGE_EDITOR) || localStorage.getItem('volley-login-type') === 'admin'; }
 
   function stampEdit(dayObj, name) {
     const editor = localStorage.getItem(STORAGE_EDITOR);
@@ -975,18 +1070,44 @@
     const all = loadAttendance();
     const key = getDateKey();
     if (!all[key]) all[key] = {};
+    const prev = all[key][name] || 'none';
     all[key][name] = status;
-    if (!TIME_STATUSES.includes(status)) delete all[key][name + '_time'];
+    if (prev === 'late' && status === 'late_early') {
+      all[key][name + '_lateTime'] = all[key][name + '_time'] || '';
+      delete all[key][name + '_time'];
+    } else if (prev === 'early' && status === 'late_early') {
+      all[key][name + '_earlyTime'] = all[key][name + '_time'] || '';
+      delete all[key][name + '_time'];
+    } else if (prev === 'late_early' && status === 'late') {
+      all[key][name + '_time'] = all[key][name + '_lateTime'] || '';
+      delete all[key][name + '_lateTime'];
+      delete all[key][name + '_earlyTime'];
+    } else if (prev === 'late_early' && status === 'early') {
+      all[key][name + '_time'] = all[key][name + '_earlyTime'] || '';
+      delete all[key][name + '_lateTime'];
+      delete all[key][name + '_earlyTime'];
+    } else if (!TIME_STATUSES.includes(status)) {
+      delete all[key][name + '_time'];
+      delete all[key][name + '_lateTime'];
+      delete all[key][name + '_earlyTime'];
+    }
     stampEdit(all[key], name);
     saveAttendance(all);
   }
 
-  function setMemberTime(name, time) {
+  function setMemberTime(name, time, timeType) {
     const all = loadAttendance();
     const key = getDateKey();
     if (!all[key]) all[key] = {};
-    if (time) { all[key][name + '_time'] = time; }
-    else { delete all[key][name + '_time']; }
+    const status = all[key][name];
+    if (status === 'late_early') {
+      const suffix = timeType === 'late' ? '_lateTime' : '_earlyTime';
+      if (time) { all[key][name + suffix] = time; }
+      else { delete all[key][name + suffix]; }
+    } else {
+      if (time) { all[key][name + '_time'] = time; }
+      else { delete all[key][name + '_time']; }
+    }
     stampEdit(all[key], name);
     saveAttendance(all);
   }
@@ -1011,6 +1132,56 @@
   document.getElementById('prevDay').addEventListener('click', () => shiftDate(-1));
   document.getElementById('nextDay').addEventListener('click', () => shiftDate(1));
 
+  // --- Custom Date Picker ---
+  let pickerYear, pickerMonth;
+  const pickerOverlay = document.getElementById('datePickerOverlay');
+
+  dateInput.addEventListener('click', e => {
+    e.preventDefault();
+    const sel = new Date(dateInput.value + 'T00:00:00');
+    pickerYear = sel.getFullYear();
+    pickerMonth = sel.getMonth();
+    renderPicker();
+    pickerOverlay.classList.add('show');
+  });
+  // Prevent native picker on mobile
+  dateInput.addEventListener('mousedown', e => e.preventDefault());
+  dateInput.addEventListener('touchstart', e => { e.preventDefault(); dateInput.click(); }, {passive: false});
+
+  pickerOverlay.addEventListener('click', e => { if (e.target === pickerOverlay) pickerOverlay.classList.remove('show'); });
+  document.getElementById('pickerPrev').addEventListener('click', () => { pickerMonth--; if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; } renderPicker(); });
+  document.getElementById('pickerNext').addEventListener('click', () => { pickerMonth++; if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; } renderPicker(); });
+
+  function renderPicker() {
+    document.getElementById('pickerTitle').textContent = pickerYear + '年' + (pickerMonth + 1) + '月';
+    const grid = document.getElementById('pickerGrid');
+    const schedule = loadSchedule();
+    const prefix = pickerYear + '-' + String(pickerMonth + 1).padStart(2, '0');
+    const monthSchedule = {};
+    schedule.filter(s => s.date.startsWith(prefix)).forEach(s => { monthSchedule[s.date] = s.mode; });
+    const today = todayStr();
+    const selected = dateInput.value;
+    const dows = ['日','月','火','水','木','金','土'];
+    let html = dows.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+    const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
+    for (let i = 0; i < firstDay; i++) html += '<div class="cal-cell cal-empty"></div>';
+    const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = prefix + '-' + String(d).padStart(2, '0');
+      const mode = monthSchedule[ds];
+      const cls = (mode ? ' cal-' + mode : '') + (ds === selected ? ' cal-selected-day' : '') + (ds === today ? ' cal-today-mark' : '');
+      html += '<div class="cal-cell' + cls + '" data-pickdate="' + ds + '">' + d + '</div>';
+    }
+    grid.innerHTML = html;
+    grid.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell => {
+      cell.addEventListener('click', () => {
+        dateInput.value = cell.dataset.pickdate;
+        pickerOverlay.classList.remove('show');
+        render();
+      });
+    });
+  }
+
   // --- Render Schedule ---
   function renderSchedule() {
     const section = document.getElementById('scheduleSection');
@@ -1024,13 +1195,21 @@
     const today = todayStr();
     const selectedDate = dateInput.value;
 
+    const now = new Date();
+    const dlRules = getDeadlineRules();
+
     function chipHTML(item) {
       const d = new Date(item.date + 'T00:00:00');
       const day = d.getDate();
       const dow = DAYS[d.getDay()];
       const isToday = item.date === today;
       const isSelected = item.date === selectedDate && currentMode === item.mode;
-      return `<button class="schedule-chip chip-${item.mode}${isToday ? ' chip-today' : ''}${isSelected ? ' chip-selected' : ''}"
+      const rule = dlRules[item.mode];
+      const dl = new Date(d);
+      dl.setDate(dl.getDate() - rule.daysBefore);
+      dl.setHours(rule.hour, 0, 0, 0);
+      const isPast = now > dl;
+      return `<button class="schedule-chip chip-${item.mode}${isToday ? ' chip-today' : ''}${isSelected ? ' chip-selected' : ''}${isPast ? ' chip-past-deadline' : ''}"
                       data-sdate="${item.date}" data-smode="${item.mode}">
                 ${day}<span class="chip-dow">${dow}</span>
               </button>`;
@@ -1058,9 +1237,6 @@
         if (newMode !== currentMode) {
           currentMode = newMode;
           localStorage.setItem(STORAGE_MODE, currentMode);
-          modeToggle.querySelectorAll('button').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.mode === currentMode);
-          });
         }
         render._prevCounts = undefined;
         render();
@@ -1076,6 +1252,23 @@
       dateInput.value === todayStr() ? '' : 'none';
 
     renderSchedule();
+
+    // --- Check if selected date has a schedule entry ---
+    const scheduleEntry = loadSchedule().find(s => s.date === dateInput.value);
+    const hasSchedule = !!scheduleEntry;
+    const contextBar = document.getElementById('contextBar');
+    const summary = document.getElementById('summary');
+    const list = document.getElementById('memberList');
+    if (!hasSchedule) {
+      const selDate = new Date(dateInput.value + 'T00:00:00');
+      contextBar.innerHTML = `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>`;
+      summary.innerHTML = '';
+      document.getElementById('noneList').style.display = 'none';
+      document.getElementById('presentList').style.display = 'none';
+      document.getElementById('headerNoneCount').style.display = 'none';
+      list.innerHTML = '<div class="empty-state"><p>予定がありません</p></div>';
+      return;
+    }
 
     // --- Context Bar ---
     const rule = getDeadlineRules()[currentMode];
@@ -1093,18 +1286,20 @@
     const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
     const dlUrgent = isDeadlineToday || render._isPastDeadline;
 
-    const selDate = new Date(dateInput.value + 'T00:00:00');
-    const contextBar = document.getElementById('contextBar');
-    contextBar.innerHTML =
-      `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>` +
-      `<span class="context-mode context-mode-${currentMode}">${MODE_NAMES[currentMode]}</span>` +
-      `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`;
+    {
+      const selDate = new Date(dateInput.value + 'T00:00:00');
+      contextBar.innerHTML =
+        `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>` +
+        `<span class="context-mode context-mode-${currentMode}">${MODE_NAMES[currentMode]}</span>` +
+        (scheduleEntry && scheduleEntry.startTime ? `<span style="font-size:13px;font-weight:600">${scheduleEntry.startTime}〜</span>` : '') +
+        `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`;
+    }
+
+    const readOnly = render._isPastDeadline && !isAdmin();
 
     // --- Members ---
     const members = loadMembers();
     const dayData = getDayAttendance();
-    const list = document.getElementById('memberList');
-    const summary = document.getElementById('summary');
 
     if (members.length === 0) {
       list.innerHTML = '<div class="empty-state"><p>メンバーがいません<br>＋ボタンから追加してください</p></div>';
@@ -1114,7 +1309,7 @@
     }
 
     let counts = { present: 0, absent: 0, late: 0, early: 0, none: 0 };
-    members.forEach(m => { counts[dayData[m.name] || 'none']++; });
+    members.forEach(m => { const s = dayData[m.name] || 'none'; if (s === 'late_early') { counts.late++; counts.early++; } else { counts[s]++; } });
 
     const headerNone = document.getElementById('headerNoneCount');
     if (counts.none > 0) {
@@ -1182,19 +1377,28 @@
     });
 
     // --- Cards ---
-    list.innerHTML = members.map((m, idx) => {
+    const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+    const readOnlyMsg = dateInput.value < todayStr() ? 'このイベントは終了しています' : 'このイベントの締切は過ぎています';
+    let cardsHTML = readOnly ? `<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">${readOnlyMsg}</div></div>` : '';
+    cardsHTML += members.map((m, idx) => {
       const name = m.name;
+      const isLocked = readOnly || (editorName && !isAdmin() && name !== editorName);
       const current = dayData[name] || 'none';
-      const savedTime = dayData[name + '_time'] || '';
       const hasTime = TIME_STATUSES.includes(current);
       let nameBadge = '';
       if (current === 'none') {
         nameBadge = '<span class="badge-none">未入力</span>';
-      } else if (hasTime && savedTime) {
-        nameBadge = `<span class="badge-time badge-time-${current}">${STATUS_NAMES[current]} ${escapeHTML(savedTime)}</span>`;
+      } else if (current === 'late_early') {
+        const lt = dayData[name + '_lateTime'] || '';
+        const et = dayData[name + '_earlyTime'] || '';
+        if (lt) nameBadge += `<span class="badge-time badge-time-late">遅刻 ${escapeHTML(lt)}</span>`;
+        if (et) nameBadge += `<span class="badge-time badge-time-early">早退 ${escapeHTML(et)}</span>`;
+      } else if (hasTime) {
+        const savedTime = dayData[name + '_time'] || '';
+        if (savedTime) nameBadge = `<span class="badge-time badge-time-${current}">${STATUS_NAMES[current]} ${escapeHTML(savedTime)}</span>`;
       }
       return `
-        <div class="member-card">
+        <div class="member-card${isLocked ? ' locked' : ''}" data-locked="${isLocked ? '1' : ''}">
           <div class="reorder-btns">
             <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
             <button class="reorder-btn" data-move="${idx}" data-dir="1" ${idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
@@ -1202,29 +1406,38 @@
           <span class="member-name">${escapeHTML(name)}${nameBadge}</span>
           <div class="status-buttons">
             ${['present', 'absent', 'late', 'early'].map(s =>
-              `<button class="status-btn ${current === s ? 'active-' + s : ''}"
+              `<button class="status-btn ${(current === s || (current === 'late_early' && (s === 'late' || s === 'early')) || (['late','early','late_early'].includes(current) && s === 'present')) ? 'active-' + s : ''}"
                        data-name="${escapeHTML(name)}" data-status="${s}">
                 ${['遅','早'].includes(STATUS_LABELS[s]) ? `<span class="btn-label">${STATUS_LABELS[s]}</span>` : STATUS_LABELS[s]}
               </button>`
             ).join('')}
           </div>
           <button class="delete-btn" data-delete="${escapeHTML(name)}" title="削除">×</button>
-          ${hasTime ? `
+          ${current === 'late_early' ? `
+          <div class="time-row">
+            <label>遅刻時刻:</label>
+            <input type="time" data-time-for="${escapeHTML(name)}" data-time-type="late" value="${escapeHTML(dayData[name + '_lateTime'] || '')}">
+          </div>
+          <div class="time-row">
+            <label>早退時刻:</label>
+            <input type="time" data-time-for="${escapeHTML(name)}" data-time-type="early" value="${escapeHTML(dayData[name + '_earlyTime'] || '')}">
+          </div>` : hasTime ? `
           <div class="time-row">
             <label>${STATUS_NAMES[current]}時刻:</label>
-            <input type="time" data-time-for="${escapeHTML(name)}" value="${escapeHTML(savedTime)}">
+            <input type="time" data-time-for="${escapeHTML(name)}" data-time-type="${current}" value="${escapeHTML(dayData[name + '_time'] || '')}">
           </div>` : ''}
-          ${(monthlyPresent[name] > 0 || dayData[name + '_editedBy']) ? `<div class="member-meta">
-            ${monthlyPresent[name] > 0 ? `<span>今月 出席: ${monthlyPresent[name]}回</span>` : ''}
-            ${dayData[name + '_editedBy'] ? `<span>更新: ${escapeHTML(dayData[name + '_editedBy'])} ${formatEditTime(dayData[name + '_editedAt'])}</span>` : ''}
+          ${dayData[name + '_editedBy'] ? `<div class="member-meta">
+            <span>更新: ${escapeHTML(dayData[name + '_editedBy'])} ${formatEditTime(dayData[name + '_editedAt'])}</span>
           </div>` : ''}
         </div>`;
     }).join('');
+    list.innerHTML = cardsHTML;
 
     // --- Event handlers ---
     list.querySelectorAll('.status-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (!requireEditor()) { alert('設定画面で編集者名を入力してください'); return; }
+        if (!requireEditor()) { alert('編集者名を入力してください'); return; }
+        if (btn.closest('.member-card').dataset.locked === '1') { alert('自分の名前に合わせると編集できます'); return; }
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
           if (!confirm('締切を過ぎていますが更新しますか？')) return;
@@ -1233,7 +1446,18 @@
         const status = btn.dataset.status;
         const dayData = getDayAttendance();
         const current = dayData[name] || 'none';
-        const next = current === status ? 'none' : status;
+        let next;
+        if (status === 'late' || status === 'early') {
+          const other = status === 'late' ? 'early' : 'late';
+          if (current === status) next = 'present';
+          else if (current === other) next = 'late_early';
+          else if (current === 'late_early') next = other;
+          else next = status;
+        } else if (status === 'present') {
+          next = ['present','late','early','late_early'].includes(current) ? 'none' : 'present';
+        } else {
+          next = current === status ? 'none' : status;
+        }
         if (next === 'absent' && !confirm('欠席に変更します。よろしいですか？')) return;
         setMemberStatus(name, next);
         render._highlightName = name;
@@ -1243,14 +1467,12 @@
 
     list.querySelectorAll('.time-row input[type="time"]').forEach(input => {
       input.addEventListener('change', () => {
-        if (!requireEditor()) { alert('設定画面で編集者名を入力してください'); render(); return; }
+        if (!requireEditor()) { alert('編集者名を入力してください'); return; }
+        if (input.closest('.member-card').dataset.locked === '1') return;
         if (render._isPastDeadline) {
-          if (!isAdmin()) { alert('締切を過ぎています'); render(); return; }
-          if (!confirm('締切を過ぎていますが更新しますか？')) { render(); return; }
+          if (!isAdmin()) { alert('締切を過ぎています'); return; }
         }
-        setMemberTime(input.dataset.timeFor, input.value);
-        render._highlightName = input.dataset.timeFor;
-        render();
+        setMemberTime(input.dataset.timeFor, input.value, input.dataset.timeType);
       });
     });
 
@@ -1298,15 +1520,131 @@
     return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
 
+  // --- Login & Admin ---
+  const STORAGE_ADMIN_PW = 'volley-admin-pw';
+
+  const STORAGE_LOGIN_TYPE = 'volley-login-type'; // 'member' | 'admin' | ''
+  const loginModal = document.getElementById('loginModal');
+  const adminModal = document.getElementById('adminModal');
+
+  function updateLoginStatus() {
+    const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+    const el = document.getElementById('loginStatus');
+    if (type === 'admin') {
+      const name = localStorage.getItem(STORAGE_EDITOR) || '';
+      el.textContent = (name || '管理者') + '(管理者)';
+      el.style.opacity = '1';
+    } else if (type === 'member') {
+      const name = localStorage.getItem(STORAGE_EDITOR) || '';
+      el.textContent = name ? name + 'でログイン中' : '未ログイン';
+      el.style.opacity = name ? '1' : '0.5';
+    } else {
+      el.textContent = '未ログイン';
+      el.style.opacity = '0.5';
+    }
+  }
+  updateLoginStatus();
+
+  document.getElementById('loginStatus').addEventListener('click', () => {
+    const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+    if (!type) return;
+    if (!confirm('ログアウトしますか？')) return;
+    localStorage.removeItem(STORAGE_LOGIN_TYPE);
+    localStorage.removeItem(STORAGE_EDITOR);
+    updateLoginStatus();
+    render();
+  });
+
+  function showLoginError(msg) {
+    const err = document.getElementById('loginError');
+    err.textContent = msg;
+    err.style.display = '';
+  }
+
+  document.getElementById('adminBtn').addEventListener('click', () => {
+    const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+    if (type === 'admin') {
+      openAdminModal();
+    } else {
+      document.getElementById('adminPwInput').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('loginStep1').style.display = '';
+      document.getElementById('loginStep2').style.display = 'none';
+      const members = loadMembers();
+      const sel = document.getElementById('memberNameSelect');
+      sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      loginModal.classList.add('show');
+    }
+  });
+
+  document.getElementById('loginCancel').addEventListener('click', () => loginModal.classList.remove('show'));
+  loginModal.addEventListener('click', e => { if (e.target === loginModal) loginModal.classList.remove('show'); });
+
+  // Member login
+  document.getElementById('memberLoginBtn').addEventListener('click', () => {
+    const name = document.getElementById('memberNameSelect').value;
+    if (!name) { showLoginError('メンバーが登録されていません'); return; }
+    localStorage.setItem(STORAGE_EDITOR, name);
+    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+    loginModal.classList.remove('show');
+    updateLoginStatus();
+    render();
+  });
+
+  document.getElementById('memberSelectBack').addEventListener('click', () => {
+    document.getElementById('loginStep1').style.display = '';
+    document.getElementById('loginStep2').style.display = 'none';
+  });
+
+  document.getElementById('memberSelectOk').addEventListener('click', () => {
+    const name = document.getElementById('adminNameSelect').value;
+    localStorage.setItem(STORAGE_EDITOR, name);
+    localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
+    loginModal.classList.remove('show');
+    updateLoginStatus();
+    render();
+  });
+
+  // Admin login
+  document.getElementById('adminLoginBtn').addEventListener('click', () => {
+    const pw = document.getElementById('adminPwInput').value;
+    if (pw !== (localStorage.getItem(STORAGE_ADMIN_PW) || '0000')) { showLoginError('パスワードが違います'); return; }
+    const members = loadMembers();
+    const sel = document.getElementById('adminNameSelect');
+    sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+    document.getElementById('loginStep1').style.display = 'none';
+    document.getElementById('loginStep2').style.display = '';
+  });
+  document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('adminLoginBtn').click(); });
+
+  // Admin settings modal
+  function openAdminModal() {
+    document.getElementById('adminNewPwInput').value = '';
+    adminModal.classList.add('show');
+  }
+
+  document.getElementById('adminModalCancel').addEventListener('click', () => adminModal.classList.remove('show'));
+  adminModal.addEventListener('click', e => { if (e.target === adminModal) adminModal.classList.remove('show'); });
+
+  document.getElementById('adminModalSave').addEventListener('click', () => {
+    const newPw = document.getElementById('adminNewPwInput').value;
+    if (newPw) localStorage.setItem(STORAGE_ADMIN_PW, newPw);
+    adminModal.classList.remove('show');
+    alert('保存しました');
+    render();
+  });
+
+  document.getElementById('adminResetBtn').addEventListener('click', () => {
+    if (!confirm('管理者パスワードを初期値(0000)にリセットします。よろしいですか？')) return;
+    localStorage.removeItem(STORAGE_ADMIN_PW);
+    adminModal.classList.remove('show');
+    alert('リセットしました。パスワードは 0000 です。');
+  });
+
   // --- Modal ---
   const modal = document.getElementById('modal');
   const nameInput = document.getElementById('memberNameInput');
 
-  document.getElementById('addBtn').addEventListener('click', () => {
-    nameInput.value = '';
-    modal.classList.add('show');
-    setTimeout(() => nameInput.focus(), 100);
-  });
   document.getElementById('modalCancel').addEventListener('click', () => modal.classList.remove('show'));
   document.getElementById('modalConfirm').addEventListener('click', addMember);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
@@ -1371,39 +1709,34 @@
     if (e.target === settingsModal) settingsModal.classList.remove('show');
   });
 
-  // --- Mode Toggle ---
-  const modeToggle = document.getElementById('modeToggle');
+  // --- Editor Name (set via login) ---
 
   function applyMode() {
-    modeToggle.querySelectorAll('button').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.mode === currentMode);
-    });
     render._prevCounts = undefined;
     render();
   }
 
-  modeToggle.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentMode = btn.dataset.mode;
-      localStorage.setItem(STORAGE_MODE, currentMode);
-      applyMode();
-    });
-  });
-
   // --- Calendar Edit ---
   let calEditData = [];
   let calEditOtherMonths = [];
+  let calEditYear, calEditMonth;
 
   function openCalendarEdit() {
     const sel = new Date(dateInput.value + 'T00:00:00');
-    const y = sel.getFullYear(), mo = sel.getMonth();
-    const prefix = y + '-' + String(mo + 1).padStart(2, '0');
+    calEditYear = sel.getFullYear();
+    calEditMonth = sel.getMonth();
+    loadCalMonth();
+    document.getElementById('calEditNotice').style.display = isAdmin() ? 'none' : 'block';
+    document.getElementById('calEditModal').classList.add('show');
+  }
+
+  function loadCalMonth() {
+    const prefix = calEditYear + '-' + String(calEditMonth + 1).padStart(2, '0');
     const all = loadSchedule();
     calEditData = all.filter(s => s.date.startsWith(prefix)).map(s => ({...s}));
     calEditOtherMonths = all.filter(s => !s.date.startsWith(prefix));
-    document.getElementById('calEditTitle').textContent = y + '年' + (mo + 1) + '月';
-    renderCalGrid(y, mo);
-    document.getElementById('calEditModal').classList.add('show');
+    document.getElementById('calEditTitle').textContent = calEditYear + '年' + (calEditMonth + 1) + '月';
+    renderCalGrid(calEditYear, calEditMonth);
   }
 
   function renderCalGrid(year, month) {
@@ -1417,32 +1750,76 @@
       const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
       const item = calEditData.find(s => s.date === dateStr);
       const cls = item ? 'cal-' + item.mode : '';
-      html += '<div class="cal-cell ' + cls + '" data-caldate="' + dateStr + '">' + d + '</div>';
+      const timeLabel = item && item.startTime ? '<span style="font-size:8px;line-height:1;opacity:0.8;display:block;text-align:center">' + item.startTime + '</span>' : '';
+      html += '<div class="cal-cell ' + cls + '" data-caldate="' + dateStr + '">' + d + timeLabel + '</div>';
     }
     grid.innerHTML = html;
+    const timeRow = document.getElementById('calTimeRow');
+    timeRow.style.display = 'none';
     grid.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell => {
       cell.addEventListener('click', () => {
+        if (!isAdmin()) return;
         const dateStr = cell.dataset.caldate;
         const idx = calEditData.findIndex(s => s.date === dateStr);
         if (idx === -1) {
           calEditData.push({date: dateStr, mode: 'practice'});
-          cell.className = 'cal-cell cal-practice';
+          renderCalGrid(year, month);
+          showCalTime(dateStr);
         } else if (calEditData[idx].mode === 'practice') {
           calEditData[idx].mode = 'match';
-          cell.className = 'cal-cell cal-match';
+          delete calEditData[idx].startTime;
+          renderCalGrid(year, month);
+          showCalTime(dateStr);
         } else {
           calEditData.splice(idx, 1);
-          cell.className = 'cal-cell';
+          renderCalGrid(year, month);
         }
       });
     });
   }
+
+  function showCalTime(dateStr) {
+    const item = calEditData.find(s => s.date === dateStr);
+    if (!item) return;
+    if (item.startTime) return; // already set, don't auto-open
+    const timeRow = document.getElementById('calTimeRow');
+    const d = new Date(dateStr + 'T00:00:00');
+    document.getElementById('calTimeLabel').textContent = (d.getMonth()+1) + '/' + d.getDate() + ' ' + MODE_NAMES[item.mode] + ' 開始:';
+    document.getElementById('calTimeInput').value = item.startTime || '';
+    timeRow.style.display = 'flex';
+    timeRow.dataset.calTimeDate = dateStr;
+  }
+
+  document.getElementById('calTimeInput').addEventListener('change', function() {
+    const dateStr = document.getElementById('calTimeRow').dataset.calTimeDate;
+    const item = calEditData.find(s => s.date === dateStr);
+    if (item) {
+      item.startTime = this.value;
+      // Update grid cell text without closing timeRow
+      const cell = document.querySelector('.cal-cell[data-caldate="' + dateStr + '"]');
+      if (cell) {
+        const d = new Date(dateStr + 'T00:00:00').getDate();
+        const timeLabel = this.value ? '<span style="font-size:8px;line-height:1;opacity:0.8;display:block;text-align:center">' + this.value + '</span>' : '';
+        cell.innerHTML = d + timeLabel;
+      }
+    }
+  });
+
+  document.getElementById('calTimeClear').addEventListener('click', () => {
+    const dateStr = document.getElementById('calTimeRow').dataset.calTimeDate;
+    const item = calEditData.find(s => s.date === dateStr);
+    if (item) {
+      delete item.startTime;
+      renderCalGrid(calEditYear, calEditMonth);
+    }
+  });
 
   function closeCalendarEdit() {
     document.getElementById('calEditModal').classList.remove('show');
   }
 
   document.getElementById('calEditSave').addEventListener('click', () => {
+    if (!isAdmin()) { alert('管理者のみ変更できます'); return; }
     const merged = calEditOtherMonths.concat(calEditData);
     localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     render();
@@ -1451,39 +1828,62 @@
 
   document.getElementById('calEditCancel').addEventListener('click', closeCalendarEdit);
 
+  document.getElementById('calPrevMonth').addEventListener('click', () => {
+    if (isAdmin()) { const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged)); }
+    calEditMonth--;
+    if (calEditMonth < 0) { calEditMonth = 11; calEditYear--; }
+    loadCalMonth();
+  });
+
+  document.getElementById('calNextMonth').addEventListener('click', () => {
+    if (isAdmin()) { const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged)); }
+    calEditMonth++;
+    if (calEditMonth > 11) { calEditMonth = 0; calEditYear++; }
+    loadCalMonth();
+  });
+
   // --- Member Settings ---
-  const ROLES = ['一般', 'キャプテン', 'サブキャプテン', 'マネージャー', 'GM', 'SM'];
+  const ROLES = ['メンバー', '副部長', '部長'];
 
   function renderMemberSettings() {
+    const admin = isAdmin();
     const members = loadMembers();
     const list = document.getElementById('memberSettingsList');
-    list.innerHTML = members.map((m, i) =>
+    const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみ</div>';
+    const adminEditor = (localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') ? (localStorage.getItem(STORAGE_EDITOR) || '') : '';
+    list.innerHTML = notice + members.map((m, i) =>
       '<div class="ms-item">' +
-        '<span class="ms-name">' + escapeHTML(m.name) + '</span>' +
-        '<select class="ms-role" data-ms-idx="' + i + '">' +
-          ROLES.map(r => '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + r + '</option>').join('') +
-        '</select>' +
-        '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' +
+        '<span class="ms-name">' + escapeHTML(m.name) + (m.name === adminEditor ? ' <span style="font-size:10px;color:var(--primary);background:#ede9fe;border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700">管理者</span>' : '') + '</span>' +
+        (admin ?
+          '<select class="ms-role" data-ms-idx="' + i + '">' +
+            ROLES.map(r => '<option value="' + r + '"' + ((ROLES.includes(m.role) ? m.role : 'メンバー') === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+          '</select>' :
+          '<span class="ms-role">' + escapeHTML(ROLES.includes(m.role) ? m.role : 'メンバー') + '</span>') +
+        (admin ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
       '</div>'
     ).join('');
-    list.querySelectorAll('.ms-role').forEach(sel => {
-      sel.addEventListener('change', () => {
-        const ms = loadMembers();
-        ms[parseInt(sel.dataset.msIdx)].role = sel.value;
-        saveMembers(ms);
-      });
-    });
-    list.querySelectorAll('.ms-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ms = loadMembers();
-        const idx = parseInt(btn.dataset.msDelete);
-        if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
-          ms.splice(idx, 1);
+    const addRow = document.querySelector('.ms-add-row');
+    addRow.style.display = admin ? '' : 'none';
+    if (admin) {
+      list.querySelectorAll('.ms-role').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const ms = loadMembers();
+          ms[parseInt(sel.dataset.msIdx)].role = sel.value;
           saveMembers(ms);
-          renderMemberSettings();
-        }
+        });
       });
-    });
+      list.querySelectorAll('.ms-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ms = loadMembers();
+          const idx = parseInt(btn.dataset.msDelete);
+          if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
+            ms.splice(idx, 1);
+            saveMembers(ms);
+            renderMemberSettings();
+          }
+        });
+      });
+    }
   }
 
   document.getElementById('memberSettingsBtn').addEventListener('click', () => {
