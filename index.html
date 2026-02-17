@@ -1164,6 +1164,7 @@
       if (!groupName) { errEl.textContent = 'グループ名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyGroupName').focus(); return; }
       if (!adminName) { errEl.textContent = '管理者名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminName').focus(); return; }
       if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
+      if (!confirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\n\nよろしいですか？')) return;
       errEl.style.display = 'none';
       const teamId = generateTeamId();
       const t = teamId + ':';
