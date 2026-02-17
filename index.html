@@ -1229,6 +1229,22 @@
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   })();
 
+  // Guard: if logged in but not a member of this team, clear login and redirect to lobby
+  (function guardTeamMember() {
+    const loginType = localStorage.getItem('volley-login-type') || '';
+    if (!loginType) return; // not logged in, allow entry (will need to login)
+    const editorName = (localStorage.getItem('volley-editor') || '').trim();
+    if (!editorName) return;
+    let members = [];
+    try { members = JSON.parse(localStorage.getItem('volley-members')) || []; } catch {}
+    const isMember = members.some(m => m.name === editorName);
+    if (!isMember) {
+      localStorage.removeItem('volley-login-type');
+      localStorage.removeItem('volley-editor');
+      alert('このチームにあなたの登録がありません。\nログインしてください。');
+    }
+  })();
+
   window.onerror = function(msg, src, line, col) {
     alert('エラー: ' + msg + '\n行: ' + line + ' 列: ' + col);
   };
@@ -2055,11 +2071,12 @@
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
   modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
 
-  function addMember() {
+  async function addMember() {
     const name = nameInput.value.trim();
     if (!name) return;
     const members = loadMembers();
     if (members.some(m => m.name === name)) { alert('既に追加済み'); return; }
+    if (!(await customConfirm(name + 'さんを追加しますか？'))) return;
     members.push({name, role: '一般'});
     saveMembers(members);
     modal.classList.remove('show');
@@ -2476,12 +2493,13 @@
   document.getElementById('inviteCloseBtn').addEventListener('click', () => invitePopup.classList.remove('show'));
   invitePopup.addEventListener('click', e => { if (e.target === invitePopup) invitePopup.classList.remove('show'); });
 
-  document.getElementById('msAddBtn').addEventListener('click', () => {
+  document.getElementById('msAddBtn').addEventListener('click', async () => {
     const input = document.getElementById('msAddName');
     const name = input.value.trim();
     if (!name) return;
     const members = loadMembers();
     if (members.some(m => m.name === name)) { alert('既に追加済み'); return; }
+    if (!(await customConfirm(name + 'さんを追加しますか？'))) return;
     members.push({name, role: '一般'});
     saveMembers(members);
     input.value = '';
