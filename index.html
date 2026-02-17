@@ -1727,12 +1727,14 @@
       btn.addEventListener('click', async () => {
         if (render._isPastEvent) { return; }
         if (!requireEditor()) { alert('ログインしてください'); return; }
+        const name = btn.dataset.name;
+        const loggedIn = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        if (!isAdmin() && name !== loggedIn) { return; }
         if (btn.closest('.member-card').dataset.locked === '1') { return; }
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
           if (!(await customConfirm('締切を過ぎていますが更新しますか？'))) return;
         }
-        const name = btn.dataset.name;
         const status = btn.dataset.status;
         const dayData = getDayAttendance();
         const current = dayData[name] || 'none';
@@ -1748,8 +1750,10 @@
         } else {
           next = current === status ? 'none' : status;
         }
-        if (next === 'absent' && !(await customConfirm('欠席に変更しますか？'))) return;
-        if (next === 'present' && current === 'absent' && !(await customConfirm('出席に変更しますか？'))) return;
+        const CONFIRM_LABELS = { present: '出席しますか？', absent: '欠席しますか？', late: '遅刻にしますか？', early: '早退にしますか？', late_early: '遅刻・早退にしますか？' };
+        if (next !== 'none' && CONFIRM_LABELS[next]) {
+          if (!(await customConfirm(CONFIRM_LABELS[next]))) return;
+        }
         setMemberStatus(name, next);
         render._highlightName = name;
         render();
@@ -1760,11 +1764,14 @@
       input.addEventListener('change', () => {
         if (render._isPastEvent) { return; }
         if (!requireEditor()) { alert('ログインしてください'); return; }
+        const timeName = input.dataset.timeFor;
+        const loggedIn = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        if (!isAdmin() && timeName !== loggedIn) { return; }
         if (input.closest('.member-card').dataset.locked === '1') return;
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
         }
-        setMemberTime(input.dataset.timeFor, input.value, input.dataset.timeType);
+        setMemberTime(timeName, input.value, input.dataset.timeType);
       });
     });
 
