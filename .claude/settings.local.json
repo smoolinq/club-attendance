@@ -4,7 +4,8 @@
       "Bash(git -C /Volumes/CrucialX9/projects/mama-volley-attendance add .gitignore index.html index.bak.html)",
       "Bash(git -C /Volumes/CrucialX9/projects/mama-volley-attendance status)",
       "Bash(git -C /Volumes/CrucialX9/projects/mama-volley-attendance add -A)",
-      "Bash(git -C /Volumes/CrucialX9/projects/mama-volley-attendance commit -m \"backup\")"
+      "Bash(git -C /Volumes/CrucialX9/projects/mama-volley-attendance commit -m \"backup\")",
+      "Bash(brew upgrade:*)"
     ]
   }
 }

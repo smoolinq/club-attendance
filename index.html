@@ -1032,6 +1032,12 @@
     <button class="btn-cancel" id="calClearMonth" style="flex:0 0 auto;padding:10px 16px;font-size:13px">この月をクリア</button>
     <button class="btn-confirm" id="calEditSave" style="flex:1">保存</button>
   </div>
+  <div id="calCellMenu" style="display:none;position:absolute;z-index:10;background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.18);padding:6px;min-width:160px">
+    <button id="calMenuTime" style="display:block;width:100%;padding:10px 14px;border:none;background:none;text-align:left;font-size:14px;border-radius:10px;cursor:pointer">🕐 時間を変更</button>
+    <button id="calMenuMode" style="display:block;width:100%;padding:10px 14px;border:none;background:none;text-align:left;font-size:14px;border-radius:10px;cursor:pointer"></button>
+    <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+    <button id="calMenuDelete" style="display:block;width:100%;padding:10px 14px;border:none;background:none;text-align:left;font-size:14px;border-radius:10px;cursor:pointer;color:var(--absent)">🗑 削除</button>
+  </div>
 </div>
 
 <script>
@@ -2145,12 +2151,22 @@
   let calEditData = [];
   let calEditOtherMonths = [];
   let calEditYear, calEditMonth;
+  let _calSavedSnapshot = '';
+
+  function _calSnapshot() {
+    return JSON.stringify(calEditOtherMonths.concat(calEditData));
+  }
+
+  function _calHasChanges() {
+    return _calSnapshot() !== _calSavedSnapshot;
+  }
 
   function openCalendarEdit() {
     const sel = new Date(dateInput.value + 'T00:00:00');
     calEditYear = sel.getFullYear();
     calEditMonth = sel.getMonth();
     loadCalMonth();
+    _calSavedSnapshot = _calSnapshot();
     document.getElementById('calEditModal').classList.add('show');
   }
 
@@ -2181,7 +2197,7 @@
     const timeRow = document.getElementById('calTimeRow');
     timeRow.style.display = 'none';
     grid.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell => {
-      cell.addEventListener('click', async () => {
+      cell.addEventListener('click', () => {
         if (!isAdmin()) return;
         const dateStr = cell.dataset.caldate;
         const idx = calEditData.findIndex(s => s.date === dateStr);
@@ -2189,29 +2205,82 @@
           calEditData.push({date: dateStr, mode: 'practice'});
           renderCalGrid(year, month);
           showCalTime(dateStr);
-        } else if (calEditData[idx].mode === 'practice') {
-          const hasTime = !!calEditData[idx].startTime;
-          const msg = hasTime ? '試合に変更しますか？\nセットした開始時間はリセットされます。' : '試合に変更しますか？';
-          if (!(await customConfirm(msg))) return;
-          calEditData[idx].mode = 'match';
-          delete calEditData[idx].startTime;
-          renderCalGrid(year, month);
-          showCalTime(dateStr);
         } else {
-          const hasTime = !!calEditData[idx].startTime;
-          const msg = hasTime ? 'この予定を削除しますか？\nセットした開始時間も削除されます。' : 'この予定を削除しますか？';
-          if (!(await customConfirm(msg))) return;
-          calEditData.splice(idx, 1);
-          renderCalGrid(year, month);
+          showCalCellMenu(dateStr, cell);
         }
       });
     });
   }
 
-  function showCalTime(dateStr) {
+  let _calMenuDate = null;
+
+  function hideCalCellMenu() {
+    document.getElementById('calCellMenu').style.display = 'none';
+    _calMenuDate = null;
+  }
+
+  function showCalCellMenu(dateStr, cell) {
     const item = calEditData.find(s => s.date === dateStr);
     if (!item) return;
-    if (item.startTime) return; // already set, don't auto-open
+    _calMenuDate = dateStr;
+    const menu = document.getElementById('calCellMenu');
+    const otherMode = item.mode === 'practice' ? 'match' : 'practice';
+    document.getElementById('calMenuMode').textContent = '🔄 ' + MODE_NAMES[otherMode] + 'に変更';
+    const modalRect = document.getElementById('calEditModal').getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    let top = cellRect.bottom - modalRect.top + 4;
+    let left = cellRect.left - modalRect.left;
+    menu.style.display = '';
+    const menuW = menu.offsetWidth;
+    if (left + menuW > modalRect.width - 8) left = modalRect.width - menuW - 8;
+    if (left < 8) left = 8;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  }
+
+  document.getElementById('calMenuTime').addEventListener('click', () => {
+    const dateStr = _calMenuDate;
+    hideCalCellMenu();
+    if (dateStr) showCalTime(dateStr, true);
+  });
+
+  document.getElementById('calMenuMode').addEventListener('click', async () => {
+    const dateStr = _calMenuDate;
+    hideCalCellMenu();
+    if (!dateStr) return;
+    const idx = calEditData.findIndex(s => s.date === dateStr);
+    if (idx === -1) return;
+    const item = calEditData[idx];
+    const otherMode = item.mode === 'practice' ? 'match' : 'practice';
+    const hasTime = !!item.startTime;
+    const msg = MODE_NAMES[otherMode] + 'に変更しますか？' + (hasTime ? '\nセットした開始時間はリセットされます。' : '');
+    if (!(await customConfirm(msg))) return;
+    item.mode = otherMode;
+    delete item.startTime;
+    renderCalGrid(calEditYear, calEditMonth);
+  });
+
+  document.getElementById('calMenuDelete').addEventListener('click', async () => {
+    const dateStr = _calMenuDate;
+    hideCalCellMenu();
+    if (!dateStr) return;
+    const idx = calEditData.findIndex(s => s.date === dateStr);
+    if (idx === -1) return;
+    if (!(await customConfirm('この予定を削除しますか？'))) return;
+    calEditData.splice(idx, 1);
+    renderCalGrid(calEditYear, calEditMonth);
+  });
+
+  document.getElementById('calEditModal').addEventListener('click', (e) => {
+    if (_calMenuDate && !e.target.closest('#calCellMenu') && !e.target.closest('.cal-cell')) {
+      hideCalCellMenu();
+    }
+  });
+
+  function showCalTime(dateStr, forceOpen) {
+    const item = calEditData.find(s => s.date === dateStr);
+    if (!item) return;
+    if (!forceOpen && item.startTime) return; // already set, don't auto-open
     const timeRow = document.getElementById('calTimeRow');
     const d = new Date(dateStr + 'T00:00:00');
     document.getElementById('calTimeLabel').textContent = (d.getMonth()+1) + '/' + d.getDate() + ' ' + MODE_NAMES[item.mode] + ' 開始:';
@@ -2245,17 +2314,31 @@
   });
 
   function closeCalendarEdit() {
+    hideCalCellMenu();
+    document.getElementById('calTimeRow').style.display = 'none';
     document.getElementById('calEditModal').classList.remove('show');
   }
 
-  document.getElementById('calEditSave').addEventListener('click', () => {
+  function saveCalendar() {
     const merged = calEditOtherMonths.concat(calEditData);
     localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
+    _calSavedSnapshot = _calSnapshot();
     render();
+  }
+
+  document.getElementById('calEditSave').addEventListener('click', () => {
+    saveCalendar();
     closeCalendarEdit();
   });
 
-  document.getElementById('calEditClose').addEventListener('click', closeCalendarEdit);
+  document.getElementById('calEditClose').addEventListener('click', async () => {
+    if (_calHasChanges()) {
+      if (await customConfirm('保存されていない変更があります。\n保存しますか？')) {
+        saveCalendar();
+      }
+    }
+    closeCalendarEdit();
+  });
 
   document.getElementById('calClearMonth').addEventListener('click', async () => {
     if (calEditData.length === 0) return;
