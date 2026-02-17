@@ -833,17 +833,13 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
     <h2>締切設定</h2>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:10px">
-      <span style="font-size:14px;font-weight:600">締切を有効にする</span>
-      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
-        <input type="checkbox" id="dlEnabledToggle" style="opacity:0;width:0;height:0">
-        <span id="dlToggleTrack" style="position:absolute;inset:0;background:#ccc;border-radius:24px;transition:.2s"></span>
-        <span id="dlToggleThumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s"></span>
-      </label>
-    </div>
-    <div id="dlFieldsWrap">
-    <div class="deadline-field">
+    <div class="deadline-field" style="margin-bottom:4px">
       <label>練習</label>
+      <label style="position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;flex-shrink:0">
+        <input type="checkbox" class="dl-mode-toggle" data-dl-mode="practice" style="opacity:0;width:0;height:0">
+        <span class="dl-toggle-track" style="position:absolute;inset:0;background:#ccc;border-radius:22px;transition:.2s"></span>
+        <span class="dl-toggle-thumb" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s"></span>
+      </label>
       <input type="number" id="dlPracticeDays" min="0" max="30" value="1">
       <span>日前</span>
       <select id="dlPracticeHour"></select>
@@ -851,11 +847,15 @@
     </div>
     <div class="deadline-field">
       <label>試合</label>
+      <label style="position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;flex-shrink:0">
+        <input type="checkbox" class="dl-mode-toggle" data-dl-mode="match" style="opacity:0;width:0;height:0">
+        <span class="dl-toggle-track" style="position:absolute;inset:0;background:#ccc;border-radius:22px;transition:.2s"></span>
+        <span class="dl-toggle-thumb" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s"></span>
+      </label>
       <input type="number" id="dlMatchDays" min="0" max="30" value="3">
       <span>日前</span>
       <select id="dlMatchHour"></select>
       <span>時</span>
-    </div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="settingsCancel">キャンセル</button>
@@ -1221,13 +1221,20 @@
   const STATUS_NAMES = { late: '遅刻', early: '早退' };
   const MODE_NAMES = { practice: '練習', match: '試合' };
 
-  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21 }, match: { daysBefore: 3, hour: 21 }, enabled: true };
+  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21, enabled: true }, match: { daysBefore: 3, hour: 21, enabled: true } };
   const STORAGE_DEADLINE = 'volley-deadline';
 
   function getDeadlineRules() {
     const saved = localStorage.getItem(STORAGE_DEADLINE);
-    const rules = saved ? JSON.parse(saved) : DEADLINE_DEFAULTS;
-    if (rules.enabled === undefined) rules.enabled = true;
+    const rules = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEADLINE_DEFAULTS));
+    // migrate from global enabled to per-mode enabled
+    if (rules.enabled !== undefined) {
+      if (rules.practice.enabled === undefined) rules.practice.enabled = rules.enabled;
+      if (rules.match.enabled === undefined) rules.match.enabled = rules.enabled;
+      delete rules.enabled;
+    }
+    if (rules.practice.enabled === undefined) rules.practice.enabled = true;
+    if (rules.match.enabled === undefined) rules.match.enabled = true;
     return rules;
   }
 
@@ -1503,8 +1510,8 @@
 
     // --- Context Bar ---
     const dlRulesAll = getDeadlineRules();
-    const dlEnabled = dlRulesAll.enabled;
     const rule = dlRulesAll[currentMode];
+    const dlEnabled = rule.enabled;
     const selected = new Date(dateInput.value + 'T00:00:00');
     const now = new Date();
     let dlUrgent = false;
@@ -1534,7 +1541,8 @@
         dlText;
     }
 
-    const readOnly = render._isPastDeadline && !isAdmin();
+    const isPastEvent = dateInput.value < todayStr();
+    const readOnly = isPastEvent || (render._isPastDeadline && !isAdmin());
 
     // --- Members ---
     const members = loadMembers();
@@ -1617,7 +1625,7 @@
 
     // --- Cards ---
     const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
-    const readOnlyMsg = dateInput.value < todayStr() ? 'このイベントは終了しています' : 'このイベントの締切は過ぎています';
+    const readOnlyMsg = isPastEvent ? 'このイベントは終了しています' : 'このイベントの締切は過ぎています';
     let cardsHTML = readOnly ? `<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">${readOnlyMsg}</div></div>` : '';
     cardsHTML += members.map((m, idx) => {
       const name = m.name;
@@ -1994,23 +2002,29 @@
     }
   });
 
-  function updateDlToggleUI(on) {
-    const track = document.getElementById('dlToggleTrack');
-    const thumb = document.getElementById('dlToggleThumb');
-    const wrap = document.getElementById('dlFieldsWrap');
+  function updateDlRowToggle(toggle) {
+    const row = toggle.closest('.deadline-field');
+    const track = toggle.nextElementSibling;
+    const thumb = track.nextElementSibling;
+    const on = toggle.checked;
     track.style.background = on ? 'var(--primary)' : '#ccc';
-    thumb.style.left = on ? '22px' : '2px';
-    wrap.style.opacity = on ? '1' : '0.4';
-    wrap.style.pointerEvents = on ? '' : 'none';
+    thumb.style.left = on ? '18px' : '2px';
+    row.querySelectorAll('input[type="number"], select').forEach(el => {
+      el.style.opacity = on ? '1' : '0.4';
+      el.disabled = !on;
+    });
   }
-  document.getElementById('dlEnabledToggle').addEventListener('change', function() {
-    updateDlToggleUI(this.checked);
+  document.querySelectorAll('.dl-mode-toggle').forEach(toggle => {
+    toggle.addEventListener('change', () => updateDlRowToggle(toggle));
   });
 
   function loadSettingsToModal() {
     const rules = getDeadlineRules();
-    document.getElementById('dlEnabledToggle').checked = rules.enabled;
-    updateDlToggleUI(rules.enabled);
+    document.querySelectorAll('.dl-mode-toggle').forEach(toggle => {
+      const mode = toggle.dataset.dlMode;
+      toggle.checked = rules[mode].enabled;
+      updateDlRowToggle(toggle);
+    });
     document.getElementById('dlPracticeDays').value = rules.practice.daysBefore;
     document.getElementById('dlPracticeHour').value = rules.practice.hour;
     document.getElementById('dlMatchDays').value = rules.match.daysBefore;
@@ -2025,13 +2039,16 @@
   document.getElementById('settingsCancel').addEventListener('click', () => settingsModal.classList.remove('show'));
 
   document.getElementById('settingsSave').addEventListener('click', () => {
+    const toggles = {};
+    document.querySelectorAll('.dl-mode-toggle').forEach(t => { toggles[t.dataset.dlMode] = t.checked; });
     const rules = {
-      enabled: document.getElementById('dlEnabledToggle').checked,
       practice: {
+        enabled: toggles.practice,
         daysBefore: parseInt(document.getElementById('dlPracticeDays').value) || DEADLINE_DEFAULTS.practice.daysBefore,
         hour: parseInt(document.getElementById('dlPracticeHour').value)
       },
       match: {
+        enabled: toggles.match,
         daysBefore: parseInt(document.getElementById('dlMatchDays').value) || DEADLINE_DEFAULTS.match.daysBefore,
         hour: parseInt(document.getElementById('dlMatchHour').value)
       }
