@@ -1470,6 +1470,7 @@
     }
     stampEdit(all[key], name);
     saveAttendance(all);
+    syncToServer();
   }
 
   function setMemberTime(name, time, timeType) {
@@ -1487,6 +1488,7 @@
     }
     stampEdit(all[key], name);
     saveAttendance(all);
+    syncToServer();
   }
 
   // --- Date ---
@@ -2157,7 +2159,7 @@
     saveMembers(members);
     modal.classList.remove('show');
     render();
-    syncToServer({events:{},members: members.map(m => m.name)});
+    syncToServer();
   }
 
   // --- Settings Modal ---
@@ -2421,6 +2423,7 @@
     localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     _calSavedSnapshot = _calSnapshot();
     render();
+    syncToServer();
   }
 
   document.getElementById('calEditSave').addEventListener('click', () => {
@@ -2589,7 +2592,7 @@
     saveMembers(members);
     input.value = '';
     renderMemberSettings();
-    syncToServer({events:{},members: members.map(m => m.name)});
+    syncToServer();
   });
 
   document.getElementById('msAddName').addEventListener('keydown', e => {
@@ -2627,6 +2630,7 @@
         const entry = rt.find(t => t.id === _teamParam);
         if (entry) { entry.name = v; localStorage.setItem('volley-recent-teams', JSON.stringify(rt)); }
       } catch {}
+      syncToServer();
       close();
     }
     function close() { row.remove(); appTitleEl.style.display = ''; }
@@ -2635,39 +2639,88 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); });
   });
 
+  // --- Server Sync ---
+  const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
+
+  function buildSyncData() {
+    return {
+      title: localStorage.getItem(STORAGE_TITLE) || '',
+      members: loadMembers(),
+      schedule: loadSchedule(),
+      deadline: getDeadlineRules(),
+      adminName: getAdminName(),
+      attendancePractice: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.practice) || '{}'),
+      attendanceMatch: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.match) || '{}')
+    };
+  }
+
+  async function syncToServer() {
+    try {
+      const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(buildSyncData())
+      });
+      return res.ok;
+    } catch(e) { return false; }
+  }
+
+  async function syncFromServer() {
+    try {
+      const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam));
+      if (!res.ok) return null;
+      return await res.json();
+    } catch(e) { return null; }
+  }
+
+  function applyServerData(data) {
+    if (!data) return false;
+    let changed = false;
+    if (data.title && !localStorage.getItem(STORAGE_TITLE)) {
+      localStorage.setItem(STORAGE_TITLE, data.title);
+      changed = true;
+    }
+    if (Array.isArray(data.members) && data.members.length > 0 && !localStorage.getItem(STORAGE_MEMBERS)) {
+      localStorage.setItem(STORAGE_MEMBERS, JSON.stringify(data.members));
+      changed = true;
+    }
+    if (Array.isArray(data.schedule) && !localStorage.getItem(STORAGE_SCHEDULE)) {
+      localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(data.schedule));
+      changed = true;
+    }
+    if (data.deadline && !localStorage.getItem(STORAGE_DEADLINE)) {
+      localStorage.setItem(STORAGE_DEADLINE, JSON.stringify(data.deadline));
+      changed = true;
+    }
+    if (data.adminName && !localStorage.getItem(STORAGE_ADMIN_NAME)) {
+      localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName);
+      changed = true;
+    }
+    if (data.attendancePractice && Object.keys(data.attendancePractice).length > 0 && !localStorage.getItem(ATTENDANCE_KEYS.practice)) {
+      localStorage.setItem(ATTENDANCE_KEYS.practice, JSON.stringify(data.attendancePractice));
+      changed = true;
+    }
+    if (data.attendanceMatch && Object.keys(data.attendanceMatch).length > 0 && !localStorage.getItem(ATTENDANCE_KEYS.match)) {
+      localStorage.setItem(ATTENDANCE_KEYS.match, JSON.stringify(data.attendanceMatch));
+      changed = true;
+    }
+    return changed;
+  }
+
   // --- Init ---
   applyMode();
 
   (async () => {
     const data = await syncFromServer();
-    console.log("SYNC FROM SERVER:", data);
-    if (data && Array.isArray(data.members)) {
+    if (applyServerData(data)) {
+      // Reload UI with server data
+      const titleEl = document.getElementById('appTitle');
+      if (titleEl) titleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
+      render();
     }
+    // Always push local state to server
+    syncToServer();
   })();
-
-  function saveToServer(data){
-    const team = new URL(location.href).searchParams.get("team") || "abc123";
-    return fetch("https://club-attendance-api.smoolinq.workers.dev/?team="+encodeURIComponent(team),{
-      method:"POST",
-      headers:{ "content-type":"application/json"},
-      body: JSON.stringify(data)
-    });
-  }
-
-  async function syncFromServer() {
-    try {
-      const team = new URL(location.href).searchParams.get("team") || "abc123";
-      const res = await fetch("https://club-attendance-api.smoolinq.workers.dev/?team=" + encodeURIComponent(team));
-      return await res.json();
-    } catch(e) { return null; }
-  }
-
-  async function syncToServer(data) {
-    try {
-      const res = await saveToServer(data);
-      return res.ok;
-    } catch(e) { return false; }
-  }
 </script>
 </body>
 </html>
