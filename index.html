@@ -1048,6 +1048,25 @@
     const RECENT_KEY = 'volley-recent-teams';
     function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
 
+    // Lobby custom confirm
+    function lobbyConfirm(msg) {
+      return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px';
+        ov.innerHTML = '<div style="max-width:300px;width:100%;text-align:center;background:#fff;border-radius:16px;padding:24px 20px 18px">' +
+          '<div style="font-size:15px;font-weight:600;color:#1e1b4b;margin-bottom:20px;line-height:1.5;white-space:pre-line"></div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button style="flex:1;padding:10px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">いいえ</button>' +
+            '<button style="flex:1;padding:10px;border:none;border-radius:12px;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;cursor:pointer">はい</button>' +
+          '</div></div>';
+        ov.querySelector('div > div').textContent = msg;
+        const [noBtn, yesBtn] = ov.querySelectorAll('button');
+        yesBtn.addEventListener('click', () => { ov.remove(); resolve(true); });
+        noBtn.addEventListener('click', () => { ov.remove(); resolve(false); });
+        document.body.appendChild(ov);
+      });
+    }
+
     const lobby = document.createElement('div');
     lobby.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg)';
 
@@ -1147,7 +1166,15 @@
       const v = document.getElementById('lobbyTeamInput').value.trim();
       if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
       const members = localStorage.getItem(v + ':volley-members');
-      if (!members) { alert('このグループIDは存在しません'); return; }
+      if (!members) {
+        const errBox = document.getElementById('lobbyTeamInput');
+        errBox.style.borderColor = '#ef4444';
+        errBox.placeholder = 'このグループIDは存在しません';
+        errBox.value = '';
+        errBox.focus();
+        setTimeout(() => { errBox.style.borderColor = ''; errBox.placeholder = 'グループID'; }, 3000);
+        return;
+      }
       location.href = '?team=' + encodeURIComponent(v);
     });
     document.getElementById('lobbyTeamInput').addEventListener('keydown', e => {
@@ -1158,7 +1185,7 @@
     document.getElementById('lobbyAdminPw').addEventListener('input', e => {
       e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
     });
-    document.getElementById('lobbyCreateBtn').addEventListener('click', () => {
+    document.getElementById('lobbyCreateBtn').addEventListener('click', async () => {
       const errEl = document.getElementById('lobbyCreateError');
       const groupName = document.getElementById('lobbyGroupName').value.trim();
       const adminName = document.getElementById('lobbyAdminName').value.trim();
@@ -1166,7 +1193,7 @@
       if (!groupName) { errEl.textContent = 'グループ名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyGroupName').focus(); return; }
       if (!adminName) { errEl.textContent = '管理者名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminName').focus(); return; }
       if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
-      if (!confirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\n\nよろしいですか？')) return;
+      if (!(await lobbyConfirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\n\nよろしいですか？'))) return;
       errEl.style.display = 'none';
       const teamId = generateTeamId();
       const t = teamId + ':';
