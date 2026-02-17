@@ -1163,6 +1163,7 @@
       localStorage.setItem('volley-login-type', 'admin');
       localStorage.setItem('volley-editor', adminName);
       localStorage.setItem('volley-members', JSON.stringify([{name: adminName, role: 'メンバー'}]));
+      localStorage.setItem('volley-schedule', '[]');
       location.href = '?team=' + encodeURIComponent(teamId);
     });
     document.getElementById('lobbyAdminName').addEventListener('keydown', e => {
@@ -1313,9 +1314,7 @@
   function loadSchedule() {
     const raw = localStorage.getItem(STORAGE_SCHEDULE);
     if (raw) return JSON.parse(raw);
-    const def = generateDefaultSchedule();
-    localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(def));
-    return def;
+    return [];
   }
 
   // --- Data ---
@@ -2182,7 +2181,7 @@
     const timeRow = document.getElementById('calTimeRow');
     timeRow.style.display = 'none';
     grid.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell => {
-      cell.addEventListener('click', () => {
+      cell.addEventListener('click', async () => {
         if (!isAdmin()) return;
         const dateStr = cell.dataset.caldate;
         const idx = calEditData.findIndex(s => s.date === dateStr);
@@ -2191,11 +2190,17 @@
           renderCalGrid(year, month);
           showCalTime(dateStr);
         } else if (calEditData[idx].mode === 'practice') {
+          const hasTime = !!calEditData[idx].startTime;
+          const msg = hasTime ? '試合に変更しますか？\nセットした開始時間はリセットされます。' : '試合に変更しますか？';
+          if (!(await customConfirm(msg))) return;
           calEditData[idx].mode = 'match';
           delete calEditData[idx].startTime;
           renderCalGrid(year, month);
           showCalTime(dateStr);
         } else {
+          const hasTime = !!calEditData[idx].startTime;
+          const msg = hasTime ? 'この予定を削除しますか？\nセットした開始時間も削除されます。' : 'この予定を削除しますか？';
+          if (!(await customConfirm(msg))) return;
           calEditData.splice(idx, 1);
           renderCalGrid(year, month);
         }
