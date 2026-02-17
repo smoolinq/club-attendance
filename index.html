@@ -1163,13 +1163,14 @@
       if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
       errEl.style.display = 'none';
       const teamId = generateTeamId();
+      const t = teamId + ':';
       // Set up localStorage for the new team
-      localStorage.setItem('volley-admin-pw', adminPw);
-      localStorage.setItem('volley-admin-name', adminName);
-      localStorage.setItem('volley-login-type', 'admin');
-      localStorage.setItem('volley-editor', adminName);
-      localStorage.setItem('volley-members', JSON.stringify([{name: adminName, role: 'メンバー'}]));
-      localStorage.setItem('volley-schedule', '[]');
+      localStorage.setItem(t + 'volley-admin-pw', adminPw);
+      localStorage.setItem(t + 'volley-admin-name', adminName);
+      localStorage.setItem(t + 'volley-login-type', 'admin');
+      localStorage.setItem(t + 'volley-editor', adminName);
+      localStorage.setItem(t + 'volley-members', JSON.stringify([{name: adminName, role: 'メンバー'}]));
+      localStorage.setItem(t + 'volley-schedule', '[]');
       location.href = '?team=' + encodeURIComponent(teamId);
     });
     document.getElementById('lobbyAdminName').addEventListener('keydown', e => {
@@ -1223,24 +1224,25 @@
     const existing = recent.find(t => t.id === _teamParam);
     const prevName = existing ? existing.name : undefined;
     recent = recent.filter(t => t.id !== _teamParam);
-    const savedTitle = localStorage.getItem('volley-app-title');
+    const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
     recent.unshift({ id: _teamParam, name: savedTitle || prevName || undefined, lastVisited: new Date().toISOString() });
     if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   })();
 
-  // Guard: if logged in but not a member of this team, clear login and redirect to lobby
+  // Guard: if logged in but not a member of this team, clear login
   (function guardTeamMember() {
-    const loginType = localStorage.getItem('volley-login-type') || '';
-    if (!loginType) return; // not logged in, allow entry (will need to login)
-    const editorName = (localStorage.getItem('volley-editor') || '').trim();
+    const tp = _teamParam + ':';
+    const loginType = localStorage.getItem(tp + 'volley-login-type') || '';
+    if (!loginType) return;
+    const editorName = (localStorage.getItem(tp + 'volley-editor') || '').trim();
     if (!editorName) return;
     let members = [];
-    try { members = JSON.parse(localStorage.getItem('volley-members')) || []; } catch {}
+    try { members = JSON.parse(localStorage.getItem(tp + 'volley-members')) || []; } catch {}
     const isMember = members.some(m => m.name === editorName);
     if (!isMember) {
-      localStorage.removeItem('volley-login-type');
-      localStorage.removeItem('volley-editor');
+      localStorage.removeItem(tp + 'volley-login-type');
+      localStorage.removeItem(tp + 'volley-editor');
       alert('このチームにあなたの登録がありません。\nログインしてください。');
     }
   })();
@@ -1249,29 +1251,32 @@
     alert('エラー: ' + msg + '\n行: ' + line + ' 列: ' + col);
   };
 
-  const STORAGE_MEMBERS = 'volley-members';
-  const STORAGE_MODE = 'volley-mode';
-  const STORAGE_EDITOR = 'volley-editor';
-  const STORAGE_ADMINS = 'volley-admins';
-  const STORAGE_ADMIN_NAME = 'volley-admin-name';
+  const _T = _teamParam + ':';
+  const STORAGE_MEMBERS = _T + 'volley-members';
+  const STORAGE_MODE = _T + 'volley-mode';
+  const STORAGE_EDITOR = _T + 'volley-editor';
+  const STORAGE_ADMINS = _T + 'volley-admins';
+  const STORAGE_ADMIN_NAME = _T + 'volley-admin-name';
 
   function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
 
+  const STORAGE_LOGIN_TYPE = _T + 'volley-login-type';
+
   // Migration: if admin is logged in but STORAGE_ADMIN_NAME not set, populate it
-  if (!localStorage.getItem(STORAGE_ADMIN_NAME) && localStorage.getItem('volley-login-type') === 'admin') {
+  if (!localStorage.getItem(STORAGE_ADMIN_NAME) && localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') {
     const ed = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
     if (ed) localStorage.setItem(STORAGE_ADMIN_NAME, ed);
   }
 
   function isAdmin() {
-    return localStorage.getItem('volley-login-type') === 'admin';
+    return localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin';
   }
 
-  const ATTENDANCE_KEYS = { practice: 'volley-attendance-practice', match: 'volley-attendance-match' };
+  const ATTENDANCE_KEYS = { practice: _T + 'volley-attendance-practice', match: _T + 'volley-attendance-match' };
   let currentMode = localStorage.getItem(STORAGE_MODE) || 'practice';
 
   (function migrate() {
-    const legacy = localStorage.getItem('volley-attendance');
+    const legacy = localStorage.getItem(_T + 'volley-attendance');
     if (legacy && !localStorage.getItem(ATTENDANCE_KEYS.practice)) {
       localStorage.setItem(ATTENDANCE_KEYS.practice, legacy);
     }
@@ -1286,7 +1291,7 @@
   const MODE_NAMES = { practice: '練習', match: '試合' };
 
   const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21, enabled: true }, match: { daysBefore: 3, hour: 21, enabled: true } };
-  const STORAGE_DEADLINE = 'volley-deadline';
+  const STORAGE_DEADLINE = _T + 'volley-deadline';
 
   function getDeadlineRules() {
     const saved = localStorage.getItem(STORAGE_DEADLINE);
@@ -1305,7 +1310,7 @@
   const DEFAULT_MEMBERS = ['田中', '鈴木', '佐藤', '山田', '中村'];
 
   // --- Schedule ---
-  const STORAGE_SCHEDULE = 'volley-schedule';
+  const STORAGE_SCHEDULE = _T + 'volley-schedule';
   const DAYS = ['日','月','火','水','木','金','土'];
 
   function generateDefaultSchedule() {
@@ -1358,7 +1363,7 @@
   function getDateKey() { return dateInput.value; }
   function getDayAttendance() { return loadAttendance()[getDateKey()] || {}; }
 
-  function requireEditor() { return !!localStorage.getItem(STORAGE_EDITOR) || localStorage.getItem('volley-login-type') === 'admin'; }
+  function requireEditor() { return !!localStorage.getItem(STORAGE_EDITOR) || localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin'; }
 
   function customConfirm(msg) {
     return new Promise(resolve => {
@@ -1856,9 +1861,8 @@
   }
 
   // --- Login & Admin ---
-  const STORAGE_ADMIN_PW = 'volley-admin-pw';
+  const STORAGE_ADMIN_PW = _T + 'volley-admin-pw';
 
-  const STORAGE_LOGIN_TYPE = 'volley-login-type'; // 'member' | 'admin' | ''
   const loginModal = document.getElementById('loginModal');
   const adminModal = document.getElementById('adminModal');
 
@@ -2056,8 +2060,8 @@
     } catch {}
     // Clear all team data
     [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME,
-     STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, 'volley-app-title',
-     ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, 'volley-attendance'].forEach(k => localStorage.removeItem(k));
+     STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, _T + 'volley-app-title',
+     ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
     deleteGroupModal.classList.remove('show');
     location.href = location.pathname;
   });
@@ -2512,7 +2516,7 @@
   });
 
   // --- Editable Title ---
-  const STORAGE_TITLE = 'volley-app-title';
+  const STORAGE_TITLE = _T + 'volley-app-title';
   const DEFAULT_TITLE = 'ママさんバレー 出席管理';
   const appTitleEl = document.getElementById('appTitle');
   appTitleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
