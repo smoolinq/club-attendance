@@ -2696,60 +2696,67 @@
   function applyServerData(data) {
     if (!data) return false;
     let changed = false;
-    if (data.title && !localStorage.getItem(STORAGE_TITLE)) {
-      localStorage.setItem(STORAGE_TITLE, data.title);
-      changed = true;
+    // Title: always sync from server
+    if (data.title) {
+      const local = localStorage.getItem(STORAGE_TITLE) || '';
+      if (data.title !== local) { localStorage.setItem(STORAGE_TITLE, data.title); changed = true; }
     }
-    // Merge members: add server-side members not in local
+    // Members: merge by name, server role wins
     if (Array.isArray(data.members) && data.members.length > 0) {
       const local = loadMembers();
-      const localNames = new Set(local.map(m => m.name));
-      const newMembers = data.members.filter(m => !localNames.has(m.name));
-      if (newMembers.length > 0) {
-        saveMembers([...local, ...newMembers]);
-        changed = true;
-      } else if (!localStorage.getItem(STORAGE_MEMBERS)) {
-        saveMembers(data.members);
+      const localMap = new Map(local.map(m => [m.name, m]));
+      let updated = false;
+      for (const sm of data.members) {
+        const lm = localMap.get(sm.name);
+        if (!lm) { local.push(sm); updated = true; }
+        else if (sm.role && sm.role !== lm.role) { lm.role = sm.role; updated = true; }
+      }
+      if (updated) { saveMembers(local); changed = true; }
+    }
+    // Schedule: merge, server wins for same date
+    if (Array.isArray(data.schedule) && data.schedule.length > 0) {
+      const local = JSON.parse(localStorage.getItem(STORAGE_SCHEDULE) || '[]');
+      const localMap = new Map(local.map(s => [s.date, s]));
+      let updated = false;
+      for (const ss of data.schedule) {
+        const ls = localMap.get(ss.date);
+        if (!ls) { local.push(ss); updated = true; }
+        else if (JSON.stringify(ss) !== JSON.stringify(ls)) {
+          Object.assign(ls, ss); updated = true;
+        }
+      }
+      if (updated) {
+        local.sort((a, b) => a.date.localeCompare(b.date));
+        localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(local));
         changed = true;
       }
     }
-    if (Array.isArray(data.schedule) && !localStorage.getItem(STORAGE_SCHEDULE)) {
-      localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(data.schedule));
-      changed = true;
+    // Deadline: always sync from server
+    if (data.deadline) {
+      const local = localStorage.getItem(STORAGE_DEADLINE);
+      const sv = JSON.stringify(data.deadline);
+      if (sv !== local) { localStorage.setItem(STORAGE_DEADLINE, sv); changed = true; }
     }
-    if (data.deadline && !localStorage.getItem(STORAGE_DEADLINE)) {
-      localStorage.setItem(STORAGE_DEADLINE, JSON.stringify(data.deadline));
-      changed = true;
+    // Admin name: always sync from server
+    if (data.adminName) {
+      const local = localStorage.getItem(STORAGE_ADMIN_NAME) || '';
+      if (data.adminName !== local) { localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName); changed = true; }
     }
-    if (data.adminName && !localStorage.getItem(STORAGE_ADMIN_NAME)) {
-      localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName);
-      changed = true;
-    }
-    // Merge attendance: per-member, newer _editedAt wins
+    // Attendance: per-member, newer _editedAt wins
     function mergeAttendance(serverAtt, key) {
       if (!serverAtt || Object.keys(serverAtt).length === 0) return;
       const localAtt = JSON.parse(localStorage.getItem(key) || '{}');
       let merged = false;
       for (const date in serverAtt) {
         if (!localAtt[date]) { localAtt[date] = serverAtt[date]; merged = true; continue; }
-        // Collect member names from server data for this date
         const memberNames = new Set();
         for (const f in serverAtt[date]) {
-          const base = f.replace(/_(time|lateTime|earlyTime|editedBy|editedAt)$/, '');
-          memberNames.add(base);
+          memberNames.add(f.replace(/_(time|lateTime|earlyTime|editedBy|editedAt)$/, ''));
         }
         for (const name of memberNames) {
           const serverTime = serverAtt[date][name + '_editedAt'] || '';
           const localTime = localAtt[date][name + '_editedAt'] || '';
-          if (serverTime > localTime) {
-            // Server is newer — copy all fields for this member
-            for (const f in serverAtt[date]) {
-              if (f === name || f.startsWith(name + '_')) {
-                localAtt[date][f] = serverAtt[date][f]; merged = true;
-              }
-            }
-          } else if (!localTime && !(name in localAtt[date])) {
-            // No local data at all for this member
+          if (serverTime > localTime || (!localTime && !(name in localAtt[date]))) {
             for (const f in serverAtt[date]) {
               if (f === name || f.startsWith(name + '_')) {
                 localAtt[date][f] = serverAtt[date][f]; merged = true;
