@@ -1140,12 +1140,12 @@
       const join = document.getElementById('joinSection');
       const showing = sec.style.display === 'none';
       sec.style.display = showing ? '' : 'none';
-      join.style.display = showing ? 'none' : '';
+      join.style.display = showing ? 'none' : 'flex';
     });
 
     document.getElementById('backToJoinBtn').addEventListener('click', () => {
       document.getElementById('createTeamSection').style.display = 'none';
-      document.getElementById('joinSection').style.display = '';
+      document.getElementById('joinSection').style.display = 'flex';
     });
 
     document.getElementById('lobbyTeamInput').focus();
