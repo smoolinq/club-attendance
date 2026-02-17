@@ -1146,6 +1146,8 @@
     document.getElementById('lobbyGoBtn').addEventListener('click', () => {
       const v = document.getElementById('lobbyTeamInput').value.trim();
       if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
+      const members = localStorage.getItem(v + ':volley-members');
+      if (!members) { alert('このグループIDは存在しません'); return; }
       location.href = '?team=' + encodeURIComponent(v);
     });
     document.getElementById('lobbyTeamInput').addEventListener('keydown', e => {
