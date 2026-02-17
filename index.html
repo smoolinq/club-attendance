@@ -1342,7 +1342,7 @@
   const STATUS_NAMES = { late: '遅刻', early: '早退' };
   const MODE_NAMES = { practice: '練習', match: '試合' };
 
-  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21, enabled: true }, match: { daysBefore: 3, hour: 21, enabled: true } };
+  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21, enabled: false }, match: { daysBefore: 3, hour: 21, enabled: false } };
   const STORAGE_DEADLINE = _T + 'volley-deadline';
 
   function getDeadlineRules() {
