@@ -2018,7 +2018,10 @@
   appSettingsModal.addEventListener('click', e => { if (e.target === appSettingsModal) appSettingsModal.classList.remove('show'); });
 
   // Back to lobby
-  document.getElementById('backToLobbyBtn').addEventListener('click', () => {
+  document.getElementById('backToLobbyBtn').addEventListener('click', async () => {
+    if (!(await customConfirm('ログアウトしてロビーに戻ります。\nよろしいですか？'))) return;
+    localStorage.removeItem(STORAGE_LOGIN_TYPE);
+    localStorage.removeItem(STORAGE_EDITOR);
     location.href = location.pathname;
   });
 
