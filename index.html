@@ -577,7 +577,7 @@
   }
   .cal-edit-header h2 { font-size: 17px; font-weight: 700; }
 
-  .cal-edit-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .cal-edit-body { overflow-y: auto; padding: 16px; }
 
   .cal-grid {
     display: grid;
@@ -958,7 +958,7 @@
     <h2>メンバー管理</h2>
     <button class="ms-close-btn" id="memberSettingsClose">✕</button>
   </div>
-  <div class="cal-edit-body">
+  <div class="cal-edit-body" style="flex:1">
     <div id="memberSettingsList"></div>
     <div class="ms-add-row">
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
@@ -1008,13 +1008,11 @@
 
 <div class="cal-edit-overlay" id="calEditModal">
   <div class="cal-edit-header" style="flex-wrap:wrap">
-    <div style="width:100%;text-align:center;font-size:13px;font-weight:700;color:var(--text-light);margin-bottom:2px;display:flex;align-items:center;justify-content:center">
-      <span style="flex:1;text-align:center">予定の編集</span>
-      <button class="ms-close-btn" id="calEditClose">✕</button>
-    </div>
+    <div style="width:100%;text-align:center;font-size:14px;font-weight:700;color:#fff;margin-bottom:4px">予定の編集</div>
     <button class="settings-btn" id="calPrevMonth" style="font-size:20px">‹</button>
     <h2 id="calEditTitle" style="flex:1;text-align:center"></h2>
     <button class="settings-btn" id="calNextMonth" style="font-size:20px">›</button>
+    <button class="ms-close-btn" id="calEditClose" style="margin-left:8px">✕</button>
   </div>
   <div class="cal-edit-body">
     <div class="cal-grid" id="calGrid"></div>
@@ -1129,9 +1127,11 @@
       const list = document.createElement('div');
       list.style.cssText = 'display:flex;flex-direction:column;gap:6px';
       recent.forEach(t => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px';
         const item = document.createElement('a');
         item.href = '?team=' + encodeURIComponent(t.id);
-        item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);font-size:14px;transition:box-shadow .15s';
+        item.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);font-size:14px;transition:box-shadow .15s';
         item.onmouseenter = () => item.style.boxShadow = '0 2px 8px rgba(91,33,182,0.12)';
         item.onmouseleave = () => item.style.boxShadow = 'none';
         const left = document.createElement('div');
@@ -1145,7 +1145,22 @@
         }
         item.appendChild(left);
         item.appendChild(time);
-        list.appendChild(item);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '×';
+        delBtn.style.cssText = 'flex-shrink:0;width:32px;height:32px;border:none;border-radius:10px;background:transparent;color:var(--text-light);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center';
+        delBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const name = (t.name || t.id);
+          if (!(await lobbyConfirm('「' + name + '」を一覧から削除しますか？'))) return;
+          let r = getRecent().filter(x => x.id !== t.id);
+          localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+          row.remove();
+          if (r.length === 0) { section.remove(); document.getElementById('orRow').style.display = 'none'; }
+        });
+        row.appendChild(item);
+        row.appendChild(delBtn);
+        list.appendChild(row);
       });
       section.appendChild(list);
       lobby.appendChild(section);
@@ -2179,6 +2194,7 @@
 
   // --- Deadline Button ---
   document.getElementById('gearBtn').addEventListener('click', () => {
+    if (!isAdmin()) { alert('管理者のみ変更できます'); return; }
     loadSettingsToModal();
     settingsModal.classList.add('show');
   });
@@ -2513,6 +2529,14 @@
     if (!confirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は全て失われます。\n管理者パスワードは初期値(0000)にリセットされます。\n\nよろしいですか？')) return;
     // Reset admin password to 0000
     localStorage.removeItem(STORAGE_ADMIN_PW);
+    // Update member roles
+    const ms = loadMembers();
+    const oldAdmin = getAdminName();
+    ms.forEach(m => {
+      if (m.name === oldAdmin) m.role = 'メンバー';
+      if (m.name === newAdminName) m.role = '管理者';
+    });
+    saveMembers(ms);
     // Update persistent admin name
     localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
     // Logout current admin → become member
@@ -2528,7 +2552,7 @@
   const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
     const teamId = _teamParam;
-    const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
+    const url = 'https://club-attendance.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
     document.getElementById('inviteTeamId').textContent = teamId;
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
