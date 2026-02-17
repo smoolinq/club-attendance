@@ -865,6 +865,13 @@
         <select id="memberNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px"></select>
         <button class="btn-confirm" id="memberLoginBtn" style="width:100%;padding:10px 16px">ログイン</button>
       </div>
+      <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">新しいメンバーとして参加</label>
+        <input type="text" id="newMemberNameInput" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box">
+        <button class="btn-confirm" id="newMemberJoinBtn" style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
       <div style="margin-bottom:8px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">管理者用パスワード</label>
         <div style="display:flex;gap:6px">
@@ -1987,7 +1994,7 @@
   }
 
   document.getElementById('loginCancel').addEventListener('click', () => loginModal.classList.remove('show'));
-  loginModal.addEventListener('click', e => { if (e.target === loginModal) loginModal.classList.remove('show'); });
+  loginModal.addEventListener('click', e => { if (e.target === loginModal && document.getElementById('loginCancel').style.display !== 'none') loginModal.classList.remove('show'); });
 
   // Member login
   document.getElementById('memberLoginBtn').addEventListener('click', () => {
@@ -1996,8 +2003,26 @@
     localStorage.setItem(STORAGE_EDITOR, name);
     localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
     loginModal.classList.remove('show');
+    document.getElementById('loginCancel').style.display = '';
     updateLoginStatus();
     render();
+  });
+
+  document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newMemberNameInput').value.trim();
+    if (!name) { showLoginError('名前を入力してください'); return; }
+    const members = loadMembers();
+    if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
+    if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
+    members.push({ name: name, role: 'メンバー' });
+    saveMembers(members);
+    localStorage.setItem(STORAGE_EDITOR, name);
+    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+    loginModal.classList.remove('show');
+    document.getElementById('loginCancel').style.display = '';
+    updateLoginStatus();
+    render();
+    syncToServer();
   });
 
   document.getElementById('memberSelectBack').addEventListener('click', () => {
@@ -2715,6 +2740,20 @@
     }
     // Always push local state to server
     syncToServer();
+    // Force login if not logged in
+    if (!localStorage.getItem(STORAGE_LOGIN_TYPE)) {
+      document.getElementById('adminPwInput').value = '';
+      document.getElementById('newMemberNameInput').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      document.getElementById('loginStep1').style.display = '';
+      document.getElementById('loginStep2').style.display = 'none';
+      const members = loadMembers();
+      const adminN = getAdminName();
+      const sel = document.getElementById('memberNameSelect');
+      sel.innerHTML = members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      document.getElementById('loginCancel').style.display = 'none';
+      loginModal.classList.add('show');
+    }
   })();
 </script>
 </body>
