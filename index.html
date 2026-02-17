@@ -2571,6 +2571,7 @@
     document.getElementById('memberSettingsModal').classList.remove('show');
     updateLoginStatus();
     render();
+    syncToServer();
     alert('管理者権限を解除しました。\n「' + newAdminName + '」さんに管理者パスワード(0000)でログインするよう伝えてください。');
   });
 
@@ -2670,6 +2671,7 @@
       schedule: loadSchedule(),
       deadline: getDeadlineRules(),
       adminName: getAdminName(),
+      adminPw: localStorage.getItem(STORAGE_ADMIN_PW) || '0000',
       attendancePractice: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.practice) || '{}'),
       attendanceMatch: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.match) || '{}')
     };
@@ -2742,6 +2744,11 @@
     if (data.adminName) {
       const local = localStorage.getItem(STORAGE_ADMIN_NAME) || '';
       if (data.adminName !== local) { localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName); changed = true; }
+    }
+    // Admin password: always sync from server
+    if (data.adminPw) {
+      const local = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
+      if (data.adminPw !== local) { localStorage.setItem(STORAGE_ADMIN_PW, data.adminPw); changed = true; }
     }
     // Attendance: per-member, newer _editedAt wins
     function mergeAttendance(serverAtt, key) {
