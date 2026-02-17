@@ -991,14 +991,14 @@
   <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
     <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待コード</div>
     <div style="background:#fff;border:2px dashed var(--primary-light);border-radius:14px;padding:16px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">チームID</div>
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">グループID</div>
       <div id="inviteTeamId" style="font-size:20px;font-weight:800;letter-spacing:2px;color:var(--primary);user-select:all"></div>
     </div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">招待URL</div>
       <div id="inviteUrl" style="font-size:12px;word-break:break-all;color:var(--primary);user-select:all;line-height:1.5"></div>
     </div>
-    <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてチームに参加させてね</p>
+    <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてグループに参加させてね</p>
     <div style="display:flex;gap:8px">
       <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
       <button class="btn-cancel" id="inviteCloseBtn" style="flex:1;padding:10px;font-size:14px">閉じる</button>
@@ -1058,7 +1058,7 @@
     const hero = document.createElement('div');
     hero.style.cssText = 'text-align:center;margin-bottom:28px';
     hero.innerHTML = '<div style="font-size:13px;color:var(--text-light);letter-spacing:2px;margin-bottom:6px">WELCOME</div>' +
-      '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px">チームIDを入力してください</div>' +
+      '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px">グループIDを入力してください</div>' +
       '<div style="font-size:12px;color:var(--text-light)">招待リンクを開くと自動で参加できます</div>';
     joinSection.appendChild(hero);
 
@@ -1066,10 +1066,10 @@
     const form = document.createElement('div');
     form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
     form.innerHTML = '<div style="display:flex;gap:8px">' +
-      '<input id="lobbyTeamInput" type="text" placeholder="チームID" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
+      '<input id="lobbyTeamInput" type="text" placeholder="グループID" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
       '<button id="lobbyGoBtn" style="padding:10px 20px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">参加</button>' +
       '</div>' +
-      '<button id="createTeamBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にチームを作る</button>';
+      '<button id="createTeamBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
     joinSection.appendChild(form);
 
     const orRow = document.createElement('div');
@@ -1089,8 +1089,9 @@
     const createSection = document.createElement('div');
     createSection.style.cssText = 'margin-bottom:32px';
     createSection.innerHTML =
-      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">新規チーム作成</div>' +
+      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">新規グループ作成</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<input id="lobbyGroupName" type="text" placeholder="グループ名" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
         '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
         '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px">' +
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
@@ -1105,7 +1106,7 @@
     if (recent.length > 0) {
       const section = document.createElement('div');
       section.style.cssText = 'width:100%;max-width:360px';
-      section.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">最近のチーム</div>';
+      section.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">最近のグループ</div>';
       const list = document.createElement('div');
       list.style.cssText = 'display:flex;flex-direction:column;gap:6px';
       recent.forEach(t => {
@@ -1157,21 +1158,32 @@
     });
     document.getElementById('lobbyCreateBtn').addEventListener('click', () => {
       const errEl = document.getElementById('lobbyCreateError');
+      const groupName = document.getElementById('lobbyGroupName').value.trim();
       const adminName = document.getElementById('lobbyAdminName').value.trim();
       const adminPw = document.getElementById('lobbyAdminPw').value;
+      if (!groupName) { errEl.textContent = 'グループ名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyGroupName').focus(); return; }
       if (!adminName) { errEl.textContent = '管理者名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminName').focus(); return; }
       if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
       errEl.style.display = 'none';
       const teamId = generateTeamId();
       const t = teamId + ':';
       // Set up localStorage for the new team
+      localStorage.setItem(t + 'volley-app-title', groupName);
       localStorage.setItem(t + 'volley-admin-pw', adminPw);
       localStorage.setItem(t + 'volley-admin-name', adminName);
       localStorage.setItem(t + 'volley-login-type', 'admin');
       localStorage.setItem(t + 'volley-editor', adminName);
       localStorage.setItem(t + 'volley-members', JSON.stringify([{name: adminName, role: '管理者'}]));
       localStorage.setItem(t + 'volley-schedule', '[]');
+      // Record to recent teams with group name
+      const RECENT_KEY = 'volley-recent-teams';
+      let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
+      recent.unshift({ id: teamId, name: groupName, lastVisited: new Date().toISOString() });
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
       location.href = '?team=' + encodeURIComponent(teamId);
+    });
+    document.getElementById('lobbyGroupName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('lobbyAdminName').focus();
     });
     document.getElementById('lobbyAdminName').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('lobbyAdminPw').focus();
@@ -1243,7 +1255,7 @@
     if (!isMember) {
       localStorage.removeItem(tp + 'volley-login-type');
       localStorage.removeItem(tp + 'volley-editor');
-      alert('このチームにあなたの登録がありません。\nログインしてください。');
+      alert('このグループにあなたの登録がありません。\nログインしてください。');
     }
   })();
 
@@ -2019,9 +2031,11 @@
 
   // Back to lobby
   document.getElementById('backToLobbyBtn').addEventListener('click', async () => {
-    if (!(await customConfirm('ログアウトしてロビーに戻ります。\nよろしいですか？'))) return;
-    localStorage.removeItem(STORAGE_LOGIN_TYPE);
-    localStorage.removeItem(STORAGE_EDITOR);
+    if (localStorage.getItem(STORAGE_LOGIN_TYPE)) {
+      if (!(await customConfirm('ログアウトしてロビーに戻ります。\nよろしいですか？'))) return;
+      localStorage.removeItem(STORAGE_LOGIN_TYPE);
+      localStorage.removeItem(STORAGE_EDITOR);
+    }
     location.href = location.pathname;
   });
 
