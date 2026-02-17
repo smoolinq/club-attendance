@@ -924,7 +924,8 @@
       <div style="font-size:13px;color:var(--text-light)">バージョン</div>
       <div id="appVersionDisplay" style="font-size:15px;font-weight:700;color:var(--text);margin-top:2px"></div>
     </div>
-    <div style="padding-top:16px;border-top:1px solid var(--border)">
+    <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+      <button id="backToLobbyBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">ロビーに戻る</button>
       <button id="deleteGroupBtn" style="width:100%;padding:12px;border:2px solid var(--absent);border-radius:12px;background:#fff;color:var(--absent);font-size:14px;font-weight:600;cursor:pointer">グループを削除する</button>
     </div>
     <div class="modal-actions" style="margin-top:16px">
@@ -1006,11 +1007,14 @@
 </div>
 
 <div class="cal-edit-overlay" id="calEditModal">
-  <div class="cal-edit-header">
+  <div class="cal-edit-header" style="flex-wrap:wrap">
+    <div style="width:100%;text-align:center;font-size:13px;font-weight:700;color:var(--text-light);margin-bottom:2px;display:flex;align-items:center;justify-content:center">
+      <span style="flex:1;text-align:center">予定の編集</span>
+      <button class="ms-close-btn" id="calEditClose">✕</button>
+    </div>
     <button class="settings-btn" id="calPrevMonth" style="font-size:20px">‹</button>
     <h2 id="calEditTitle" style="flex:1;text-align:center"></h2>
     <button class="settings-btn" id="calNextMonth" style="font-size:20px">›</button>
-    <button class="ms-close-btn" id="calEditClose" style="margin-left:8px">✕</button>
   </div>
   <div class="cal-edit-body">
     <div class="cal-grid" id="calGrid"></div>
@@ -1024,7 +1028,8 @@
       <span class="leg-match">試合</span>
     </div>
   </div>
-  <div class="cal-edit-actions">
+  <div class="cal-edit-actions" style="gap:8px">
+    <button class="btn-cancel" id="calClearMonth" style="flex:0 0 auto;padding:10px 16px;font-size:13px">この月をクリア</button>
     <button class="btn-confirm" id="calEditSave" style="flex:1">保存</button>
   </div>
 </div>
@@ -1154,6 +1159,7 @@
       const teamId = generateTeamId();
       // Set up localStorage for the new team
       localStorage.setItem('volley-admin-pw', adminPw);
+      localStorage.setItem('volley-admin-name', adminName);
       localStorage.setItem('volley-login-type', 'admin');
       localStorage.setItem('volley-editor', adminName);
       localStorage.setItem('volley-members', JSON.stringify([{name: adminName, role: 'メンバー'}]));
@@ -1224,6 +1230,15 @@
   const STORAGE_MODE = 'volley-mode';
   const STORAGE_EDITOR = 'volley-editor';
   const STORAGE_ADMINS = 'volley-admins';
+  const STORAGE_ADMIN_NAME = 'volley-admin-name';
+
+  function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
+
+  // Migration: if admin is logged in but STORAGE_ADMIN_NAME not set, populate it
+  if (!localStorage.getItem(STORAGE_ADMIN_NAME) && localStorage.getItem('volley-login-type') === 'admin') {
+    const ed = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+    if (ed) localStorage.setItem(STORAGE_ADMIN_NAME, ed);
+  }
 
   function isAdmin() {
     return localStorage.getItem('volley-login-type') === 'admin';
@@ -1855,9 +1870,9 @@
       document.getElementById('loginStep1').style.display = '';
       document.getElementById('loginStep2').style.display = 'none';
       const members = loadMembers();
-      const adminName = (localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') ? (localStorage.getItem(STORAGE_EDITOR) || '') : '';
+      const adminN = getAdminName();
       const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = members.filter(m => m.name !== adminName).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      sel.innerHTML = members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
       loginModal.classList.add('show');
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
@@ -1977,6 +1992,11 @@
   document.getElementById('appSettingsClose').addEventListener('click', () => appSettingsModal.classList.remove('show'));
   appSettingsModal.addEventListener('click', e => { if (e.target === appSettingsModal) appSettingsModal.classList.remove('show'); });
 
+  // Back to lobby
+  document.getElementById('backToLobbyBtn').addEventListener('click', () => {
+    location.href = location.pathname;
+  });
+
   // Delete group
   document.getElementById('deleteGroupBtn').addEventListener('click', () => {
     if (!isAdmin()) { alert('管理者のみ実行できます'); return; }
@@ -2014,7 +2034,7 @@
       localStorage.setItem('volley-recent-teams', JSON.stringify(rt.filter(t => t.id !== _teamParam)));
     } catch {}
     // Clear all team data
-    [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW,
+    [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME,
      STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, 'volley-app-title',
      ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, 'volley-attendance'].forEach(k => localStorage.removeItem(k));
     deleteGroupModal.classList.remove('show');
@@ -2232,6 +2252,13 @@
 
   document.getElementById('calEditClose').addEventListener('click', closeCalendarEdit);
 
+  document.getElementById('calClearMonth').addEventListener('click', async () => {
+    if (calEditData.length === 0) return;
+    if (!(await customConfirm(calEditYear + '年' + (calEditMonth + 1) + '月の予定をすべてクリアしますか？'))) return;
+    calEditData = [];
+    renderCalGrid(calEditYear, calEditMonth);
+  });
+
   document.getElementById('calPrevMonth').addEventListener('click', () => {
     const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     calEditMonth--;
@@ -2254,10 +2281,10 @@
     const members = loadMembers();
     const list = document.getElementById('memberSettingsList');
     const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみ</div>';
-    const adminEditor = (localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') ? (localStorage.getItem(STORAGE_EDITOR) || '') : '';
+    const adminN = getAdminName();
     list.innerHTML = notice + members.map((m, i) =>
       '<div class="ms-item">' +
-        '<span class="ms-name">' + escapeHTML(m.name) + (m.name === adminEditor ? ' <span style="font-size:10px;color:var(--primary);background:#ede9fe;border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700">管理者</span>' : '') + '</span>' +
+        '<span class="ms-name">' + escapeHTML(m.name) + (m.name === adminN ? ' <span style="font-size:10px;color:var(--primary);background:#ede9fe;border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700">管理者</span>' : '') + '</span>' +
         (admin ?
           '<select class="ms-role" data-ms-idx="' + i + '">' +
             ROLES.map(r => '<option value="' + r + '"' + ((ROLES.includes(m.role) ? m.role : 'メンバー') === r ? ' selected' : '') + '>' + r + '</option>').join('') +
@@ -2327,6 +2354,8 @@
     if (!confirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は全て失われます。\n管理者パスワードは初期値(0000)にリセットされます。\n\nよろしいですか？')) return;
     // Reset admin password to 0000
     localStorage.removeItem(STORAGE_ADMIN_PW);
+    // Update persistent admin name
+    localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
     // Logout current admin → become member
     localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
     document.getElementById('changeAdminPanel').style.display = 'none';
