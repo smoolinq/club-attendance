@@ -964,6 +964,15 @@
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
     <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待コードを表示</button>
+    <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
+    <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
+      <div id="changeAdminList"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-cancel" id="changeAdminCancel" style="flex:1;padding:8px;font-size:13px">キャンセル</button>
+        <button id="changeAdminConfirm" style="flex:1;padding:8px;border:none;border-radius:12px;background:var(--late);color:#fff;font-size:13px;font-weight:600;cursor:pointer">変更する</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1814,8 +1823,9 @@
       document.getElementById('loginStep1').style.display = '';
       document.getElementById('loginStep2').style.display = 'none';
       const members = loadMembers();
+      const adminName = (localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') ? (localStorage.getItem(STORAGE_EDITOR) || '') : '';
       const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      sel.innerHTML = members.filter(m => m.name !== adminName).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
       loginModal.classList.add('show');
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
@@ -2228,6 +2238,8 @@
     ).join('');
     const addRow = document.querySelector('.ms-add-row');
     addRow.style.display = admin ? '' : 'none';
+    document.getElementById('changeAdminBtn').style.display = admin ? '' : 'none';
+    document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
       list.querySelectorAll('.ms-role').forEach(sel => {
         sel.addEventListener('change', () => {
@@ -2258,6 +2270,40 @@
   document.getElementById('memberSettingsClose').addEventListener('click', () => {
     document.getElementById('memberSettingsModal').classList.remove('show');
     render();
+  });
+
+  // --- Change Admin ---
+  document.getElementById('changeAdminBtn').addEventListener('click', () => {
+    const panel = document.getElementById('changeAdminPanel');
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    const members = loadMembers();
+    const currentAdmin = localStorage.getItem(STORAGE_EDITOR) || '';
+    const listEl = document.getElementById('changeAdminList');
+    listEl.innerHTML = members.filter(m => m.name !== currentAdmin).map(m =>
+      '<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:14px">' +
+        '<input type="radio" name="newAdmin" value="' + escapeHTML(m.name) + '" style="width:18px;height:18px;accent-color:var(--late)">' +
+        escapeHTML(m.name) +
+      '</label>'
+    ).join('');
+    panel.style.display = '';
+  });
+  document.getElementById('changeAdminCancel').addEventListener('click', () => {
+    document.getElementById('changeAdminPanel').style.display = 'none';
+  });
+  document.getElementById('changeAdminConfirm').addEventListener('click', () => {
+    const selected = document.querySelector('input[name="newAdmin"]:checked');
+    if (!selected) { alert('メンバーを選択してください'); return; }
+    const newAdminName = selected.value;
+    if (!confirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は全て失われます。\n管理者パスワードは初期値(0000)にリセットされます。\n\nよろしいですか？')) return;
+    // Reset admin password to 0000
+    localStorage.removeItem(STORAGE_ADMIN_PW);
+    // Logout current admin → become member
+    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+    document.getElementById('changeAdminPanel').style.display = 'none';
+    document.getElementById('memberSettingsModal').classList.remove('show');
+    updateLoginStatus();
+    render();
+    alert('管理者権限を解除しました。\n「' + newAdminName + '」さんに管理者パスワード(0000)でログインするよう伝えてください。');
   });
 
   // --- Invite Code (popup) ---
