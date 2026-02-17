@@ -2725,15 +2725,37 @@
       localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName);
       changed = true;
     }
-    // Merge attendance: add server-side entries not in local
+    // Merge attendance: per-member, newer _editedAt wins
     function mergeAttendance(serverAtt, key) {
       if (!serverAtt || Object.keys(serverAtt).length === 0) return;
       const localAtt = JSON.parse(localStorage.getItem(key) || '{}');
       let merged = false;
       for (const date in serverAtt) {
         if (!localAtt[date]) { localAtt[date] = serverAtt[date]; merged = true; continue; }
-        for (const field in serverAtt[date]) {
-          if (!(field in localAtt[date])) { localAtt[date][field] = serverAtt[date][field]; merged = true; }
+        // Collect member names from server data for this date
+        const memberNames = new Set();
+        for (const f in serverAtt[date]) {
+          const base = f.replace(/_(time|lateTime|earlyTime|editedBy|editedAt)$/, '');
+          memberNames.add(base);
+        }
+        for (const name of memberNames) {
+          const serverTime = serverAtt[date][name + '_editedAt'] || '';
+          const localTime = localAtt[date][name + '_editedAt'] || '';
+          if (serverTime > localTime) {
+            // Server is newer — copy all fields for this member
+            for (const f in serverAtt[date]) {
+              if (f === name || f.startsWith(name + '_')) {
+                localAtt[date][f] = serverAtt[date][f]; merged = true;
+              }
+            }
+          } else if (!localTime && !(name in localAtt[date])) {
+            // No local data at all for this member
+            for (const f in serverAtt[date]) {
+              if (f === name || f.startsWith(name + '_')) {
+                localAtt[date][f] = serverAtt[date][f]; merged = true;
+              }
+            }
+          }
         }
       }
       if (merged) { localStorage.setItem(key, JSON.stringify(localAtt)); changed = true; }
