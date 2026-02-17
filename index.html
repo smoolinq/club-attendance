@@ -1750,7 +1750,7 @@
         } else {
           next = current === status ? 'none' : status;
         }
-        const CONFIRM_LABELS = { present: '出席しますか？', absent: '欠席しますか？', late: '遅刻にしますか？', early: '早退にしますか？', late_early: '遅刻・早退にしますか？' };
+        const CONFIRM_LABELS = { present: '出席しますか？', absent: '欠席しますか？', late: '遅刻しますか？', early: '早退しますか？', late_early: '遅刻・早退しますか？' };
         if (next !== 'none' && CONFIRM_LABELS[next]) {
           if (!(await customConfirm(CONFIRM_LABELS[next]))) return;
         }
