@@ -833,6 +833,15 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
     <h2>締切設定</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:10px">
+      <span style="font-size:14px;font-weight:600">締切を有効にする</span>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+        <input type="checkbox" id="dlEnabledToggle" style="opacity:0;width:0;height:0">
+        <span id="dlToggleTrack" style="position:absolute;inset:0;background:#ccc;border-radius:24px;transition:.2s"></span>
+        <span id="dlToggleThumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s"></span>
+      </label>
+    </div>
+    <div id="dlFieldsWrap">
     <div class="deadline-field">
       <label>練習</label>
       <input type="number" id="dlPracticeDays" min="0" max="30" value="1">
@@ -846,6 +855,7 @@
       <span>日前</span>
       <select id="dlMatchHour"></select>
       <span>時</span>
+    </div>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="settingsCancel">キャンセル</button>
@@ -1211,12 +1221,14 @@
   const STATUS_NAMES = { late: '遅刻', early: '早退' };
   const MODE_NAMES = { practice: '練習', match: '試合' };
 
-  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21 }, match: { daysBefore: 3, hour: 21 } };
+  const DEADLINE_DEFAULTS = { practice: { daysBefore: 1, hour: 21 }, match: { daysBefore: 3, hour: 21 }, enabled: true };
   const STORAGE_DEADLINE = 'volley-deadline';
 
   function getDeadlineRules() {
     const saved = localStorage.getItem(STORAGE_DEADLINE);
-    return saved ? JSON.parse(saved) : DEADLINE_DEFAULTS;
+    const rules = saved ? JSON.parse(saved) : DEADLINE_DEFAULTS;
+    if (rules.enabled === undefined) rules.enabled = true;
+    return rules;
   }
 
   const DEFAULT_MEMBERS = ['田中', '鈴木', '佐藤', '山田', '中村'];
@@ -1490,28 +1502,36 @@
     }
 
     // --- Context Bar ---
-    const rule = getDeadlineRules()[currentMode];
+    const dlRulesAll = getDeadlineRules();
+    const dlEnabled = dlRulesAll.enabled;
+    const rule = dlRulesAll[currentMode];
     const selected = new Date(dateInput.value + 'T00:00:00');
-    const deadlineDate = new Date(selected);
-    deadlineDate.setDate(deadlineDate.getDate() - rule.daysBefore);
-    const dlMonth = deadlineDate.getMonth() + 1;
-    const dlDay = deadlineDate.getDate();
-    const ruleLabel = rule.daysBefore === 1 ? '前日' : `${rule.daysBefore}日前`;
-
-    const deadlineTime = new Date(deadlineDate);
-    deadlineTime.setHours(rule.hour, 0, 0, 0);
     const now = new Date();
-    render._isPastDeadline = now > deadlineTime;
-    const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
-    const dlUrgent = isDeadlineToday || render._isPastDeadline;
+    let dlUrgent = false;
+    if (dlEnabled) {
+      const deadlineDate = new Date(selected);
+      deadlineDate.setDate(deadlineDate.getDate() - rule.daysBefore);
+      var dlMonth = deadlineDate.getMonth() + 1;
+      var dlDay = deadlineDate.getDate();
+      const deadlineTime = new Date(deadlineDate);
+      deadlineTime.setHours(rule.hour, 0, 0, 0);
+      render._isPastDeadline = now > deadlineTime;
+      const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
+      dlUrgent = isDeadlineToday || render._isPastDeadline;
+    } else {
+      render._isPastDeadline = false;
+    }
 
     {
       const selDate = new Date(dateInput.value + 'T00:00:00');
+      const dlText = dlEnabled
+        ? `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`
+        : '<span class="context-deadline" style="opacity:0.4">締切 OFF</span>';
       contextBar.innerHTML =
         `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>` +
         `<span class="context-mode context-mode-${currentMode}">${MODE_NAMES[currentMode]}</span>` +
         (scheduleEntry && scheduleEntry.startTime ? `<span style="font-size:13px;font-weight:600">${scheduleEntry.startTime}〜</span>` : '') +
-        `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`;
+        dlText;
     }
 
     const readOnly = render._isPastDeadline && !isAdmin();
@@ -1974,8 +1994,23 @@
     }
   });
 
+  function updateDlToggleUI(on) {
+    const track = document.getElementById('dlToggleTrack');
+    const thumb = document.getElementById('dlToggleThumb');
+    const wrap = document.getElementById('dlFieldsWrap');
+    track.style.background = on ? 'var(--primary)' : '#ccc';
+    thumb.style.left = on ? '22px' : '2px';
+    wrap.style.opacity = on ? '1' : '0.4';
+    wrap.style.pointerEvents = on ? '' : 'none';
+  }
+  document.getElementById('dlEnabledToggle').addEventListener('change', function() {
+    updateDlToggleUI(this.checked);
+  });
+
   function loadSettingsToModal() {
     const rules = getDeadlineRules();
+    document.getElementById('dlEnabledToggle').checked = rules.enabled;
+    updateDlToggleUI(rules.enabled);
     document.getElementById('dlPracticeDays').value = rules.practice.daysBefore;
     document.getElementById('dlPracticeHour').value = rules.practice.hour;
     document.getElementById('dlMatchDays').value = rules.match.daysBefore;
@@ -1991,6 +2026,7 @@
 
   document.getElementById('settingsSave').addEventListener('click', () => {
     const rules = {
+      enabled: document.getElementById('dlEnabledToggle').checked,
       practice: {
         daysBefore: parseInt(document.getElementById('dlPracticeDays').value) || DEADLINE_DEFAULTS.practice.daysBefore,
         hour: parseInt(document.getElementById('dlPracticeHour').value)
