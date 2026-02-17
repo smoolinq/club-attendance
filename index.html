@@ -1000,6 +1000,7 @@
     <button class="settings-btn" id="calPrevMonth" style="font-size:20px">‹</button>
     <h2 id="calEditTitle" style="flex:1;text-align:center"></h2>
     <button class="settings-btn" id="calNextMonth" style="font-size:20px">›</button>
+    <button class="ms-close-btn" id="calEditClose" style="margin-left:8px">✕</button>
   </div>
   <div class="cal-edit-body">
     <div class="cal-grid" id="calGrid"></div>
@@ -1013,10 +1014,8 @@
       <span class="leg-match">試合</span>
     </div>
   </div>
-  <div id="calEditNotice" style="display:none;text-align:center;font-size:12px;color:#999;padding:4px 0 0">管理者のみ変更できます</div>
   <div class="cal-edit-actions">
-    <button class="btn-cancel" id="calEditCancel">キャンセル</button>
-    <button class="btn-confirm" id="calEditSave">保存</button>
+    <button class="btn-confirm" id="calEditSave" style="flex:1">保存</button>
   </div>
 </div>
 
@@ -2101,7 +2100,6 @@
     calEditYear = sel.getFullYear();
     calEditMonth = sel.getMonth();
     loadCalMonth();
-    document.getElementById('calEditNotice').style.display = isAdmin() ? 'none' : 'block';
     document.getElementById('calEditModal').classList.add('show');
   }
 
@@ -2194,24 +2192,23 @@
   }
 
   document.getElementById('calEditSave').addEventListener('click', () => {
-    if (!isAdmin()) { alert('管理者のみ変更できます'); return; }
     const merged = calEditOtherMonths.concat(calEditData);
     localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     render();
     closeCalendarEdit();
   });
 
-  document.getElementById('calEditCancel').addEventListener('click', closeCalendarEdit);
+  document.getElementById('calEditClose').addEventListener('click', closeCalendarEdit);
 
   document.getElementById('calPrevMonth').addEventListener('click', () => {
-    if (isAdmin()) { const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged)); }
+    const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     calEditMonth--;
     if (calEditMonth < 0) { calEditMonth = 11; calEditYear--; }
     loadCalMonth();
   });
 
   document.getElementById('calNextMonth').addEventListener('click', () => {
-    if (isAdmin()) { const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged)); }
+    const merged = calEditOtherMonths.concat(calEditData); localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(merged));
     calEditMonth++;
     if (calEditMonth > 11) { calEditMonth = 0; calEditYear++; }
     loadCalMonth();
