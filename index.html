@@ -1135,17 +1135,22 @@
       if (e.key === 'Enter') document.getElementById('lobbyCreateBtn').click();
     });
 
+    const JOIN_CSS = 'display:flex;flex-direction:column;align-items:center;width:100%';
+    const JOIN_CSS_HIDDEN = 'display:none';
+    const CREATE_CSS = 'width:100%;max-width:360px';
+    const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:360px';
+
     document.getElementById('createTeamBtn').addEventListener('click', () => {
       const sec = document.getElementById('createTeamSection');
       const join = document.getElementById('joinSection');
       const showing = sec.style.display === 'none';
-      sec.style.display = showing ? '' : 'none';
-      join.style.display = showing ? 'none' : 'flex';
+      sec.style.cssText = showing ? CREATE_CSS : CREATE_CSS_HIDDEN;
+      join.style.cssText = showing ? JOIN_CSS_HIDDEN : JOIN_CSS;
     });
 
     document.getElementById('backToJoinBtn').addEventListener('click', () => {
-      document.getElementById('createTeamSection').style.display = 'none';
-      document.getElementById('joinSection').style.display = 'flex';
+      document.getElementById('createTeamSection').style.cssText = CREATE_CSS_HIDDEN;
+      document.getElementById('joinSection').style.cssText = JOIN_CSS;
     });
 
     document.getElementById('lobbyTeamInput').focus();
