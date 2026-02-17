@@ -2029,11 +2029,21 @@
   document.getElementById('adminLoginBtn').addEventListener('click', () => {
     const pw = document.getElementById('adminPwInput').value;
     if (pw !== (localStorage.getItem(STORAGE_ADMIN_PW) || '0000')) { showLoginError('パスワードが違います'); return; }
-    const members = loadMembers();
-    const sel = document.getElementById('adminNameSelect');
-    sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-    document.getElementById('loginStep1').style.display = 'none';
-    document.getElementById('loginStep2').style.display = '';
+    const adminN = getAdminName();
+    if (adminN) {
+      localStorage.setItem(STORAGE_EDITOR, adminN);
+      localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
+      loginModal.classList.remove('show');
+      updateLoginStatus();
+      render();
+    } else {
+      // Fallback: no admin name stored, show member select
+      const members = loadMembers();
+      const sel = document.getElementById('adminNameSelect');
+      sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      document.getElementById('loginStep1').style.display = 'none';
+      document.getElementById('loginStep2').style.display = '';
+    }
   });
   document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('adminLoginBtn').click(); });
 
