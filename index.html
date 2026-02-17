@@ -953,24 +953,17 @@
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">招待コードを表示</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="inviteModal">
-  <div class="modal" style="text-align:center">
-    <h2 style="margin-bottom:16px">招待コード</h2>
-    <div style="margin-bottom:14px">
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">チームID</div>
-      <div id="inviteTeamId" style="font-size:18px;font-weight:700;letter-spacing:1px;color:var(--text);background:var(--bg);padding:10px;border-radius:10px;user-select:all"></div>
-    </div>
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:4px">招待URL</div>
-      <div id="inviteUrl" style="font-size:13px;word-break:break-all;color:var(--primary);background:var(--bg);padding:10px;border-radius:10px;user-select:all"></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px">URLをコピー</button>
-      <button class="btn-cancel" id="inviteCloseBtn" style="flex:1;padding:10px">閉じる</button>
+    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待コードを表示</button>
+    <div id="inviteInline" style="display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:10px;text-align:center">
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:2px">チームID</div>
+        <div id="inviteTeamId" style="font-size:15px;font-weight:700;letter-spacing:1px;color:var(--text);user-select:all"></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:2px">招待URL</div>
+        <div id="inviteUrl" style="font-size:11px;word-break:break-all;color:var(--primary);user-select:all"></div>
+      </div>
+      <button class="btn-confirm" id="inviteCopyBtn" style="width:100%;padding:8px;font-size:13px">URLをコピー</button>
     </div>
   </div>
 </div>
@@ -2203,14 +2196,16 @@
     render();
   });
 
-  // --- Invite Code ---
-  const inviteModal = document.getElementById('inviteModal');
+  // --- Invite Code (inline) ---
+  const inviteInline = document.getElementById('inviteInline');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
+    const visible = inviteInline.style.display !== 'none';
+    if (visible) { inviteInline.style.display = 'none'; return; }
     const teamId = _teamParam;
     const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
     document.getElementById('inviteTeamId').textContent = teamId;
     document.getElementById('inviteUrl').textContent = url;
-    inviteModal.classList.add('show');
+    inviteInline.style.display = '';
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
@@ -2220,8 +2215,6 @@
       setTimeout(() => { btn.textContent = 'URLをコピー'; }, 1500);
     });
   });
-  document.getElementById('inviteCloseBtn').addEventListener('click', () => inviteModal.classList.remove('show'));
-  inviteModal.addEventListener('click', e => { if (e.target === inviteModal) inviteModal.classList.remove('show'); });
 
   document.getElementById('msAddBtn').addEventListener('click', () => {
     const input = document.getElementById('msAddName');
