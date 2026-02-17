@@ -2167,6 +2167,9 @@
     calEditMonth = sel.getMonth();
     loadCalMonth();
     _calSavedSnapshot = _calSnapshot();
+    const admin = isAdmin();
+    document.getElementById('calEditSave').style.display = admin ? '' : 'none';
+    document.getElementById('calClearMonth').style.display = admin ? '' : 'none';
     document.getElementById('calEditModal').classList.add('show');
   }
 
@@ -2378,7 +2381,7 @@
             ROLES.map(r => '<option value="' + r + '"' + ((ROLES.includes(m.role) ? m.role : 'メンバー') === r ? ' selected' : '') + '>' + r + '</option>').join('') +
           '</select>' :
           '<span class="ms-role">' + escapeHTML(ROLES.includes(m.role) ? m.role : 'メンバー') + '</span>') +
-        (admin ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
+        (admin && m.name !== adminN ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
       '</div>'
     ).join('');
     const addRow = document.querySelector('.ms-add-row');
