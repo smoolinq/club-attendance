@@ -2503,6 +2503,7 @@
           const ms = loadMembers();
           ms[parseInt(sel.dataset.msIdx)].role = sel.value;
           saveMembers(ms);
+          syncToServer();
         });
       });
       list.querySelectorAll('.ms-delete').forEach(btn => {
