@@ -1725,6 +1725,7 @@
           next = current === status ? 'none' : status;
         }
         if (next === 'absent' && !confirm('欠席に変更します。よろしいですか？')) return;
+        if (next === 'present' && current === 'absent' && !confirm('出席に変更しますか？')) return;
         setMemberStatus(name, next);
         render._highlightName = name;
         render();
