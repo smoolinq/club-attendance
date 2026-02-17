@@ -967,7 +967,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="invitePopup">
+<div class="modal-overlay" id="invitePopup" style="z-index:2500">
   <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
     <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待コード</div>
     <div style="background:#fff;border:2px dashed var(--primary-light);border-radius:14px;padding:16px;margin-bottom:12px">
@@ -1693,7 +1693,7 @@
     list.querySelectorAll('.status-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (render._isPastEvent) { return; }
-        if (!requireEditor()) { alert('編集者名を入力してください'); return; }
+        if (!requireEditor()) { alert('ログインしてください'); return; }
         if (btn.closest('.member-card').dataset.locked === '1') { return; }
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
@@ -1725,7 +1725,7 @@
     list.querySelectorAll('.time-row input[type="time"]').forEach(input => {
       input.addEventListener('change', () => {
         if (render._isPastEvent) { return; }
-        if (!requireEditor()) { alert('編集者名を入力してください'); return; }
+        if (!requireEditor()) { alert('ログインしてください'); return; }
         if (input.closest('.member-card').dataset.locked === '1') return;
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
