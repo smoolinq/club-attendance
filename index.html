@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>出席管理 - ママさんバレー</title>
+<meta property="og:title" content="出欠ちゃん">
+<meta property="og:description" content="部活や練習・試合の出欠をかんたん共有。招待リンクですぐ使えます。">
+<meta property="og:type" content="website">
+<title>出欠ちゃん</title>
 <style>
   :root {
     --primary: #5b21b6;
@@ -1334,7 +1337,7 @@
   function getAttendanceKey() { return ATTENDANCE_KEYS[currentMode]; }
 
   const STATUSES = ['none', 'present', 'absent', 'late', 'early'];
-  const STATUS_LABELS = { none: '−', present: '🏐', absent: '✕', late: '遅', early: '早' };
+  const STATUS_LABELS = { none: '−', present: '◯', absent: '✕', late: '遅', early: '早' };
   const TIME_STATUSES = ['late', 'early', 'late_early'];
   const STATUS_NAMES = { late: '遅刻', early: '早退' };
   const MODE_NAMES = { practice: '練習', match: '試合' };
