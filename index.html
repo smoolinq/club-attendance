@@ -2613,7 +2613,7 @@
 
   function saveToServer(data){
     const team = new URL(location.href).searchParams.get("team") || "abc123";
-    return fetch("https://club-attendance-api.riot05550.workers.dev/?team="+encodeURIComponent(team),{
+    return fetch("https://club-attendance-api.smoolinq.workers.dev/?team="+encodeURIComponent(team),{
       method:"POST",
       headers:{ "content-type":"application/json"},
       body: JSON.stringify(data)
@@ -2623,7 +2623,7 @@
   async function syncFromServer() {
     try {
       const team = new URL(location.href).searchParams.get("team") || "abc123";
-      const res = await fetch("https://club-attendance-api.riot05550.workers.dev/?team=" + encodeURIComponent(team));
+      const res = await fetch("https://club-attendance-api.smoolinq.workers.dev/?team=" + encodeURIComponent(team));
       return await res.json();
     } catch(e) { return null; }
   }
