@@ -339,7 +339,7 @@
     transition: background 0.6s ease;
   }
   .member-card.highlight { background: #ede9fe; }
-  .member-card.locked { opacity: 0.45; }
+  .member-card.locked { opacity: 0.45; pointer-events: none; }
 
   .reorder-btns {
     display: flex;
@@ -1694,11 +1694,7 @@
       btn.addEventListener('click', () => {
         if (render._isPastEvent) { return; }
         if (!requireEditor()) { alert('編集者名を入力してください'); return; }
-        if (btn.closest('.member-card').dataset.locked === '1') {
-          if (render._isPastDeadline) { alert('締切を過ぎています'); }
-          else { alert('自分の名前に合わせると編集できます'); }
-          return;
-        }
+        if (btn.closest('.member-card').dataset.locked === '1') { return; }
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
           if (!confirm('締切を過ぎていますが更新しますか？')) return;
