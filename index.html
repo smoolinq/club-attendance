@@ -2700,9 +2700,18 @@
       localStorage.setItem(STORAGE_TITLE, data.title);
       changed = true;
     }
-    if (Array.isArray(data.members) && data.members.length > 0 && !localStorage.getItem(STORAGE_MEMBERS)) {
-      localStorage.setItem(STORAGE_MEMBERS, JSON.stringify(data.members));
-      changed = true;
+    // Merge members: add server-side members not in local
+    if (Array.isArray(data.members) && data.members.length > 0) {
+      const local = loadMembers();
+      const localNames = new Set(local.map(m => m.name));
+      const newMembers = data.members.filter(m => !localNames.has(m.name));
+      if (newMembers.length > 0) {
+        saveMembers([...local, ...newMembers]);
+        changed = true;
+      } else if (!localStorage.getItem(STORAGE_MEMBERS)) {
+        saveMembers(data.members);
+        changed = true;
+      }
     }
     if (Array.isArray(data.schedule) && !localStorage.getItem(STORAGE_SCHEDULE)) {
       localStorage.setItem(STORAGE_SCHEDULE, JSON.stringify(data.schedule));
@@ -2716,14 +2725,21 @@
       localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName);
       changed = true;
     }
-    if (data.attendancePractice && Object.keys(data.attendancePractice).length > 0 && !localStorage.getItem(ATTENDANCE_KEYS.practice)) {
-      localStorage.setItem(ATTENDANCE_KEYS.practice, JSON.stringify(data.attendancePractice));
-      changed = true;
+    // Merge attendance: add server-side entries not in local
+    function mergeAttendance(serverAtt, key) {
+      if (!serverAtt || Object.keys(serverAtt).length === 0) return;
+      const localAtt = JSON.parse(localStorage.getItem(key) || '{}');
+      let merged = false;
+      for (const date in serverAtt) {
+        if (!localAtt[date]) { localAtt[date] = serverAtt[date]; merged = true; continue; }
+        for (const field in serverAtt[date]) {
+          if (!(field in localAtt[date])) { localAtt[date][field] = serverAtt[date][field]; merged = true; }
+        }
+      }
+      if (merged) { localStorage.setItem(key, JSON.stringify(localAtt)); changed = true; }
     }
-    if (data.attendanceMatch && Object.keys(data.attendanceMatch).length > 0 && !localStorage.getItem(ATTENDANCE_KEYS.match)) {
-      localStorage.setItem(ATTENDANCE_KEYS.match, JSON.stringify(data.attendanceMatch));
-      changed = true;
-    }
+    mergeAttendance(data.attendancePractice, ATTENDANCE_KEYS.practice);
+    mergeAttendance(data.attendanceMatch, ATTENDANCE_KEYS.match);
     return changed;
   }
 
