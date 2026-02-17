@@ -964,16 +964,24 @@
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
     <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待コードを表示</button>
-    <div id="inviteInline" style="display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:10px;text-align:center">
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text-light);margin-bottom:2px">チームID</div>
-        <div id="inviteTeamId" style="font-size:15px;font-weight:700;letter-spacing:1px;color:var(--text);user-select:all"></div>
-      </div>
-      <div style="margin-bottom:8px">
-        <div style="font-size:11px;color:var(--text-light);margin-bottom:2px">招待URL</div>
-        <div id="inviteUrl" style="font-size:11px;word-break:break-all;color:var(--primary);user-select:all"></div>
-      </div>
-      <button class="btn-confirm" id="inviteCopyBtn" style="width:100%;padding:8px;font-size:13px">URLをコピー</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="invitePopup">
+  <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待コード</div>
+    <div style="background:#fff;border:2px dashed var(--primary-light);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">チームID</div>
+      <div id="inviteTeamId" style="font-size:20px;font-weight:800;letter-spacing:2px;color:var(--primary);user-select:all"></div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">招待URL</div>
+      <div id="inviteUrl" style="font-size:12px;word-break:break-all;color:var(--primary);user-select:all;line-height:1.5"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてチームに参加させてね</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
+      <button class="btn-cancel" id="inviteCloseBtn" style="flex:1;padding:10px;font-size:14px">閉じる</button>
     </div>
   </div>
 </div>
@@ -1542,6 +1550,7 @@
     }
 
     const isPastEvent = dateInput.value < todayStr();
+    render._isPastEvent = isPastEvent;
     const readOnly = isPastEvent || (render._isPastDeadline && !isAdmin());
 
     // --- Members ---
@@ -1683,8 +1692,13 @@
     // --- Event handlers ---
     list.querySelectorAll('.status-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (render._isPastEvent) { return; }
         if (!requireEditor()) { alert('編集者名を入力してください'); return; }
-        if (btn.closest('.member-card').dataset.locked === '1') { alert('自分の名前に合わせると編集できます'); return; }
+        if (btn.closest('.member-card').dataset.locked === '1') {
+          if (render._isPastDeadline) { alert('締切を過ぎています'); }
+          else { alert('自分の名前に合わせると編集できます'); }
+          return;
+        }
         if (render._isPastDeadline) {
           if (!isAdmin()) { alert('締切を過ぎています'); return; }
           if (!confirm('締切を過ぎていますが更新しますか？')) return;
@@ -1714,6 +1728,7 @@
 
     list.querySelectorAll('.time-row input[type="time"]').forEach(input => {
       input.addEventListener('change', () => {
+        if (render._isPastEvent) { return; }
         if (!requireEditor()) { alert('編集者名を入力してください'); return; }
         if (input.closest('.member-card').dataset.locked === '1') return;
         if (render._isPastDeadline) {
@@ -2249,16 +2264,14 @@
     render();
   });
 
-  // --- Invite Code (inline) ---
-  const inviteInline = document.getElementById('inviteInline');
+  // --- Invite Code (popup) ---
+  const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
-    const visible = inviteInline.style.display !== 'none';
-    if (visible) { inviteInline.style.display = 'none'; return; }
     const teamId = _teamParam;
     const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
     document.getElementById('inviteTeamId').textContent = teamId;
     document.getElementById('inviteUrl').textContent = url;
-    inviteInline.style.display = '';
+    invitePopup.classList.add('show');
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
@@ -2268,6 +2281,8 @@
       setTimeout(() => { btn.textContent = 'URLをコピー'; }, 1500);
     });
   });
+  document.getElementById('inviteCloseBtn').addEventListener('click', () => invitePopup.classList.remove('show'));
+  invitePopup.addEventListener('click', e => { if (e.target === invitePopup) invitePopup.classList.remove('show'); });
 
   document.getElementById('msAddBtn').addEventListener('click', () => {
     const input = document.getElementById('msAddName');
