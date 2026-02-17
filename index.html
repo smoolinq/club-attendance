@@ -427,17 +427,6 @@
   .status-btn.active-late .btn-label,
   .status-btn.active-early .btn-label { font-weight: 900; }
 
-  .delete-btn {
-    background: none;
-    border: none;
-    color: var(--text-light);
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px 6px;
-    margin-left: 2px;
-    opacity: 0.3;
-  }
-  .delete-btn:hover { opacity: 1; color: var(--absent); }
 
   .time-row {
     width: 100%;
@@ -1000,8 +989,11 @@
     </div>
     <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてグループに参加させてね</p>
     <div style="display:flex;gap:8px">
+      <button class="btn-confirm" id="inviteIdCopyBtn" style="flex:1;padding:10px;font-size:14px">IDをコピー</button>
       <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
-      <button class="btn-cancel" id="inviteCloseBtn" style="flex:1;padding:10px;font-size:14px">閉じる</button>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn-cancel" id="inviteCloseBtn" style="width:100%;padding:10px;font-size:14px">閉じる</button>
     </div>
   </div>
 </div>
@@ -1801,7 +1793,7 @@
               </button>`
             ).join('')}
           </div>
-          <button class="delete-btn" data-delete="${escapeHTML(name)}" title="削除">×</button>
+
           ${current === 'late_early' ? `
           <div class="time-row">
             <label>遅刻時刻:</label>
@@ -1886,15 +1878,6 @@
       });
     });
 
-    list.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.dataset.delete;
-        if (confirm(`「${name}」を削除しますか？`)) {
-          saveMembers(loadMembers().filter(m => m.name !== name));
-          render();
-        }
-      });
-    });
 
     if (render._highlightName) {
       const target = list.querySelector(`[data-name="${CSS.escape(render._highlightName)}"]`);
@@ -2569,6 +2552,14 @@
     document.getElementById('inviteTeamId').textContent = teamId;
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
+  });
+  document.getElementById('inviteIdCopyBtn').addEventListener('click', () => {
+    const id = document.getElementById('inviteTeamId').textContent;
+    navigator.clipboard.writeText(id).then(() => {
+      const btn = document.getElementById('inviteIdCopyBtn');
+      btn.textContent = 'コピーしました';
+      setTimeout(() => { btn.textContent = 'IDをコピー'; }, 1500);
+    });
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
