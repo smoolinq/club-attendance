@@ -1059,7 +1059,7 @@
             '<button style="flex:1;padding:10px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;font-weight:600;cursor:pointer">いいえ</button>' +
             '<button style="flex:1;padding:10px;border:none;border-radius:12px;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;cursor:pointer">はい</button>' +
           '</div></div>';
-        ov.querySelector('div > div').textContent = msg;
+        ov.querySelector('[style*="white-space"]').textContent = msg;
         const [noBtn, yesBtn] = ov.querySelectorAll('button');
         yesBtn.addEventListener('click', () => { ov.remove(); resolve(true); });
         noBtn.addEventListener('click', () => { ov.remove(); resolve(false); });
@@ -1110,9 +1110,9 @@
     createSection.innerHTML =
       '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">新規グループ作成</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
-        '<input id="lobbyGroupName" type="text" placeholder="グループ名" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px">' +
+        '<input id="lobbyGroupName" type="text" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
+        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
+        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px">' +
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
         '<button id="lobbyCreateBtn" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">作成する</button>' +
       '</div>' +
