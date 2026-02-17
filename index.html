@@ -1169,7 +1169,7 @@
       localStorage.setItem(t + 'volley-admin-name', adminName);
       localStorage.setItem(t + 'volley-login-type', 'admin');
       localStorage.setItem(t + 'volley-editor', adminName);
-      localStorage.setItem(t + 'volley-members', JSON.stringify([{name: adminName, role: 'メンバー'}]));
+      localStorage.setItem(t + 'volley-members', JSON.stringify([{name: adminName, role: '管理者'}]));
       localStorage.setItem(t + 'volley-schedule', '[]');
       location.href = '?team=' + encodeURIComponent(teamId);
     });
@@ -1307,7 +1307,7 @@
     return rules;
   }
 
-  const DEFAULT_MEMBERS = ['田中', '鈴木', '佐藤', '山田', '中村'];
+  const DEFAULT_MEMBERS = [];
 
   // --- Schedule ---
   const STORAGE_SCHEDULE = _T + 'volley-schedule';
@@ -2399,9 +2399,9 @@
         '<span class="ms-name">' + escapeHTML(m.name) + (m.name === adminN ? ' <span style="font-size:10px;color:var(--primary);background:#ede9fe;border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700">管理者</span>' : '') + '</span>' +
         (admin ?
           '<select class="ms-role" data-ms-idx="' + i + '">' +
-            ROLES.map(r => '<option value="' + r + '"' + ((ROLES.includes(m.role) ? m.role : 'メンバー') === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+            (m.name === adminN ? ['管理者'].concat(ROLES) : ROLES).map(r => '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + r + '</option>').join('') +
           '</select>' :
-          '<span class="ms-role">' + escapeHTML(ROLES.includes(m.role) ? m.role : 'メンバー') + '</span>') +
+          '<span class="ms-role">' + escapeHTML(m.role || 'メンバー') + '</span>') +
         (admin && m.name !== adminN ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
       '</div>'
     ).join('');
