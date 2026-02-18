@@ -519,6 +519,20 @@
   .btn-confirm { background: var(--primary); color: #fff; }
   .btn-confirm:active { background: var(--primary-light); }
 
+  .modal-close-x {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none; border: none;
+    font-size: 22px; line-height: 1;
+    color: var(--text-light);
+    cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+  }
+  .modal-close-x:hover { background: var(--bg); }
+  .modal-close-x:active { background: var(--border); }
+
   .deadline-field {
     display: flex;
     align-items: center;
@@ -812,7 +826,8 @@
 <main id="memberList"></main>
 
 <div class="modal-overlay" id="modal">
-  <div class="modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close-x" id="modalCloseX">&times;</button>
     <h2 id="modalTitle">メンバー追加</h2>
     <input type="text" id="memberNameInput" placeholder="名前を入力">
     <div class="modal-actions">
@@ -823,7 +838,8 @@
 </div>
 
 <div class="modal-overlay" id="settingsModal">
-  <div class="modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close-x" id="settingsCloseX">&times;</button>
     <h2>締切設定</h2>
     <div class="deadline-field" style="margin-bottom:4px">
       <label>練習</label>
@@ -857,30 +873,32 @@
 </div>
 
 <div class="modal-overlay" id="loginModal">
-  <div class="modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close-x" id="loginCloseX">&times;</button>
     <h2>ログイン</h2>
     <div id="loginStep1">
-      <div style="margin-bottom:14px">
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">メンバーとしてログイン</label>
-        <select id="memberNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px"></select>
-        <button class="btn-confirm" id="memberLoginBtn" style="width:100%;padding:10px 16px">ログイン</button>
-      </div>
-      <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
       <div style="margin-bottom:14px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">新しいメンバーとして参加</label>
         <input type="text" id="newMemberNameInput" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box">
         <button class="btn-confirm" id="newMemberJoinBtn" style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
       </div>
       <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
-      <div style="margin-bottom:8px">
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">管理者用パスワード</label>
-        <div style="display:flex;gap:6px">
-          <input type="password" id="adminPwInput" placeholder="パスワード" style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
-          <button class="btn-confirm" id="adminLoginBtn" style="padding:10px 16px;white-space:nowrap">ログイン</button>
+      <details id="loginExistingDetails">
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--primary);margin-bottom:8px">すでに参加済みの方はこちら</summary>
+        <div style="margin-bottom:14px">
+          <select id="memberNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px"></select>
+          <button class="btn-confirm" id="memberLoginBtn" style="padding:8px 20px;font-size:14px">ログイン</button>
         </div>
-      </div>
+        <details id="loginAdminDetails">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-light);margin-bottom:8px">管理者用パスワード</summary>
+          <div style="display:flex;gap:6px">
+            <input type="password" id="adminPwInput" placeholder="パスワード" style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
+            <button class="btn-confirm" id="adminLoginBtn" style="padding:8px 16px;font-size:14px;white-space:nowrap">ログイン</button>
+          </div>
+        </details>
+      </details>
       <div id="loginError" style="color:var(--absent);font-size:13px;margin-top:6px;display:none"></div>
-      <div class="modal-actions"><button class="btn-cancel" id="loginCancel">閉じる</button></div>
+      <div class="modal-actions"><button class="btn-cancel" id="loginCancel">キャンセル</button></div>
     </div>
     <div id="loginStep2" style="display:none">
       <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">名前を選択してください</label>
@@ -894,7 +912,8 @@
 </div>
 
 <div class="modal-overlay" id="adminModal">
-  <div class="modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close-x" id="adminModalCloseX">&times;</button>
     <h2>管理者設定</h2>
     <div style="margin-bottom:16px">
       <label style="font-size:14px;font-weight:600;display:block;margin-bottom:6px">管理者パスワード変更</label>
@@ -1950,7 +1969,7 @@
       const members = loadMembers();
       const adminN = getAdminName();
       const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
       loginModal.classList.add('show');
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
@@ -1993,17 +2012,32 @@
     err.style.display = '';
   }
 
-  document.getElementById('loginCancel').addEventListener('click', () => loginModal.classList.remove('show'));
-  loginModal.addEventListener('click', e => { if (e.target === loginModal && document.getElementById('loginCancel').style.display !== 'none') loginModal.classList.remove('show'); });
-
-  // Member login
-  document.getElementById('memberLoginBtn').addEventListener('click', () => {
-    const name = document.getElementById('memberNameSelect').value;
-    if (!name) { showLoginError('メンバーが登録されていません'); return; }
-    localStorage.setItem(STORAGE_EDITOR, name);
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+  function closeLoginModal() {
     loginModal.classList.remove('show');
     document.getElementById('loginCancel').style.display = '';
+    document.getElementById('loginCloseX').style.display = '';
+    document.getElementById('newMemberNameInput').value = '';
+    document.getElementById('adminPwInput').value = '';
+    document.getElementById('loginError').style.display = 'none';
+    const details1 = document.getElementById('loginExistingDetails');
+    const details2 = document.getElementById('loginAdminDetails');
+    if (details1) details1.removeAttribute('open');
+    if (details2) details2.removeAttribute('open');
+    document.getElementById('loginStep1').style.display = '';
+    document.getElementById('loginStep2').style.display = 'none';
+  }
+  document.getElementById('loginCancel').addEventListener('click', closeLoginModal);
+  document.getElementById('loginCloseX').addEventListener('click', closeLoginModal);
+  loginModal.addEventListener('click', e => { if (e.target === loginModal && document.getElementById('loginCancel').style.display !== 'none') closeLoginModal(); });
+
+  // Member login
+  document.getElementById('memberLoginBtn').addEventListener('click', async () => {
+    const name = document.getElementById('memberNameSelect').value;
+    if (!name) { showLoginError('メンバーを選択してください'); return; }
+    if (!(await customConfirm(name + 'さんでログインしますか？'))) return;
+    localStorage.setItem(STORAGE_EDITOR, name);
+    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+    closeLoginModal();
     updateLoginStatus();
     render();
   });
@@ -2018,8 +2052,7 @@
     saveMembers(members);
     localStorage.setItem(STORAGE_EDITOR, name);
     localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-    loginModal.classList.remove('show');
-    document.getElementById('loginCancel').style.display = '';
+    closeLoginModal();
     updateLoginStatus();
     render();
     syncToServer();
@@ -2034,7 +2067,7 @@
     const name = document.getElementById('adminNameSelect').value;
     localStorage.setItem(STORAGE_EDITOR, name);
     localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
-    loginModal.classList.remove('show');
+    closeLoginModal();
     updateLoginStatus();
     render();
   });
@@ -2047,7 +2080,7 @@
     if (adminN) {
       localStorage.setItem(STORAGE_EDITOR, adminN);
       localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
-      loginModal.classList.remove('show');
+      closeLoginModal();
       updateLoginStatus();
       render();
     } else {
@@ -2067,13 +2100,15 @@
     adminModal.classList.add('show');
   }
 
-  document.getElementById('adminModalCancel').addEventListener('click', () => adminModal.classList.remove('show'));
-  adminModal.addEventListener('click', e => { if (e.target === adminModal) adminModal.classList.remove('show'); });
+  function closeAdminModal() { adminModal.classList.remove('show'); document.getElementById('adminNewPwInput').value = ''; }
+  document.getElementById('adminModalCancel').addEventListener('click', closeAdminModal);
+  document.getElementById('adminModalCloseX').addEventListener('click', closeAdminModal);
+  adminModal.addEventListener('click', e => { if (e.target === adminModal) closeAdminModal(); });
 
   document.getElementById('adminModalSave').addEventListener('click', () => {
     const newPw = document.getElementById('adminNewPwInput').value;
     if (newPw) localStorage.setItem(STORAGE_ADMIN_PW, newPw);
-    adminModal.classList.remove('show');
+    closeAdminModal();
     alert('保存しました');
     render();
   });
@@ -2156,10 +2191,12 @@
   const modal = document.getElementById('modal');
   const nameInput = document.getElementById('memberNameInput');
 
-  document.getElementById('modalCancel').addEventListener('click', () => modal.classList.remove('show'));
+  function closeModal() { modal.classList.remove('show'); nameInput.value = ''; }
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalCloseX').addEventListener('click', closeModal);
   document.getElementById('modalConfirm').addEventListener('click', addMember);
   nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
-  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
   async function addMember() {
     const name = nameInput.value.trim();
@@ -2169,7 +2206,7 @@
     if (!(await customConfirm(name + 'さんを追加しますか？'))) return;
     members.push({name, role: '一般'});
     saveMembers(members);
-    modal.classList.remove('show');
+    closeModal();
     render();
     syncToServer();
   }
@@ -2222,7 +2259,10 @@
     loadSettingsToModal();
     settingsModal.classList.add('show');
   });
-  document.getElementById('settingsCancel').addEventListener('click', () => settingsModal.classList.remove('show'));
+  function closeSettingsModal() { settingsModal.classList.remove('show'); }
+  document.getElementById('settingsCancel').addEventListener('click', closeSettingsModal);
+  document.getElementById('settingsCloseX').addEventListener('click', closeSettingsModal);
+  settingsModal.addEventListener('click', e => { if (e.target === settingsModal) closeSettingsModal(); });
 
   document.getElementById('settingsSave').addEventListener('click', () => {
     const toggles = {};
@@ -2240,12 +2280,8 @@
       }
     };
     localStorage.setItem(STORAGE_DEADLINE, JSON.stringify(rules));
-    settingsModal.classList.remove('show');
+    closeSettingsModal();
     render();
-  });
-
-  settingsModal.addEventListener('click', e => {
-    if (e.target === settingsModal) settingsModal.classList.remove('show');
   });
 
   // --- Editor Name (set via login) ---
@@ -2803,11 +2839,23 @@
       const members = loadMembers();
       const adminN = getAdminName();
       const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
       document.getElementById('loginCancel').style.display = 'none';
+      document.getElementById('loginCloseX').style.display = 'none';
       loginModal.classList.add('show');
     }
   })();
+
+  // Global Esc key handler for modals
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    // Don't close login modal if cancel is hidden (forced login)
+    if (loginModal.classList.contains('show') && document.getElementById('loginCancel').style.display !== 'none') { closeLoginModal(); return; }
+    if (adminModal.classList.contains('show')) { closeAdminModal(); return; }
+    if (document.getElementById('settingsModal').classList.contains('show')) { closeSettingsModal(); return; }
+    if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
+    if (document.getElementById('userMenu').classList.contains('show')) { document.getElementById('userMenu').classList.remove('show'); return; }
+  });
 </script>
 </body>
 </html>
