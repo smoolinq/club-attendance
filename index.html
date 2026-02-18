@@ -2022,9 +2022,21 @@
 document.getElementById('newMemberSection').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
 document.getElementById('newMemberSeparator').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
     
-      const det = document.getElementById('loginExistingDetails');
-      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
-      loginModal.classList.add('show');
+  const det = document.getElementById('loginExistingDetails');
+const fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
+
+if (fromInviteCard) {
+  det.style.display = 'none';
+  document.getElementById('newMemberSection').style.display = '';
+  document.getElementById('newMemberSeparator').style.display = '';
+} else {
+  det.style.display = '';
+  if (hasMembers) det.setAttribute('open', '');
+  else det.removeAttribute('open');
+}
+
+loginModal.classList.add('show');
+
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
       localStorage.removeItem(STORAGE_LOGIN_TYPE);
