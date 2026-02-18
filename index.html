@@ -1314,9 +1314,10 @@
       inviteJoinBtn.addEventListener('click', () => {
   const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
   if (inv && inv.id) {
-  location.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
+  sessionStorage.setItem('inviteFromCard', '1');
+  location.href = '?team=' + encodeURIComponent(inv.id);
+}
 
-  }
 });
     }
 
