@@ -1060,7 +1060,24 @@
 </div>
 
 <script>
+  const INVITE_KEY = 'volley-invite';
   const _teamParam = new URL(location.href).searchParams.get("team");
+
+  // Intercept invite URL: if team not in recent and no pending invite, save invite and redirect to lobby
+  if (_teamParam) {
+    const RECENT_KEY = 'volley-recent-teams';
+    let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
+    const isKnown = recent.some(t => t.id === _teamParam);
+    let pendingInvite = null; try { pendingInvite = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
+    const isFromInviteCard = pendingInvite && pendingInvite.id === _teamParam;
+    if (!isKnown && !isFromInviteCard) {
+      const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
+      localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: savedTitle || null }));
+      location.href = location.pathname;
+      throw new Error('redirect to lobby');
+    }
+  }
+
   if (!_teamParam) {
     // --- Lobby Screen ---
     document.body.innerHTML = '';
@@ -1100,6 +1117,20 @@
       '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px">グループIDを入力してください</div>' +
       '<div style="font-size:12px;color:var(--text-light)">招待リンクを開くと自動で参加できます</div>';
     joinSection.appendChild(hero);
+
+    // Invite card
+    let inviteData = null;
+    try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
+    if (inviteData && inviteData.id) {
+      const inviteCard = document.createElement('div');
+      inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
+      const displayName = inviteData.name ? inviteData.name : inviteData.id;
+      inviteCard.innerHTML =
+        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">「' + displayName.replace(/</g,'&lt;') + '」に招待されています</div>' +
+        '<div style="font-size:11px;color:var(--text-light);margin-bottom:14px">ID: ' + inviteData.id.replace(/</g,'&lt;') + '</div>' +
+        '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このチームに参加する</button>';
+      joinSection.appendChild(inviteCard);
+    }
 
     // Team ID input
     const form = document.createElement('div');
@@ -1277,6 +1308,15 @@
       document.getElementById('joinSection').style.cssText = JOIN_CSS;
     });
 
+    // Invite join button
+    const inviteJoinBtn = document.getElementById('inviteJoinBtn');
+    if (inviteJoinBtn) {
+      inviteJoinBtn.addEventListener('click', () => {
+        const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
+        if (inv && inv.id) location.href = '?team=' + encodeURIComponent(inv.id);
+      });
+    }
+
     document.getElementById('lobbyTeamInput').focus();
     throw new Error('lobby');
   }
@@ -1308,6 +1348,9 @@
     if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   })();
+
+  // Clear invite info once team page is loaded
+  localStorage.removeItem(INVITE_KEY);
 
   // Guard: if logged in but not a member of this team, clear login
   (function guardTeamMember() {
