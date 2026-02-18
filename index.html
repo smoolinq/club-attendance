@@ -1073,7 +1073,7 @@
     if (!isKnown && !isFromInviteCard) {
       const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
       localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: savedTitle || null }));
-      location.href = location.pathname;
+      location.href = location.pathname + (location.search || '');
       throw new Error('redirect to lobby');
     }
   }
