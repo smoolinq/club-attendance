@@ -1314,8 +1314,8 @@
       inviteJoinBtn.addEventListener('click', () => {
   const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
   if (inv && inv.id) {
-    localStorage.setItem('volley-invite-active', '1'); // ★追加
-    location.href = '?team=' + encodeURIComponent(inv.id);
+  location.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
+
   }
 });
     }
@@ -2017,7 +2017,7 @@
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      const isInviteFlow = localStorage.getItem('volley-invite-active') === '1';
+ const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
 document.getElementById('newMemberSection').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
 document.getElementById('newMemberSeparator').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
     
