@@ -1308,23 +1308,22 @@
       document.getElementById('joinSection').style.cssText = JOIN_CSS;
     });
 
-  // Invite join button
-const inviteJoinBtn = document.getElementById('inviteJoinBtn');
-if (inviteJoinBtn) {
-  inviteJoinBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const raw = localStorage.getItem(INVITE_KEY);
-    if (!raw) { alert('招待データがありません'); return; }
-    let inv = null;
-    try { inv = JSON.parse(raw); } catch { alert('招待データが壊れています'); return; }
-    if (!inv || !inv.id) { alert('招待IDがありません'); return; }
+ // Invite join button (event delegation)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#inviteJoinBtn');
+  if (!btn) return;
 
-    // ここで“反応してる”のが見える
-    alert('招待で参加: ' + inv.id);
+  const raw = localStorage.getItem(INVITE_KEY);
+  if (!raw) { alert('招待データがありません'); return; }
 
-    location.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
-  });
-}
+  let inv = null;
+  try { inv = JSON.parse(raw); } catch { alert('招待データが壊れています'); return; }
+  if (!inv || !inv.id) { alert('招待IDがありません'); return; }
+
+  sessionStorage.setItem('inviteFromCard', '1');
+  location.href = '?team=' + encodeURIComponent(inv.id);
+});
+
 
 
     document.getElementById('lobbyTeamInput').focus();
@@ -2125,7 +2124,8 @@ loginModal.classList.add('show');
     saveMembers(members);
     localStorage.setItem(STORAGE_EDITOR, name);
     localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-    localStorage.removeItem('volley-invite-active');
+    localStorage.removeItem(INVITE_KEY);
+    sessionStorage.removeItem('inviteFromCard');
     closeLoginModal();
     updateLoginStatus();
     render();
