@@ -877,12 +877,12 @@
     <button class="modal-close-x" id="loginCloseX">&times;</button>
     <h2>ログイン</h2>
     <div id="loginStep1">
-      <div style="margin-bottom:14px">
+      <div id="newMemberSection" style="margin-bottom:14px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">新しいメンバーとして参加</label>
         <input type="text" id="newMemberNameInput" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box">
         <button class="btn-confirm" id="newMemberJoinBtn" style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
       </div>
-      <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
+      <div id="newMemberSeparator" style="border-top:1px solid var(--border);margin:14px 0;"></div>
       <details id="loginExistingDetails">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--primary);margin-bottom:8px">すでに参加済みの方はこちら</summary>
         <div style="margin-bottom:14px">
@@ -1968,8 +1968,13 @@
       document.getElementById('loginStep2').style.display = 'none';
       const members = loadMembers();
       const adminN = getAdminName();
+      const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
+      document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
+      document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
+      const det = document.getElementById('loginExistingDetails');
+      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
       loginModal.classList.add('show');
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
@@ -2014,8 +2019,8 @@
 
   function closeLoginModal() {
     loginModal.classList.remove('show');
-    document.getElementById('loginCancel').style.display = '';
-    document.getElementById('loginCloseX').style.display = '';
+    document.getElementById('newMemberSection').style.display = '';
+    document.getElementById('newMemberSeparator').style.display = '';
     document.getElementById('newMemberNameInput').value = '';
     document.getElementById('adminPwInput').value = '';
     document.getElementById('loginError').style.display = 'none';
@@ -2026,9 +2031,10 @@
     document.getElementById('loginStep1').style.display = '';
     document.getElementById('loginStep2').style.display = 'none';
   }
-  document.getElementById('loginCancel').addEventListener('click', closeLoginModal);
-  document.getElementById('loginCloseX').addEventListener('click', closeLoginModal);
-  loginModal.addEventListener('click', e => { if (e.target === loginModal && document.getElementById('loginCancel').style.display !== 'none') closeLoginModal(); });
+  function backToLobbyFromLogin() { closeLoginModal(); location.href = location.pathname; }
+  document.getElementById('loginCancel').addEventListener('click', backToLobbyFromLogin);
+  document.getElementById('loginCloseX').addEventListener('click', backToLobbyFromLogin);
+  loginModal.addEventListener('click', e => { if (e.target === loginModal) backToLobbyFromLogin(); });
 
   // Member login
   document.getElementById('memberLoginBtn').addEventListener('click', async () => {
@@ -2838,10 +2844,13 @@
       document.getElementById('loginStep2').style.display = 'none';
       const members = loadMembers();
       const adminN = getAdminName();
+      const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      document.getElementById('loginCancel').style.display = 'none';
-      document.getElementById('loginCloseX').style.display = 'none';
+      document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
+      document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
+      const det = document.getElementById('loginExistingDetails');
+      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
       loginModal.classList.add('show');
     }
   })();
@@ -2849,8 +2858,7 @@
   // Global Esc key handler for modals
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    // Don't close login modal if cancel is hidden (forced login)
-    if (loginModal.classList.contains('show') && document.getElementById('loginCancel').style.display !== 'none') { closeLoginModal(); return; }
+    if (loginModal.classList.contains('show')) { backToLobbyFromLogin(); return; }
     if (adminModal.classList.contains('show')) { closeAdminModal(); return; }
     if (document.getElementById('settingsModal').classList.contains('show')) { closeSettingsModal(); return; }
     if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
