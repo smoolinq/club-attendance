@@ -2024,11 +2024,20 @@ document.addEventListener('click', (e) => {
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
  const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
-document.getElementById('newMemberSection').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
-document.getElementById('newMemberSeparator').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
-    
-  const det = document.getElementById('loginExistingDetails');
-const fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
+const hasTeamParam = !!new URL(location.href).searchParams.get('team');
+
+document.getElementById('newMemberSection').style.display =
+  hasTeamParam ? '' : (hasMembers ? 'none' : '');
+
+document.getElementById('newMemberSeparator').style.display =
+  hasTeamParam ? '' : (hasMembers ? 'none' : '');
+
+const det = document.getElementById('loginExistingDetails');
+
+// ?team= で入った(=招待/ID入力/URL直)なら「既存ログイン」を見せない
+det.style.display = hasTeamParam ? 'none' : '';
+if (!hasTeamParam) det.style.display = ''; // ロビー起点は通常表示
+
 
 if (fromInviteCard) {
   det.style.display = 'none';
