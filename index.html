@@ -2015,7 +2015,7 @@
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
       let inv=null; try{inv=JSON.parse(localStorage.getItem(INVITE_KEY));}catch(e){}
-const isInviteFlow = inv && inv.id === _teamParam;
+const isInviteFlow = !!inv;
 document.getElementById('newMemberSection').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
 document.getElementById('newMemberSeparator').style.display = (hasMembers && !isInviteFlow) ? 'none' : '';
 
