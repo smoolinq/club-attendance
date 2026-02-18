@@ -1315,7 +1315,7 @@
   const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
   if (inv && inv.id) {
   sessionStorage.setItem('inviteFromCard', '1');
-  location.href = '?team=' + encodeURIComponent(inv.id);
+  llocation.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
 }
 
 });
@@ -2909,10 +2909,19 @@ loginModal.classList.add('show');
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
-      document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
-      const det = document.getElementById('loginExistingDetails');
-      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
+      const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
+const det = document.getElementById('loginExistingDetails');
+
+if (isInviteFlow) {
+  det.style.display = 'none'; // 既存ログイン自体を出さない
+  document.getElementById('newMemberSection').style.display = '';
+  document.getElementById('newMemberSeparator').style.display = 'none'; // 区切り線も不要
+} else {
+  det.style.display = '';
+  document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
+  document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
+  if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
+}
       loginModal.classList.add('show');
     }
   })();
