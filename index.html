@@ -1308,18 +1308,24 @@
       document.getElementById('joinSection').style.cssText = JOIN_CSS;
     });
 
-    // Invite join button
-    const inviteJoinBtn = document.getElementById('inviteJoinBtn');
-    if (inviteJoinBtn) {
-      inviteJoinBtn.addEventListener('click', () => {
-  const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
-  if (inv && inv.id) {
-  sessionStorage.setItem('inviteFromCard', '1');
-  llocation.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
+  // Invite join button
+const inviteJoinBtn = document.getElementById('inviteJoinBtn');
+if (inviteJoinBtn) {
+  inviteJoinBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const raw = localStorage.getItem(INVITE_KEY);
+    if (!raw) { alert('招待データがありません'); return; }
+    let inv = null;
+    try { inv = JSON.parse(raw); } catch { alert('招待データが壊れています'); return; }
+    if (!inv || !inv.id) { alert('招待IDがありません'); return; }
+
+    // ここで“反応してる”のが見える
+    alert('招待で参加: ' + inv.id);
+
+    location.href = '?team=' + encodeURIComponent(inv.id) + '&invite=1';
+  });
 }
 
-});
-    }
 
     document.getElementById('lobbyTeamInput').focus();
     throw new Error('lobby');
