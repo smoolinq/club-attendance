@@ -1230,21 +1230,41 @@
     }
 
     // Event handlers — join existing team
-    document.getElementById('lobbyGoBtn').addEventListener('click', () => {
-      const v = document.getElementById('lobbyTeamInput').value.trim();
-      if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
-      const members = localStorage.getItem(v + ':volley-members');
-      if (!members) {
-        const errBox = document.getElementById('lobbyTeamInput');
-        errBox.style.borderColor = '#ef4444';
-        errBox.placeholder = 'このグループIDは存在しません';
-        errBox.value = '';
-        errBox.focus();
-        setTimeout(() => { errBox.style.borderColor = ''; errBox.placeholder = 'グループID'; }, 3000);
-        return;
-      }
+document.getElementById('lobbyGoBtn').addEventListener('click', async () => {
+  const v = document.getElementById('lobbyTeamInput').value.trim();
+  if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
+
+  // まずローカルにあれば即入る
+  const members = localStorage.getItem(v + ':volley-members');
+  if (members) {
+    location.href = '?team=' + encodeURIComponent(v);
+    return;
+  }
+
+  // ローカルに無い場合はサーバーに存在確認（新規端末対策）
+  try {
+    const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
+    const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(v), { method: 'GET' });
+
+    if (res.ok) {
       location.href = '?team=' + encodeURIComponent(v);
-    });
+      return;
+    }
+  } catch (e) {
+    // 通信失敗は下のエラー表示へ
+  }
+
+  // ここに来たら「チームが無い」扱い
+  const errBox = document.getElementById('lobbyTeamInput');
+  errBox.style.borderColor = '#ef4444';
+  errBox.placeholder = 'このグループIDは存在しません';
+  errBox.value = '';
+  errBox.focus();
+  setTimeout(() => { errBox.style.borderColor = ''; errBox.placeholder = 'グループID'; }, 3000);
+});
+
+
+
     document.getElementById('lobbyTeamInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('lobbyGoBtn').click();
     });
