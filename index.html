@@ -1137,13 +1137,13 @@
     if (inviteData && inviteData.id) {
       const inviteCard = document.createElement('div');
       inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
-      const displayName = inviteData.name ? inviteData.name : 'グループ名を取得中';
+      const displayName = inviteData.name || inviteData.id || 'グループ名を取得中';
       inviteCard.innerHTML =
         '<div id="inviteCardTitle" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px"></div>' +
         '<div style="font-size:12px;color:var(--text-light);margin-bottom:14px">招待リンクから参加できます</div>' +
         '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このグループに参加する</button>';
       joinSection.appendChild(inviteCard);
-      const inviteCardTitle = document.getElementById('inviteCardTitle');
+      const inviteCardTitle = inviteCard.querySelector('#inviteCardTitle');
       if (inviteCardTitle) inviteCardTitle.textContent = '「' + displayName + '」に招待されています';
 
       if (!inviteData.name) {
