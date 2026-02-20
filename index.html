@@ -2639,14 +2639,19 @@ loginModal.classList.add('show');
     document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
 list.querySelectorAll('.ms-delete').forEach(btn => {
-  btn.onclick = () => {
-    const idx = Number(btn.dataset.idx);
-    const ms = getMembers();
-    ms.splice(idx, 1);
-    saveMembers(ms);
-    syncToServer();      // ← これを追加
-    renderMemberSettings();
-  };
+  btn.onclick = async () => {
+  const idx = Number(btn.dataset.idx);
+
+  const team = getCurrentTeam();            // ← 既存の「今のteam取得」に置換
+  if (!team || !Array.isArray(team.members)) return;
+
+  team.members.splice(idx, 1);
+
+  saveTeam(team);                           // ← 既存の「team保存」に置換
+  await syncToServer();                     // syncがPromiseならawait推奨（違うならawait消す）
+  renderMemberSettings();
+};
+
 });
 
       list.querySelectorAll('.ms-delete').forEach(btn => {
