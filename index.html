@@ -1380,6 +1380,7 @@ document.addEventListener('click', (e) => {
     if (!isMember) {
       localStorage.removeItem(tp + 'volley-login-type');
       localStorage.removeItem(tp + 'volley-editor');
+      localStorage.removeItem(tp + 'volley-login-session');
       alert('このグループにあなたの登録がありません。\nログインしてください。');
     }
   })();
@@ -1394,10 +1395,37 @@ document.addEventListener('click', (e) => {
   const STORAGE_EDITOR = _T + 'volley-editor';
   const STORAGE_ADMINS = _T + 'volley-admins';
   const STORAGE_ADMIN_NAME = _T + 'volley-admin-name';
+  const STORAGE_LOGIN_SESSION = _T + 'volley-login-session';
 
   function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
 
   const STORAGE_LOGIN_TYPE = _T + 'volley-login-type';
+  let _skipNextSyncOnce = false;
+
+  function newSessionId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function getLoginSession() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_LOGIN_SESSION) || 'null'); } catch { return null; }
+  }
+
+  function setLoginState(type, editorName) {
+    localStorage.setItem(STORAGE_EDITOR, editorName);
+    localStorage.setItem(STORAGE_LOGIN_TYPE, type);
+    localStorage.setItem(STORAGE_LOGIN_SESSION, JSON.stringify({
+      id: newSessionId(),
+      type,
+      editor: editorName,
+      updatedAt: new Date().toISOString()
+    }));
+  }
+
+  function clearLoginState() {
+    localStorage.removeItem(STORAGE_LOGIN_TYPE);
+    localStorage.removeItem(STORAGE_EDITOR);
+    localStorage.removeItem(STORAGE_LOGIN_SESSION);
+  }
 
   // Migration: if admin is logged in but STORAGE_ADMIN_NAME not set, populate it
   if (!localStorage.getItem(STORAGE_ADMIN_NAME) && localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin') {
@@ -2089,8 +2117,7 @@ document.addEventListener('click', (e) => {
   members.push({ name: name, role: 'メンバー', pin });
   saveMembers(members);
 
-  localStorage.setItem(STORAGE_EDITOR, name);
-  localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+  setLoginState('member', name);
 
   closeLoginModal();
   updateLoginStatus();
@@ -2105,11 +2132,11 @@ document.addEventListener('click', (e) => {
 
   document.getElementById('memberSelectOk').addEventListener('click', () => {
     const name = document.getElementById('adminNameSelect').value;
-    localStorage.setItem(STORAGE_EDITOR, name);
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
+    setLoginState('admin', name);
     closeLoginModal();
     updateLoginStatus();
     render();
+    syncToServer();
   });
 
   // Admin login
@@ -2118,11 +2145,11 @@ document.addEventListener('click', (e) => {
     if (pw !== (localStorage.getItem(STORAGE_ADMIN_PW) || '0000')) { showLoginError('パスワードが違います'); return; }
     const adminN = getAdminName();
     if (adminN) {
-      localStorage.setItem(STORAGE_EDITOR, adminN);
-      localStorage.setItem(STORAGE_LOGIN_TYPE, 'admin');
+      setLoginState('admin', adminN);
       closeLoginModal();
       updateLoginStatus();
       render();
+      syncToServer();
     } else {
       // Fallback: no admin name stored, show member select
       const members = loadMembers();
@@ -2633,7 +2660,7 @@ document.addEventListener('click', (e) => {
     // Update persistent admin name
     localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
     // Logout current admin → become member
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+    setLoginState('member', oldAdmin);
     document.getElementById('changeAdminPanel').style.display = 'none';
     document.getElementById('memberSettingsModal').classList.remove('show');
     updateLoginStatus();
@@ -2732,6 +2759,7 @@ document.addEventListener('click', (e) => {
       deadline: getDeadlineRules(),
       adminName: getAdminName(),
       adminPw: localStorage.getItem(STORAGE_ADMIN_PW) || '0000',
+      loginSession: getLoginSession(),
       attendancePractice: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.practice) || '{}'),
       attendanceMatch: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.match) || '{}')
     };
@@ -2739,6 +2767,17 @@ document.addEventListener('click', (e) => {
 
   async function syncToServer() {
     try {
+      const localSession = getLoginSession();
+      if (localSession && localSession.id) {
+        const latest = await syncFromServer();
+        const serverSessionId = latest && latest.loginSession ? latest.loginSession.id : '';
+        if (serverSessionId && serverSessionId !== localSession.id) {
+          clearLoginState();
+          alert('別の端末でログインされたため、この端末はログアウトされました。');
+          location.href = '?team=' + encodeURIComponent(_teamParam);
+          return false;
+        }
+      }
       const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -2796,13 +2835,24 @@ document.addEventListener('click', (e) => {
       if (loginType === 'member' && editorName) {
         const stillExists = next.some(m => m && m.name === editorName);
         if (!stillExists) {
-          localStorage.removeItem(STORAGE_LOGIN_TYPE);
-          localStorage.removeItem(STORAGE_EDITOR);
+          clearLoginState();
           alert('削除されました');
           location.href = location.pathname; // lobby (no ?team=)
           return true;
         }
       }
+      }
+    }
+    // Single-device login session control.
+    if (data.loginSession && data.loginSession.id) {
+      const localType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+      const localSession = getLoginSession();
+      if (localType && localSession && localSession.id && data.loginSession.id !== localSession.id) {
+        clearLoginState();
+        _skipNextSyncOnce = true;
+        alert('別の端末でログインされたため、この端末はログアウトされました。');
+        location.href = '?team=' + encodeURIComponent(_teamParam);
+        return true;
       }
     }
     // Schedule: merge, server wins for same date
@@ -2882,7 +2932,8 @@ document.addEventListener('click', (e) => {
       render();
     }
     // Always push local state to server
-    syncToServer();
+    if (_skipNextSyncOnce) _skipNextSyncOnce = false;
+    else syncToServer();
     // Force login if not logged in
     if (!localStorage.getItem(STORAGE_LOGIN_TYPE)) {
       document.getElementById('adminPwInput').value = '';
@@ -2894,6 +2945,16 @@ document.addEventListener('click', (e) => {
       loginModal.classList.add('show');
     }
   })();
+
+  // Periodic server check for cross-device login conflicts.
+  setInterval(async () => {
+    const data = await syncFromServer();
+    if (applyServerData(data)) {
+      const titleEl = document.getElementById('appTitle');
+      if (titleEl) titleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
+      render();
+    }
+  }, 15000);
 
   // Global Esc key handler for modals
   document.addEventListener('keydown', e => {
