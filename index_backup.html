@@ -1059,7 +1059,9 @@
 </div>
 
 <script>
-  const _teamParam = new URL(location.href).searchParams.get("team");
+  const _urlParams = new URL(location.href).searchParams;
+  const _teamParam = _urlParams.get("team");
+  const _inviteNameParam = (_urlParams.get("name") || '').trim();
   const RECENT_KEY = 'volley-recent-teams';
   const INVITE_KEY = 'volley-invite-link';
 
@@ -1078,7 +1080,7 @@
   // Invite URL from a new device: store pending invite then return to lobby.
   if (_teamParam && !_isKnownTeam && !_fromInviteCard) {
     const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
-    localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: savedTitle || null }));
+    localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: _inviteNameParam || savedTitle || null }));
     location.href = location.pathname;
     throw new Error('redirect to lobby');
   }
@@ -2709,7 +2711,9 @@ loginModal.classList.add('show');
   const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
     const teamId = _teamParam;
-    const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
+    const groupName = (localStorage.getItem(_T + 'volley-app-title') || '').trim();
+    const qs = '?team=' + encodeURIComponent(teamId) + (groupName ? '&name=' + encodeURIComponent(groupName) : '');
+    const url = location.origin + location.pathname + qs;
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
   });
