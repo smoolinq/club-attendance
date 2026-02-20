@@ -1171,8 +1171,7 @@ joinSection.appendChild(form);
         item.onmouseenter = () => item.style.boxShadow = '0 2px 8px rgba(91,33,182,0.12)';
         item.onmouseleave = () => item.style.boxShadow = 'none';
         const left = document.createElement('div');
-        left.innerHTML = '<div style="font-weight:600">' + (t.name || t.id).replace(/</g,'&lt;') + '</div>' +
-          '<div style="font-size:11px;color:var(--text-light)">ID: ' + t.id.replace(/</g,'&lt;') + '</div>';
+        left.innerHTML = '<div style="font-weight:600">' + (t.name || t.id).replace(/</g,'&lt;') + '</div>';
         const time = document.createElement('div');
         time.style.cssText = 'font-size:11px;color:var(--text-light);white-space:nowrap;margin-left:12px';
         if (t.lastVisited) {
@@ -2631,7 +2630,7 @@ loginModal.classList.add('show');
     alert('管理者権限を解除しました。\n「' + newAdminName + '」さんに管理者パスワード(0000)でログインするよう伝えてください。');
   });
 
-  // --- Invite Code (popup) ---
+  // --- Invite Link (popup) ---
   const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
     const teamId = _teamParam;

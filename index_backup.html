@@ -880,6 +880,12 @@
       <div id="newMemberSection" style="margin-bottom:14px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">新しいメンバーとして参加</label>
         <input type="text" id="newMemberNameInput" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box">
+        
+        <input type="tel" id="newMemberPinInput" inputmode="numeric" maxlength="4"
+    placeholder="ログインPIN（4桁）" autocomplete="off"
+    style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px">
+
+        
         <button class="btn-confirm" id="newMemberJoinBtn" style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
       </div>
       <div id="newMemberSeparator" style="border-top:1px solid var(--border);margin:14px 0;"></div>
@@ -982,7 +988,7 @@
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待コードを表示</button>
+    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
     <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
@@ -1007,20 +1013,13 @@
 
 <div class="modal-overlay" id="invitePopup" style="z-index:2500">
   <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待コード</div>
-    <div style="background:#fff;border:2px dashed var(--primary-light);border-radius:14px;padding:16px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">グループID</div>
-      <div id="inviteTeamId" style="font-size:20px;font-weight:800;letter-spacing:2px;color:var(--primary);user-select:all"></div>
-    </div>
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待リンク</div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">招待URL</div>
       <div id="inviteUrl" style="font-size:12px;word-break:break-all;color:var(--primary);user-select:all;line-height:1.5"></div>
     </div>
     <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてグループに参加させてね</p>
-    <div style="display:flex;gap:8px">
-      <button class="btn-confirm" id="inviteIdCopyBtn" style="flex:1;padding:10px;font-size:14px">IDをコピー</button>
-      <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
-    </div>
+    <button class="btn-confirm" id="inviteCopyBtn" style="width:100%;padding:10px;font-size:14px">URLをコピー</button>
     <div style="margin-top:8px">
       <button class="btn-cancel" id="inviteCloseBtn" style="width:100%;padding:10px;font-size:14px">閉じる</button>
     </div>
@@ -1060,29 +1059,24 @@
 </div>
 
 <script>
-  const INVITE_KEY = 'volley-invite';
   const _teamParam = new URL(location.href).searchParams.get("team");
+  const RECENT_KEY = 'volley-recent-teams';
 
-  // Intercept invite URL: if team not in recent and no pending invite, save invite and redirect to lobby
-  if (_teamParam) {
-    const RECENT_KEY = 'volley-recent-teams';
-    let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
-    const isKnown = recent.some(t => t.id === _teamParam);
-    let pendingInvite = null; try { pendingInvite = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
-    const isFromInviteCard = pendingInvite && pendingInvite.id === _teamParam;
-    if (!isKnown && !isFromInviteCard) {
-      const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
-      localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: savedTitle || null }));
-      location.href = location.pathname;
-      throw new Error('redirect to lobby');
-    }
+  function getRecentTeams() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
   }
+
+  function isKnownTeam(teamId) {
+    if (!teamId) return false;
+    return getRecentTeams().some(t => t.id === teamId);
+  }
+
+  const _isKnownTeam = isKnownTeam(_teamParam);
 
   if (!_teamParam) {
     // --- Lobby Screen ---
     document.body.innerHTML = '';
-    const RECENT_KEY = 'volley-recent-teams';
-    function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
+    function getRecent() { return getRecentTeams(); }
 
     // Lobby custom confirm
     function lobbyConfirm(msg) {
@@ -1112,35 +1106,24 @@
 
     const hero = document.createElement('div');
     hero.style.cssText = 'text-align:center;margin-bottom:28px';
-    hero.innerHTML = '<div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:2px">出欠ちゃん</div>' +
-      '<div style="font-size:11px;color:var(--text-light);letter-spacing:1px;margin-bottom:14px">管理アプリ</div>' +
-      '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px">グループIDを入力してください</div>' +
-      '<div style="font-size:12px;color:var(--text-light)">招待リンクを開くと自動で参加できます</div>';
+    hero.innerHTML =
+  '<div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:2px">出欠ちゃん</div>' +
+  '<div style="font-size:11px;color:var(--text-light);letter-spacing:1px;margin-bottom:18px">管理アプリ</div>';
+
+
     joinSection.appendChild(hero);
 
-    // Invite card
-    let inviteData = null;
-    try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
-    if (inviteData && inviteData.id) {
-      const inviteCard = document.createElement('div');
-      inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
-      const displayName = inviteData.name ? inviteData.name : inviteData.id;
-      inviteCard.innerHTML =
-        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">「' + displayName.replace(/</g,'&lt;') + '」に招待されています</div>' +
-        '<div style="font-size:11px;color:var(--text-light);margin-bottom:14px">ID: ' + inviteData.id.replace(/</g,'&lt;') + '</div>' +
-        '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このチームに参加する</button>';
-      joinSection.appendChild(inviteCard);
-    }
-
-    // Team ID input
     const form = document.createElement('div');
-    form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
-    form.innerHTML = '<div style="display:flex;gap:8px">' +
-      '<input id="lobbyTeamInput" type="text" placeholder="グループID" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-      '<button id="lobbyGoBtn" style="padding:10px 20px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">参加</button>' +
-      '</div>' +
-      '<button id="createTeamBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
-    joinSection.appendChild(form);
+form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
+form.innerHTML = 
+  '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
+    '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
+    '<div>・新しく参加するグループはPINが必要です</div>' +
+    '<div>・この端末でログイン済みのグループはPIN不要です</div>' +
+    '<div>・同じグループ内で同じPINは使えません</div>' +
+  '</div>' +
+  '<button id="createTeamBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
+joinSection.appendChild(form);
 
     const orRow = document.createElement('div');
     orRow.id = 'orRow';
@@ -1188,8 +1171,7 @@
         item.onmouseenter = () => item.style.boxShadow = '0 2px 8px rgba(91,33,182,0.12)';
         item.onmouseleave = () => item.style.boxShadow = 'none';
         const left = document.createElement('div');
-        left.innerHTML = '<div style="font-weight:600">' + (t.name || t.id).replace(/</g,'&lt;') + '</div>' +
-          '<div style="font-size:11px;color:var(--text-light)">ID: ' + t.id.replace(/</g,'&lt;') + '</div>';
+        left.innerHTML = '<div style="font-weight:600">' + (t.name || t.id).replace(/</g,'&lt;') + '</div>';
         const time = document.createElement('div');
         time.style.cssText = 'font-size:11px;color:var(--text-light);white-space:nowrap;margin-left:12px';
         if (t.lastVisited) {
@@ -1229,25 +1211,7 @@
       return id;
     }
 
-    // Event handlers — join existing team
-    document.getElementById('lobbyGoBtn').addEventListener('click', () => {
-      const v = document.getElementById('lobbyTeamInput').value.trim();
-      if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
-      const members = localStorage.getItem(v + ':volley-members');
-      if (!members) {
-        const errBox = document.getElementById('lobbyTeamInput');
-        errBox.style.borderColor = '#ef4444';
-        errBox.placeholder = 'このグループIDは存在しません';
-        errBox.value = '';
-        errBox.focus();
-        setTimeout(() => { errBox.style.borderColor = ''; errBox.placeholder = 'グループID'; }, 3000);
-        return;
-      }
-      location.href = '?team=' + encodeURIComponent(v);
-    });
-    document.getElementById('lobbyTeamInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('lobbyGoBtn').click();
-    });
+    
 
     // Event handlers — create new team
     document.getElementById('lobbyAdminPw').addEventListener('input', e => {
@@ -1295,31 +1259,28 @@
     const CREATE_CSS = 'width:100%;max-width:360px';
     const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:360px';
 
-    document.getElementById('createTeamBtn').addEventListener('click', () => {
-      const sec = document.getElementById('createTeamSection');
-      const join = document.getElementById('joinSection');
-      const showing = sec.style.display === 'none';
-      sec.style.cssText = showing ? CREATE_CSS : CREATE_CSS_HIDDEN;
-      join.style.cssText = showing ? JOIN_CSS_HIDDEN : JOIN_CSS;
-    });
+ document.addEventListener('click', (e) => {
+  const createBtn = e.target.closest('#createTeamBtn');
+  const backBtn   = e.target.closest('#backToJoinBtn');
+  if (!createBtn && !backBtn) return;
 
-    document.getElementById('backToJoinBtn').addEventListener('click', () => {
-      document.getElementById('createTeamSection').style.cssText = CREATE_CSS_HIDDEN;
-      document.getElementById('joinSection').style.cssText = JOIN_CSS;
-    });
+  e.preventDefault();
 
-    // Invite join button
-    const inviteJoinBtn = document.getElementById('inviteJoinBtn');
-    if (inviteJoinBtn) {
-      inviteJoinBtn.addEventListener('click', () => {
-        const inv = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
-        if (inv && inv.id) location.href = '?team=' + encodeURIComponent(inv.id);
-      });
-    }
+  const sec  = document.getElementById('createTeamSection');
+  const join = document.getElementById('joinSection');
+  if (!sec || !join) return;
 
-    document.getElementById('lobbyTeamInput').focus();
-    throw new Error('lobby');
+  if (createBtn) {
+    sec.style.cssText  = CREATE_CSS;
+    join.style.cssText = JOIN_CSS_HIDDEN;
+  } else {
+    sec.style.cssText  = CREATE_CSS_HIDDEN;
+    join.style.cssText = JOIN_CSS;
   }
+});
+
+
+} else {
 
   // Check if team was deleted
   const DELETED_TEAMS_KEY = 'volley-deleted-teams';
@@ -1348,9 +1309,6 @@
     if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   })();
-
-  // Clear invite info once team page is loaded
-  localStorage.removeItem(INVITE_KEY);
 
   // Guard: if logged in but not a member of this team, clear login
   (function guardTeamMember() {
@@ -2014,11 +1972,19 @@
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
-      document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
-      const det = document.getElementById('loginExistingDetails');
-      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
-      loginModal.classList.add('show');
+const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
+const det = document.getElementById('loginExistingDetails');
+
+document.getElementById('newMemberSection').style.display =
+  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
+document.getElementById('newMemberSeparator').style.display =
+  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
+det.style.display = shouldUseInviteJoinFlow ? 'none' : '';
+if (!shouldUseInviteJoinFlow && hasMembers) det.setAttribute('open', '');
+else det.removeAttribute('open');
+
+loginModal.classList.add('show');
+
     } else if (type === 'member') {
       if (!confirm('ログアウトしますか？')) return;
       localStorage.removeItem(STORAGE_LOGIN_TYPE);
@@ -2092,20 +2058,29 @@
   });
 
   document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
-    const name = document.getElementById('newMemberNameInput').value.trim();
-    if (!name) { showLoginError('名前を入力してください'); return; }
-    const members = loadMembers();
-    if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
-    if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
-    members.push({ name: name, role: 'メンバー' });
-    saveMembers(members);
-    localStorage.setItem(STORAGE_EDITOR, name);
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-    closeLoginModal();
-    updateLoginStatus();
-    render();
-    syncToServer();
-  });
+  const name = document.getElementById('newMemberNameInput').value.trim();
+  const pin = document.getElementById('newMemberPinInput').value.trim();
+
+  if (!name) { showLoginError('名前を入力してください'); return; }
+  if (!/^\d{4}$/.test(pin)) { showLoginError('PINは4桁の数字で入力してください'); return; }
+
+  const members = loadMembers();
+  if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
+  if (members.some(m => String(m.pin || '') === pin)) { showLoginError('このPINはすでに使われています'); return; }
+
+  if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
+
+  members.push({ name: name, role: 'メンバー', pin });
+  saveMembers(members);
+
+  localStorage.setItem(STORAGE_EDITOR, name);
+  localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+
+  closeLoginModal();
+  updateLoginStatus();
+  render();
+  syncToServer();
+});
 
   document.getElementById('memberSelectBack').addEventListener('click', () => {
     document.getElementById('loginStep1').style.display = '';
@@ -2583,21 +2558,16 @@
     document.getElementById('changeAdminBtn').style.display = admin ? '' : 'none';
     document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
-      list.querySelectorAll('.ms-role').forEach(sel => {
-        sel.addEventListener('change', () => {
-          const ms = loadMembers();
-          ms[parseInt(sel.dataset.msIdx)].role = sel.value;
-          saveMembers(ms);
-          syncToServer();
-        });
-      });
-      list.querySelectorAll('.ms-delete').forEach(btn => {
+
+
+            list.querySelectorAll('.ms-delete').forEach(btn => {
         btn.addEventListener('click', () => {
           const ms = loadMembers();
           const idx = parseInt(btn.dataset.msDelete);
           if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
             ms.splice(idx, 1);
             saveMembers(ms);
+            syncToServer();
             renderMemberSettings();
           }
         });
@@ -2660,22 +2630,13 @@
     alert('管理者権限を解除しました。\n「' + newAdminName + '」さんに管理者パスワード(0000)でログインするよう伝えてください。');
   });
 
-  // --- Invite Code (popup) ---
+  // --- Invite Link (popup) ---
   const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
     const teamId = _teamParam;
-    const url = 'https://club-attendance.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
-    document.getElementById('inviteTeamId').textContent = teamId;
+    const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
-  });
-  document.getElementById('inviteIdCopyBtn').addEventListener('click', () => {
-    const id = document.getElementById('inviteTeamId').textContent;
-    navigator.clipboard.writeText(id).then(() => {
-      const btn = document.getElementById('inviteIdCopyBtn');
-      btn.textContent = 'コピーしました';
-      setTimeout(() => { btn.textContent = 'IDをコピー'; }, 1500);
-    });
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
@@ -2782,6 +2743,7 @@
   }
 
   function applyServerData(data) {
+    console.log('[applyServerData] members=', Array.isArray(data?.members) ? data.members.length : 'no-members', 'loginType=', localStorage.getItem(STORAGE_LOGIN_TYPE), 'editor=', localStorage.getItem(STORAGE_EDITOR));
     if (!data) return false;
     let changed = false;
     // Title: always sync from server
@@ -2789,17 +2751,40 @@
       const local = localStorage.getItem(STORAGE_TITLE) || '';
       if (data.title !== local) { localStorage.setItem(STORAGE_TITLE, data.title); changed = true; }
     }
-    // Members: merge by name, server role wins
-    if (Array.isArray(data.members) && data.members.length > 0) {
+        // Members: server is source of truth (reflect deletions too)
+    if (Array.isArray(data.members)) {
       const local = loadMembers();
       const localMap = new Map(local.map(m => [m.name, m]));
-      let updated = false;
-      for (const sm of data.members) {
-        const lm = localMap.get(sm.name);
-        if (!lm) { local.push(sm); updated = true; }
-        else if (sm.role && sm.role !== lm.role) { lm.role = sm.role; updated = true; }
+
+      // Build next members list in server order
+      const next = data.members.map(sm => {
+        const lm = localMap.get(sm.name) || {};
+        const out = { ...lm, ...sm };
+        if (sm.role) out.role = sm.role; // server role wins
+        // Keep local pin if server omitted
+        if (sm.pin == null && lm.pin != null) out.pin = lm.pin;
+        return out;
+      });
+
+      // Save only if changed
+      if (JSON.stringify(next) !== JSON.stringify(local)) {
+        saveMembers(next);
+        changed = true;
       }
-      if (updated) { saveMembers(local); changed = true; }
+
+      // If this device was logged in as a member and got deleted -> lobby
+      const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE);
+      const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+      if (loginType === 'member' && editorName) {
+        const stillExists = next.some(m => m && m.name === editorName);
+        if (!stillExists) {
+          localStorage.removeItem(STORAGE_LOGIN_TYPE);
+          localStorage.removeItem(STORAGE_EDITOR);
+          alert('削除されました');
+          location.href = location.pathname; // lobby (no ?team=)
+          return true;
+        }
+      }
     }
     // Schedule: merge, server wins for same date
     if (Array.isArray(data.schedule) && data.schedule.length > 0) {
@@ -2890,10 +2875,18 @@
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
-      document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
-      const det = document.getElementById('loginExistingDetails');
-      if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
+const det = document.getElementById('loginExistingDetails');
+const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
+if (shouldUseInviteJoinFlow) {
+  det.style.display = 'none';
+  document.getElementById('newMemberSection').style.display = '';
+  document.getElementById('newMemberSeparator').style.display = '';
+} else {
+  det.style.display = '';
+  document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
+  document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
+  if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
+}
       loginModal.classList.add('show');
     }
   })();
@@ -2907,6 +2900,7 @@
     if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
     if (document.getElementById('userMenu').classList.contains('show')) { document.getElementById('userMenu').classList.remove('show'); return; }
   });
+}
 </script>
 </body>
 </html>
