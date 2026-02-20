@@ -1355,9 +1355,9 @@ document.addEventListener('click', (e) => {
 
 
 
-    document.getElementById('lobbyTeamInput').focus();
-    throw new Error('lobby');
-  }
+    const ti = document.getElementById('lobbyTeamInput');
+if (ti) ti.focus();
+} else {
 
   // Check if team was deleted
   const DELETED_TEAMS_KEY = 'volley-deleted-teams';
@@ -2996,6 +2996,7 @@ if (isInviteFlow) {
     if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
     if (document.getElementById('userMenu').classList.contains('show')) { document.getElementById('userMenu').classList.remove('show'); return; }
   });
+}
 </script>
 </body>
 </html>
