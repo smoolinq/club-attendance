@@ -877,7 +877,7 @@
     <button class="modal-close-x" id="loginCloseX">&times;</button>
     <h2>ログイン</h2>
     <div id="loginStep1">
-      <div id="newMemberSection" style="margin-bottom:14px">
+      <div id="newMemberSection" style="margin-bottom:8px">
         <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">新しいメンバーとして参加</label>
         <input type="text" id="newMemberNameInput" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box">
         
@@ -888,21 +888,12 @@
         
         <button class="btn-confirm" id="newMemberJoinBtn" style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
       </div>
-      <div id="newMemberSeparator" style="border-top:1px solid var(--border);margin:14px 0;"></div>
-      <details id="loginExistingDetails">
-        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--primary);margin-bottom:8px">すでに参加済みの方はこちら</summary>
-        <div style="margin-bottom:14px">
-          <select id="memberNameSelect" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px"></select>
-          <input type="tel" id="memberPinInput" inputmode="numeric" maxlength="4" placeholder="ログインPIN（4桁）" autocomplete="off" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px">
-          <button class="btn-confirm" id="memberLoginBtn" style="padding:8px 20px;font-size:14px">PINでログイン</button>
+      <details id="loginAdminDetails">
+        <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-light);margin-bottom:8px">管理者用パスワード</summary>
+        <div style="display:flex;gap:6px">
+          <input type="password" id="adminPwInput" placeholder="パスワード" style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
+          <button class="btn-confirm" id="adminLoginBtn" style="padding:8px 16px;font-size:14px;white-space:nowrap">ログイン</button>
         </div>
-        <details id="loginAdminDetails">
-          <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-light);margin-bottom:8px">管理者用パスワード</summary>
-          <div style="display:flex;gap:6px">
-            <input type="password" id="adminPwInput" placeholder="パスワード" style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
-            <button class="btn-confirm" id="adminLoginBtn" style="padding:8px 16px;font-size:14px;white-space:nowrap">ログイン</button>
-          </div>
-        </details>
       </details>
       <div id="loginError" style="color:var(--absent);font-size:13px;margin-top:6px;display:none"></div>
       <div class="modal-actions"><button class="btn-cancel" id="loginCancel">キャンセル</button></div>
@@ -2048,27 +2039,11 @@ document.addEventListener('click', (e) => {
     if (!type) {
       // Not logged in → open login modal
       document.getElementById('adminPwInput').value = '';
-      document.getElementById('memberPinInput').value = '';
       document.getElementById('loginError').style.display = 'none';
       document.getElementById('loginStep1').style.display = '';
       document.getElementById('loginStep2').style.display = 'none';
-      const members = loadMembers();
-      const adminN = getAdminName();
-      const hasMembers = members.filter(m => m.name !== adminN).length > 0;
-      const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
-const det = document.getElementById('loginExistingDetails');
-
-document.getElementById('newMemberSection').style.display =
-  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
-document.getElementById('newMemberSeparator').style.display =
-  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
-det.style.display = shouldUseInviteJoinFlow ? 'none' : '';
-if (!shouldUseInviteJoinFlow && hasMembers) det.setAttribute('open', '');
-else det.removeAttribute('open');
-
-loginModal.classList.add('show');
+      document.getElementById('newMemberSection').style.display = '';
+      loginModal.classList.add('show');
       return;
     }
   });
@@ -2082,14 +2057,10 @@ loginModal.classList.add('show');
   function closeLoginModal() {
     loginModal.classList.remove('show');
     document.getElementById('newMemberSection').style.display = '';
-    document.getElementById('newMemberSeparator').style.display = '';
     document.getElementById('newMemberNameInput').value = '';
-    document.getElementById('memberPinInput').value = '';
     document.getElementById('adminPwInput').value = '';
     document.getElementById('loginError').style.display = 'none';
-    const details1 = document.getElementById('loginExistingDetails');
     const details2 = document.getElementById('loginAdminDetails');
-    if (details1) details1.removeAttribute('open');
     if (details2) details2.removeAttribute('open');
     document.getElementById('loginStep1').style.display = '';
     document.getElementById('loginStep2').style.display = 'none';
@@ -2098,23 +2069,6 @@ loginModal.classList.add('show');
   document.getElementById('loginCancel').addEventListener('click', backToLobbyFromLogin);
   document.getElementById('loginCloseX').addEventListener('click', backToLobbyFromLogin);
   loginModal.addEventListener('click', e => { if (e.target === loginModal) backToLobbyFromLogin(); });
-
-  // Member login
-  document.getElementById('memberLoginBtn').addEventListener('click', async () => {
-    const name = document.getElementById('memberNameSelect').value;
-    const pin = document.getElementById('memberPinInput').value.trim();
-    if (!name) { showLoginError('メンバーを選択してください'); return; }
-    if (!/^\d{4}$/.test(pin)) { showLoginError('PINは4桁の数字で入力してください'); return; }
-    const member = loadMembers().find(m => m.name === name);
-    if (!member) { showLoginError('メンバー情報が見つかりません'); return; }
-    if (String(member.pin || '') !== pin) { showLoginError('PINが違います'); return; }
-    if (!(await customConfirm(name + 'さんでログインしますか？'))) return;
-    localStorage.setItem(STORAGE_EDITOR, name);
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-    closeLoginModal();
-    updateLoginStatus();
-    render();
-  });
 
   document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
   const name = document.getElementById('newMemberNameInput').value.trim();
@@ -2126,6 +2080,8 @@ loginModal.classList.add('show');
   const members = loadMembers();
   if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
   if (members.some(m => String(m.pin || '') === pin)) { showLoginError('このPINはすでに使われています'); return; }
+  const adminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
+  if (pin === adminPw) { showLoginError('このPINは管理者パスワードと重複するため使えません'); return; }
 
   if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
 
@@ -2176,12 +2132,6 @@ loginModal.classList.add('show');
     }
   });
   document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('adminLoginBtn').click(); });
-  document.getElementById('memberPinInput').addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-  });
-  document.getElementById('memberPinInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('memberLoginBtn').click();
-  });
 
   // Admin settings modal
   function openAdminModal() {
@@ -2940,27 +2890,10 @@ loginModal.classList.add('show');
     if (!localStorage.getItem(STORAGE_LOGIN_TYPE)) {
       document.getElementById('adminPwInput').value = '';
       document.getElementById('newMemberNameInput').value = '';
-      document.getElementById('memberPinInput').value = '';
       document.getElementById('loginError').style.display = 'none';
       document.getElementById('loginStep1').style.display = '';
       document.getElementById('loginStep2').style.display = 'none';
-      const members = loadMembers();
-      const adminN = getAdminName();
-      const hasMembers = members.filter(m => m.name !== adminN).length > 0;
-      const sel = document.getElementById('memberNameSelect');
-      sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-const det = document.getElementById('loginExistingDetails');
-const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
-if (shouldUseInviteJoinFlow) {
-  det.style.display = 'none';
-  document.getElementById('newMemberSection').style.display = '';
-  document.getElementById('newMemberSeparator').style.display = '';
-} else {
-  det.style.display = '';
-  document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
-  document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
-  if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
-}
+      document.getElementById('newMemberSection').style.display = '';
       loginModal.classList.add('show');
     }
   })();
