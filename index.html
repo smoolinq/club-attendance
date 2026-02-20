@@ -2991,7 +2991,7 @@ loginModal.classList.add('show');
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-      const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
+            const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
 const det = document.getElementById('loginExistingDetails');
 
 if (isInviteFlow) {
@@ -3000,8 +3000,9 @@ if (isInviteFlow) {
   document.getElementById('newMemberSeparator').style.display = 'none'; // 区切り線も不要
 } else {
   det.style.display = '';
-  document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
-  document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
+  // 招待フロー以外は新規登録を出さない（＝招待コード専用を保証）
+  document.getElementById('newMemberSection').style.display = 'none';
+  document.getElementById('newMemberSeparator').style.display = 'none';
   if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
 }
       loginModal.classList.add('show');
