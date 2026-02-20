@@ -988,7 +988,7 @@
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待コードを表示</button>
+    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
     <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
@@ -1013,20 +1013,13 @@
 
 <div class="modal-overlay" id="invitePopup" style="z-index:2500">
   <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待コード</div>
-    <div style="background:#fff;border:2px dashed var(--primary-light);border-radius:14px;padding:16px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">グループID</div>
-      <div id="inviteTeamId" style="font-size:20px;font-weight:800;letter-spacing:2px;color:var(--primary);user-select:all"></div>
-    </div>
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待リンク</div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">招待URL</div>
       <div id="inviteUrl" style="font-size:12px;word-break:break-all;color:var(--primary);user-select:all;line-height:1.5"></div>
     </div>
     <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてグループに参加させてね</p>
-    <div style="display:flex;gap:8px">
-      <button class="btn-confirm" id="inviteIdCopyBtn" style="flex:1;padding:10px;font-size:14px">IDをコピー</button>
-      <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
-    </div>
+    <button class="btn-confirm" id="inviteCopyBtn" style="width:100%;padding:10px;font-size:14px">URLをコピー</button>
     <div style="margin-top:8px">
       <button class="btn-cancel" id="inviteCloseBtn" style="width:100%;padding:10px;font-size:14px">閉じる</button>
     </div>
@@ -1066,29 +1059,24 @@
 </div>
 
 <script>
-  const INVITE_KEY = 'volley-invite';
   const _teamParam = new URL(location.href).searchParams.get("team");
+  const RECENT_KEY = 'volley-recent-teams';
 
-  // Intercept invite URL: if team not in recent and no pending invite, save invite and redirect to lobby
-  if (_teamParam) {
-    const RECENT_KEY = 'volley-recent-teams';
-    let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
-    const isKnown = recent.some(t => t.id === _teamParam);
-    let pendingInvite = null; try { pendingInvite = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
-    const isFromInviteCard = pendingInvite && pendingInvite.id === _teamParam;
-    if (!isKnown && !isFromInviteCard) {
-      const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
-      localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: savedTitle || null }));
-      location.href = location.pathname;
-      throw new Error('redirect to lobby');
-    }
+  function getRecentTeams() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
   }
+
+  function isKnownTeam(teamId) {
+    if (!teamId) return false;
+    return getRecentTeams().some(t => t.id === teamId);
+  }
+
+  const _isKnownTeam = isKnownTeam(_teamParam);
 
   if (!_teamParam) {
     // --- Lobby Screen ---
     document.body.innerHTML = '';
-    const RECENT_KEY = 'volley-recent-teams';
-    function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
+    function getRecent() { return getRecentTeams(); }
 
     // Lobby custom confirm
     function lobbyConfirm(msg) {
@@ -1124,20 +1112,6 @@
 
 
     joinSection.appendChild(hero);
-
-    // Invite card
-    let inviteData = null;
-    try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
-    if (inviteData && inviteData.id) {
-      const inviteCard = document.createElement('div');
-      inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
-      const displayName = inviteData.name ? inviteData.name : inviteData.id;
-      inviteCard.innerHTML =
-        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">「' + displayName.replace(/</g,'&lt;') + '」に招待されています</div>' +
-        '<div style="font-size:11px;color:var(--text-light);margin-bottom:14px">ID: ' + inviteData.id.replace(/</g,'&lt;') + '</div>' +
-        '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このチームに参加する</button>';
-      joinSection.appendChild(inviteCard);
-    }
 
     const form = document.createElement('div');
 form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
@@ -1306,25 +1280,7 @@ joinSection.appendChild(form);
   }
 });
 
- // Invite join button (event delegation)
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#inviteJoinBtn');
-  if (!btn) return;
 
-  const raw = localStorage.getItem(INVITE_KEY);
-  if (!raw) { alert('招待データがありません'); return; }
-
-  let inv = null;
-  try { inv = JSON.parse(raw); } catch { alert('招待データが壊れています'); return; }
-  if (!inv || !inv.id) { alert('招待IDがありません'); return; }
-
-  sessionStorage.setItem('inviteFromCard', '1');
-  location.href = '?team=' + encodeURIComponent(inv.id);
-});
-
-
-
-   
 } else {
 
   // Check if team was deleted
@@ -1354,9 +1310,6 @@ document.addEventListener('click', (e) => {
     if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   })();
-
-  // Clear invite info once team page is loaded
-  localStorage.removeItem(INVITE_KEY);
 
   // Guard: if logged in but not a member of this team, clear login
   (function guardTeamMember() {
@@ -2020,31 +1973,16 @@ document.addEventListener('click', (e) => {
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
- const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
-const hasTeamParam = !!new URL(location.href).searchParams.get('team');
-
-document.getElementById('newMemberSection').style.display =
-  hasTeamParam ? '' : (hasMembers ? 'none' : '');
-
-document.getElementById('newMemberSeparator').style.display =
-  hasTeamParam ? '' : (hasMembers ? 'none' : '');
-
+const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
 const det = document.getElementById('loginExistingDetails');
 
-// ?team= で入った(=招待/ID入力/URL直)なら「既存ログイン」を見せない
-det.style.display = hasTeamParam ? 'none' : '';
-if (!hasTeamParam) det.style.display = ''; // ロビー起点は通常表示
-
-
-if (fromInviteCard) {
-  det.style.display = 'none';
-  document.getElementById('newMemberSection').style.display = '';
-  document.getElementById('newMemberSeparator').style.display = '';
-} else {
-  det.style.display = '';
-  if (hasMembers) det.setAttribute('open', '');
-  else det.removeAttribute('open');
-}
+document.getElementById('newMemberSection').style.display =
+  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
+document.getElementById('newMemberSeparator').style.display =
+  shouldUseInviteJoinFlow ? '' : (hasMembers ? 'none' : '');
+det.style.display = shouldUseInviteJoinFlow ? 'none' : '';
+if (!shouldUseInviteJoinFlow && hasMembers) det.setAttribute('open', '');
+else det.removeAttribute('open');
 
 loginModal.classList.add('show');
 
@@ -2138,8 +2076,6 @@ loginModal.classList.add('show');
 
   localStorage.setItem(STORAGE_EDITOR, name);
   localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-  localStorage.removeItem(INVITE_KEY);
-  sessionStorage.removeItem('inviteFromCard');
 
   closeLoginModal();
   updateLoginStatus();
@@ -2699,18 +2635,9 @@ loginModal.classList.add('show');
   const invitePopup = document.getElementById('invitePopup');
   document.getElementById('showInviteBtn').addEventListener('click', () => {
     const teamId = _teamParam;
-    const url = 'https://club-attendance.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
-    document.getElementById('inviteTeamId').textContent = teamId;
+    const url = location.origin + location.pathname + '?team=' + encodeURIComponent(teamId);
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
-  });
-  document.getElementById('inviteIdCopyBtn').addEventListener('click', () => {
-    const id = document.getElementById('inviteTeamId').textContent;
-    navigator.clipboard.writeText(id).then(() => {
-      const btn = document.getElementById('inviteIdCopyBtn');
-      btn.textContent = 'コピーしました';
-      setTimeout(() => { btn.textContent = 'IDをコピー'; }, 1500);
-    });
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
@@ -2949,18 +2876,16 @@ loginModal.classList.add('show');
       const hasMembers = members.filter(m => m.name !== adminN).length > 0;
       const sel = document.getElementById('memberNameSelect');
       sel.innerHTML = '<option value="" disabled selected>選択してください</option>' + members.filter(m => m.name !== adminN).map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-            const isInviteFlow = new URL(location.href).searchParams.get('invite') === '1';
 const det = document.getElementById('loginExistingDetails');
-
-if (isInviteFlow) {
-  det.style.display = 'none'; // 既存ログイン自体を出さない
+const shouldUseInviteJoinFlow = !!_teamParam && !_isKnownTeam;
+if (shouldUseInviteJoinFlow) {
+  det.style.display = 'none';
   document.getElementById('newMemberSection').style.display = '';
-  document.getElementById('newMemberSeparator').style.display = 'none'; // 区切り線も不要
+  document.getElementById('newMemberSeparator').style.display = '';
 } else {
   det.style.display = '';
-  // 招待フロー以外は新規登録を出さない（＝招待コード専用を保証）
-  document.getElementById('newMemberSection').style.display = 'none';
-  document.getElementById('newMemberSeparator').style.display = 'none';
+  document.getElementById('newMemberSection').style.display = hasMembers ? 'none' : '';
+  document.getElementById('newMemberSeparator').style.display = hasMembers ? 'none' : '';
   if (hasMembers) det.setAttribute('open', ''); else det.removeAttribute('open');
 }
       loginModal.classList.add('show');
