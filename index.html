@@ -8,6 +8,8 @@
 <meta property="og:type" content="website">
 <title>出欠ちゃん</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
   :root {
     --primary: #5b21b6;
     --primary-light: #7c3aed;
@@ -136,6 +138,70 @@
     background: rgba(255,255,255,0.18);
     border-radius: 8px;
     padding: 3px 12px;
+  }
+
+  .lobby-logo {
+    font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+    margin-bottom: 4px;
+  }
+
+  .lobby-subtitle {
+    font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #625f84;
+    letter-spacing: 0.08em;
+    margin-bottom: 18px;
+  }
+
+  .lobby-create-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.25);
+  }
+
+  .lobby-create-btn:active { transform: translateY(1px); }
+
+  .lobby-relogin-card {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: #f7f2ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 14px;
+  }
+
+  .lobby-relogin-summary {
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--primary);
+    text-align: center;
+  }
+
+  .lobby-relogin-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   /* === Schedule Section === */
@@ -1142,8 +1208,8 @@
     const hero = document.createElement('div');
     hero.style.cssText = 'text-align:center;margin-bottom:28px';
     hero.innerHTML =
-  '<div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:2px">出欠ちゃん</div>' +
-  '<div style="font-size:11px;color:var(--text-light);letter-spacing:1px;margin-bottom:18px">管理アプリ</div>';
+  '<div class="lobby-logo">出欠ちゃん</div>' +
+  '<div class="lobby-subtitle">管理アプリ</div>';
 
 
     joinSection.appendChild(hero);
@@ -1186,25 +1252,26 @@ form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
 form.innerHTML = 
   '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
     '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
-    '<div>・初回参加は「名前＋PIN（4桁）」で登録します</div>' +
+    '<div>・新規にグループを作る時は管理者名として登録されます</div>' +
+    '<div>・管理者はメンバー管理や招待リンク発行などの機能が使えます</div>' +
     '<div>・別端末は「グループIDからログイン」で入れます</div>' +
     '<div>・同じグループ内で同じPINは使えません</div>' +
     '<div>・別端末でログインすると前の端末はログアウトされます</div>' +
   '</div>' +
-  '<button id="createTeamBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
+  '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>';
 joinSection.appendChild(form);
 
     const relogin = document.createElement('details');
     relogin.id = 'reloginSection';
-    relogin.style.cssText = 'width:100%;max-width:360px;margin-bottom:16px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px';
+    relogin.className = 'lobby-relogin-card';
     relogin.innerHTML =
-      '<summary style="font-size:13px;font-weight:700;cursor:pointer;color:var(--primary)">グループIDからログイン</summary>' +
+      '<summary class="lobby-relogin-summary">グループIDからログイン</summary>' +
       '<div style="margin-top:10px">' +
-        '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box">' +
-        '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box">' +
-        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px">' +
-        '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px"></div>' +
-        '<button id="reloginBtn" style="width:100%;padding:10px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer">ログインする</button>' +
+        '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
+        '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
+        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
+        '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
+        '<button id="reloginBtn" class="lobby-relogin-btn">ログインする</button>' +
       '</div>';
     joinSection.appendChild(relogin);
 
