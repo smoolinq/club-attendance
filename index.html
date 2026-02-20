@@ -1006,12 +1006,19 @@
 <div class="modal-overlay" id="invitePopup" style="z-index:2500">
   <div class="modal" style="max-width:340px;text-align:center;background:#faf8ff;border-radius:20px;padding:28px 24px 22px">
     <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">招待リンク</div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">グループID</div>
+      <div id="inviteTeamId" style="font-size:14px;font-weight:700;word-break:break-all;color:var(--primary);user-select:all;line-height:1.4"></div>
+    </div>
     <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
       <div style="font-size:11px;color:var(--text-light);margin-bottom:4px">招待URL</div>
       <div id="inviteUrl" style="font-size:12px;word-break:break-all;color:var(--primary);user-select:all;line-height:1.5"></div>
     </div>
     <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;line-height:1.5">招待リンクをコピーしてグループに参加させてね</p>
-    <button class="btn-confirm" id="inviteCopyBtn" style="width:100%;padding:10px;font-size:14px">URLをコピー</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-confirm" id="inviteIdCopyBtn" style="flex:1;padding:10px;font-size:14px">IDをコピー</button>
+      <button class="btn-confirm" id="inviteCopyBtn" style="flex:1;padding:10px;font-size:14px">URLをコピー</button>
+    </div>
     <div style="margin-top:8px">
       <button class="btn-cancel" id="inviteCloseBtn" style="width:100%;padding:10px;font-size:14px">閉じる</button>
     </div>
@@ -1058,6 +1065,10 @@
   const _pendingInviteName = (_urlParams.get("inviteName") || '').trim();
   const RECENT_KEY = 'volley-recent-teams';
   const INVITE_KEY = 'volley-invite-link';
+
+  function createSessionId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
 
   function getRecentTeams() {
     try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
@@ -1169,6 +1180,20 @@ form.innerHTML =
   '<button id="createTeamBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
 joinSection.appendChild(form);
 
+    const relogin = document.createElement('details');
+    relogin.id = 'reloginSection';
+    relogin.style.cssText = 'width:100%;max-width:360px;margin-bottom:16px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px';
+    relogin.innerHTML =
+      '<summary style="font-size:13px;font-weight:700;cursor:pointer;color:var(--primary)">グループIDからログイン</summary>' +
+      '<div style="margin-top:10px">' +
+        '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box">' +
+        '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box">' +
+        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px">' +
+        '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px"></div>' +
+        '<button id="reloginBtn" style="width:100%;padding:10px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer">ログインする</button>' +
+      '</div>';
+    joinSection.appendChild(relogin);
+
     const orRow = document.createElement('div');
     orRow.id = 'orRow';
     orRow.style.cssText = 'display:none;width:100%;max-width:360px;align-items:center;gap:12px;margin-bottom:24px';
@@ -1279,6 +1304,12 @@ joinSection.appendChild(form);
       localStorage.setItem(t + 'volley-admin-name', adminName);
       localStorage.setItem(t + 'volley-login-type', 'admin');
       localStorage.setItem(t + 'volley-editor', adminName);
+      localStorage.setItem(t + 'volley-login-session', JSON.stringify({
+        id: createSessionId(),
+        type: 'admin',
+        editor: adminName,
+        updatedAt: new Date().toISOString()
+      }));
       localStorage.setItem(t + 'volley-members', JSON.stringify([{name: adminName, role: '管理者'}]));
       localStorage.setItem(t + 'volley-schedule', '[]');
       // Record to recent teams with group name
@@ -1331,6 +1362,48 @@ document.addEventListener('click', (e) => {
   if (!inviteData || !inviteData.id) { alert('招待データがありません'); return; }
   sessionStorage.setItem('inviteFromCard', '1');
   location.href = '?team=' + encodeURIComponent(inviteData.id);
+});
+
+document.getElementById('reloginPin').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+});
+document.getElementById('reloginBtn').addEventListener('click', async () => {
+  const err = document.getElementById('reloginError');
+  const teamId = document.getElementById('reloginGroupId').value.trim().toLowerCase();
+  const name = document.getElementById('reloginName').value.trim();
+  const pin = document.getElementById('reloginPin').value.trim();
+  if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
+  if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
+  if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
+  err.style.display = 'none';
+  try {
+    const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
+    if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
+    const data = await res.json();
+    if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
+    const member = data.members.find(m => m && m.name === name);
+    if (!member) { err.textContent = 'この名前は登録されていません'; err.style.display = ''; return; }
+    if (String(member.pin || '') !== pin) { err.textContent = 'PINが違います'; err.style.display = ''; return; }
+    const t = teamId + ':';
+    if (data.title) localStorage.setItem(t + 'volley-app-title', data.title);
+    if (Array.isArray(data.members)) localStorage.setItem(t + 'volley-members', JSON.stringify(data.members));
+    if (Array.isArray(data.schedule)) localStorage.setItem(t + 'volley-schedule', JSON.stringify(data.schedule));
+    if (data.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(data.deadline));
+    if (data.adminName) localStorage.setItem(t + 'volley-admin-name', data.adminName);
+    if (data.adminPw) localStorage.setItem(t + 'volley-admin-pw', data.adminPw);
+    localStorage.setItem(t + 'volley-editor', name);
+    localStorage.setItem(t + 'volley-login-type', 'member');
+    localStorage.setItem(t + 'volley-login-session', JSON.stringify({
+      id: createSessionId(),
+      type: 'member',
+      editor: name,
+      updatedAt: new Date().toISOString()
+    }));
+    location.href = '?team=' + encodeURIComponent(teamId);
+  } catch {
+    err.textContent = '通信エラーが発生しました';
+    err.style.display = '';
+  }
 });
 
 
@@ -1402,10 +1475,6 @@ document.addEventListener('click', (e) => {
   const STORAGE_LOGIN_TYPE = _T + 'volley-login-type';
   let _skipNextSyncOnce = false;
 
-  function newSessionId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-  }
-
   function getLoginSession() {
     try { return JSON.parse(localStorage.getItem(STORAGE_LOGIN_SESSION) || 'null'); } catch { return null; }
   }
@@ -1414,7 +1483,7 @@ document.addEventListener('click', (e) => {
     localStorage.setItem(STORAGE_EDITOR, editorName);
     localStorage.setItem(STORAGE_LOGIN_TYPE, type);
     localStorage.setItem(STORAGE_LOGIN_SESSION, JSON.stringify({
-      id: newSessionId(),
+      id: createSessionId(),
       type,
       editor: editorName,
       updatedAt: new Date().toISOString()
@@ -2676,8 +2745,17 @@ document.addEventListener('click', (e) => {
     const groupName = (localStorage.getItem(_T + 'volley-app-title') || '').trim();
     const qs = '?team=' + encodeURIComponent(teamId) + (groupName ? '&name=' + encodeURIComponent(groupName) : '');
     const url = location.origin + location.pathname + qs;
+    document.getElementById('inviteTeamId').textContent = teamId;
     document.getElementById('inviteUrl').textContent = url;
     invitePopup.classList.add('show');
+  });
+  document.getElementById('inviteIdCopyBtn').addEventListener('click', () => {
+    const id = document.getElementById('inviteTeamId').textContent;
+    navigator.clipboard.writeText(id).then(() => {
+      const btn = document.getElementById('inviteIdCopyBtn');
+      btn.textContent = 'コピーしました';
+      setTimeout(() => { btn.textContent = 'IDをコピー'; }, 1500);
+    });
   });
   document.getElementById('inviteCopyBtn').addEventListener('click', () => {
     const url = document.getElementById('inviteUrl').textContent;
