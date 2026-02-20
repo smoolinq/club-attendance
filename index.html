@@ -2872,6 +2872,7 @@ list.querySelectorAll('.ms-delete').forEach(btn => {
   }
 
   function applyServerData(data) {
+    console.log('[applyServerData] members=', Array.isArray(data?.members) ? data.members.length : 'no-members', 'loginType=', localStorage.getItem(STORAGE_LOGIN_TYPE), 'editor=', localStorage.getItem(STORAGE_EDITOR));
     if (!data) return false;
     let changed = false;
     // Title: always sync from server
@@ -2879,17 +2880,40 @@ list.querySelectorAll('.ms-delete').forEach(btn => {
       const local = localStorage.getItem(STORAGE_TITLE) || '';
       if (data.title !== local) { localStorage.setItem(STORAGE_TITLE, data.title); changed = true; }
     }
-    // Members: merge by name, server role wins
-    if (Array.isArray(data.members) && data.members.length > 0) {
+        // Members: server is source of truth (reflect deletions too)
+    if (Array.isArray(data.members)) {
       const local = loadMembers();
       const localMap = new Map(local.map(m => [m.name, m]));
-      let updated = false;
-      for (const sm of data.members) {
-        const lm = localMap.get(sm.name);
-        if (!lm) { local.push(sm); updated = true; }
-        else if (sm.role && sm.role !== lm.role) { lm.role = sm.role; updated = true; }
+
+      // Build next members list in server order
+      const next = data.members.map(sm => {
+        const lm = localMap.get(sm.name) || {};
+        const out = { ...lm, ...sm };
+        if (sm.role) out.role = sm.role; // server role wins
+        // Keep local pin if server omitted
+        if (sm.pin == null && lm.pin != null) out.pin = lm.pin;
+        return out;
+      });
+
+      // Save only if changed
+      if (JSON.stringify(next) !== JSON.stringify(local)) {
+        saveMembers(next);
+        changed = true;
       }
-      if (updated) { saveMembers(local); changed = true; }
+
+      // If this device was logged in as a member and got deleted -> lobby
+      const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE);
+      const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+      if (loginType === 'member' && editorName) {
+        const stillExists = next.some(m => m && m.name === editorName);
+        if (!stillExists) {
+          localStorage.removeItem(STORAGE_LOGIN_TYPE);
+          localStorage.removeItem(STORAGE_EDITOR);
+          alert('削除されました');
+          location.href = location.pathname; // lobby (no ?team=)
+          return true;
+        }
+      }
     }
     // Schedule: merge, server wins for same date
     if (Array.isArray(data.schedule) && data.schedule.length > 0) {
