@@ -1133,15 +1133,17 @@
       joinSection.appendChild(inviteCard);
     }
 
-    // Team ID input
     const form = document.createElement('div');
-    form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
-    form.innerHTML = '<div style="display:flex;gap:8px">' +
-      '<input id="lobbyTeamInput" type="text" placeholder="グループID" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-      '<button id="lobbyGoBtn" style="padding:10px 20px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">参加</button>' +
-      '</div>' +
-      '<button id="createTeamBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
-    joinSection.appendChild(form);
+form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
+form.innerHTML = 
+  '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
+    '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
+    '<div>・新しく参加するグループはPINが必要です</div>' +
+    '<div>・この端末でログイン済みのグループはPIN不要です</div>' +
+    '<div>・同じグループ内で同じPINは使えません</div>' +
+  '</div>' +
+  '<button id="createTeamBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
+joinSection.appendChild(form);
 
     const orRow = document.createElement('div');
     orRow.id = 'orRow';
