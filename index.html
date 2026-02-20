@@ -2065,10 +2065,10 @@ document.addEventListener('click', (e) => {
     document.getElementById('loginStep1').style.display = '';
     document.getElementById('loginStep2').style.display = 'none';
   }
-  function backToLobbyFromLogin() { closeLoginModal(); location.href = location.pathname; }
-  document.getElementById('loginCancel').addEventListener('click', backToLobbyFromLogin);
-  document.getElementById('loginCloseX').addEventListener('click', backToLobbyFromLogin);
-  loginModal.addEventListener('click', e => { if (e.target === loginModal) backToLobbyFromLogin(); });
+  function dismissLoginModal() { closeLoginModal(); }
+  document.getElementById('loginCancel').addEventListener('click', dismissLoginModal);
+  document.getElementById('loginCloseX').addEventListener('click', dismissLoginModal);
+  loginModal.addEventListener('click', e => { if (e.target === loginModal) dismissLoginModal(); });
 
   document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
   const name = document.getElementById('newMemberNameInput').value.trim();
@@ -2901,7 +2901,7 @@ document.addEventListener('click', (e) => {
   // Global Esc key handler for modals
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (loginModal.classList.contains('show')) { backToLobbyFromLogin(); return; }
+    if (loginModal.classList.contains('show')) { dismissLoginModal(); return; }
     if (adminModal.classList.contains('show')) { closeAdminModal(); return; }
     if (document.getElementById('settingsModal').classList.contains('show')) { closeSettingsModal(); return; }
     if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
