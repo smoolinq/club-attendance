@@ -1128,12 +1128,33 @@
     if (inviteData && inviteData.id) {
       const inviteCard = document.createElement('div');
       inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
-      const displayName = inviteData.name ? inviteData.name : 'このチーム';
+      const displayName = inviteData.name ? inviteData.name : 'グループ名を取得中';
       inviteCard.innerHTML =
-        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">「' + displayName.replace(/</g,'&lt;') + '」に招待されています</div>' +
+        '<div id="inviteCardTitle" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px"></div>' +
         '<div style="font-size:12px;color:var(--text-light);margin-bottom:14px">招待リンクから参加できます</div>' +
-        '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このチームに参加する</button>';
+        '<button id="inviteJoinBtn" style="padding:12px 32px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">このグループに参加する</button>';
       joinSection.appendChild(inviteCard);
+      const inviteCardTitle = document.getElementById('inviteCardTitle');
+      if (inviteCardTitle) inviteCardTitle.textContent = '「' + displayName + '」に招待されています';
+
+      if (!inviteData.name) {
+        (async () => {
+          try {
+            const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
+            if (!res.ok) return;
+            const data = await res.json();
+            const fetchedName = typeof data?.title === 'string' ? data.title.trim() : '';
+            if (!fetchedName) return;
+            const latestRaw = localStorage.getItem(INVITE_KEY);
+            let latest = null;
+            try { latest = JSON.parse(latestRaw); } catch {}
+            if (!latest || latest.id !== inviteData.id) return;
+            latest.name = fetchedName;
+            localStorage.setItem(INVITE_KEY, JSON.stringify(latest));
+            if (inviteCardTitle) inviteCardTitle.textContent = '「' + fetchedName + '」に招待されています';
+          } catch {}
+        })();
+      }
     }
 
     const form = document.createElement('div');
