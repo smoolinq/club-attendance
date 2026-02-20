@@ -1324,18 +1324,26 @@ document.getElementById('lobbyGoBtn').addEventListener('click', async () => {
     const CREATE_CSS = 'width:100%;max-width:360px';
     const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:360px';
 
-    document.getElementById('createTeamBtn').addEventListener('click', () => {
-      const sec = document.getElementById('createTeamSection');
-      const join = document.getElementById('joinSection');
-      const showing = sec.style.display === 'none';
-      sec.style.cssText = showing ? CREATE_CSS : CREATE_CSS_HIDDEN;
-      join.style.cssText = showing ? JOIN_CSS_HIDDEN : JOIN_CSS;
-    });
+    document.getElementById('createTeamBtn').addEventListener('click', (e) => {
+  e.preventDefault(); // フォームsubmit対策
+  const sec = document.getElementById('createTeamSection');
+  const join = document.getElementById('joinSection');
+  if (!sec || !join) return;
 
-    document.getElementById('backToJoinBtn').addEventListener('click', () => {
-      document.getElementById('createTeamSection').style.cssText = CREATE_CSS_HIDDEN;
-      document.getElementById('joinSection').style.cssText = JOIN_CSS;
-    });
+  const isHidden = getComputedStyle(sec).display === 'none'; // inline依存をやめる
+  sec.style.cssText = isHidden ? CREATE_CSS : CREATE_CSS_HIDDEN;
+  join.style.cssText = isHidden ? JOIN_CSS_HIDDEN : JOIN_CSS;
+});
+
+document.getElementById('backToJoinBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  const sec = document.getElementById('createTeamSection');
+  const join = document.getElementById('joinSection');
+  if (!sec || !join) return;
+
+  sec.style.cssText = CREATE_CSS_HIDDEN;
+  join.style.cssText = JOIN_CSS;
+});
 
  // Invite join button (event delegation)
 document.addEventListener('click', (e) => {
