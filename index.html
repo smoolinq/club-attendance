@@ -2147,22 +2147,31 @@ loginModal.classList.add('show');
   });
 
   document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
-    const name = document.getElementById('newMemberNameInput').value.trim();
-    if (!name) { showLoginError('名前を入力してください'); return; }
-    const members = loadMembers();
-    if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
-    if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
-    members.push({ name: name, role: 'メンバー' });
-    saveMembers(members);
-    localStorage.setItem(STORAGE_EDITOR, name);
-    localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
-    localStorage.removeItem(INVITE_KEY);
-    sessionStorage.removeItem('inviteFromCard');
-    closeLoginModal();
-    updateLoginStatus();
-    render();
-    syncToServer();
-  });
+  const name = document.getElementById('newMemberNameInput').value.trim();
+  const pin = document.getElementById('newMemberPinInput').value.trim();
+
+  if (!name) { showLoginError('名前を入力してください'); return; }
+  if (!/^\d{4}$/.test(pin)) { showLoginError('PINは4桁の数字で入力してください'); return; }
+
+  const members = loadMembers();
+  if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
+  if (members.some(m => String(m.pin || '') === pin)) { showLoginError('このPINはすでに使われています'); return; }
+
+  if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
+
+  members.push({ name: name, role: 'メンバー', pin });
+  saveMembers(members);
+
+  localStorage.setItem(STORAGE_EDITOR, name);
+  localStorage.setItem(STORAGE_LOGIN_TYPE, 'member');
+  localStorage.removeItem(INVITE_KEY);
+  sessionStorage.removeItem('inviteFromCard');
+
+  closeLoginModal();
+  updateLoginStatus();
+  render();
+  syncToServer();
+});
 
   document.getElementById('memberSelectBack').addEventListener('click', () => {
     document.getElementById('loginStep1').style.display = '';
