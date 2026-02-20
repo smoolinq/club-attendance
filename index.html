@@ -2638,14 +2638,17 @@ loginModal.classList.add('show');
     document.getElementById('changeAdminBtn').style.display = admin ? '' : 'none';
     document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
-      list.querySelectorAll('.ms-role').forEach(sel => {
-        sel.addEventListener('change', () => {
-          const ms = loadMembers();
-          ms[parseInt(sel.dataset.msIdx)].role = sel.value;
-          saveMembers(ms);
-          syncToServer();
-        });
-      });
+list.querySelectorAll('.ms-delete').forEach(btn => {
+  btn.onclick = () => {
+    const idx = Number(btn.dataset.idx);
+    const ms = getMembers();
+    ms.splice(idx, 1);
+    saveMembers(ms);
+    syncToServer();      // ← これを追加
+    renderMemberSettings();
+  };
+});
+
       list.querySelectorAll('.ms-delete').forEach(btn => {
         btn.addEventListener('click', () => {
           const ms = loadMembers();
