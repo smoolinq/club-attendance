@@ -2665,29 +2665,16 @@ loginModal.classList.add('show');
     document.getElementById('changeAdminBtn').style.display = admin ? '' : 'none';
     document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
-list.querySelectorAll('.ms-delete').forEach(btn => {
-  btn.onclick = async () => {
-  const idx = Number(btn.dataset.idx);
 
-  const team = getCurrentTeam();            // ← 既存の「今のteam取得」に置換
-  if (!team || !Array.isArray(team.members)) return;
 
-  team.members.splice(idx, 1);
-
-  saveTeam(team);                           // ← 既存の「team保存」に置換
-  await syncToServer();                     // syncがPromiseならawait推奨（違うならawait消す）
-  renderMemberSettings();
-};
-
-});
-
-      list.querySelectorAll('.ms-delete').forEach(btn => {
+            list.querySelectorAll('.ms-delete').forEach(btn => {
         btn.addEventListener('click', () => {
           const ms = loadMembers();
           const idx = parseInt(btn.dataset.msDelete);
           if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
             ms.splice(idx, 1);
             saveMembers(ms);
+            syncToServer();
             renderMemberSettings();
           }
         });
