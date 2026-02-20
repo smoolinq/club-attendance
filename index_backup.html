@@ -1252,11 +1252,24 @@ form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
 form.innerHTML = 
   '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
     '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
-    '<div>・新規にグループを作る時は管理者名として登録されます</div>' +
-    '<div>・管理者はメンバー管理や招待リンク発行などの機能が使えます</div>' +
+    '<div>・新規にグループを作る時は管理者として登録されます</div>' +
+    '<div>・招待リンクは誰でも発行できます</div>' +
     '<div>・別端末は「グループIDからログイン」で入れます</div>' +
     '<div>・同じグループ内で同じPINは使えません</div>' +
     '<div>・別端末でログインすると前の端末はログアウトされます</div>' +
+    '<details style="margin-top:10px;padding:10px 12px;background:#f7f2ff;border:1px solid #ddd6fe;border-radius:12px">' +
+      '<summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--primary)">管理者権限</summary>' +
+      '<div style="margin-top:8px;font-size:12px;line-height:1.65;color:var(--text)">' +
+        '<div>・メンバーの役職変更</div>' +
+        '<div>・メンバーの削除</div>' +
+        '<div>・練習予定の作成・編集・削除</div>' +
+        '<div>・試合予定の作成・編集・削除</div>' +
+        '<div>・予定ごとの締切設定</div>' +
+        '<div>・メンバーの出欠確認・管理</div>' +
+        '<div>・グループ名の変更</div>' +
+        '<div>・グループの削除</div>' +
+      '</div>' +
+    '</details>' +
   '</div>' +
   '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>';
 joinSection.appendChild(form);
