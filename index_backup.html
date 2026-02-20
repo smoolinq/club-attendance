@@ -2068,7 +2068,8 @@ document.addEventListener('click', (e) => {
   function backToLobbyFromLogin() { closeLoginModal(); location.href = location.pathname; }
   document.getElementById('loginCancel').addEventListener('click', backToLobbyFromLogin);
   document.getElementById('loginCloseX').addEventListener('click', backToLobbyFromLogin);
-  loginModal.addEventListener('click', e => { if (e.target === loginModal) backToLobbyFromLogin(); });
+  // Ignore backdrop taps to avoid accidental navigation during input.
+  loginModal.addEventListener('click', e => { if (e.target === loginModal) return; });
 
   document.getElementById('newMemberJoinBtn').addEventListener('click', async () => {
   const name = document.getElementById('newMemberNameInput').value.trim();
@@ -2174,11 +2175,7 @@ document.addEventListener('click', (e) => {
 
   // Back to lobby
   document.getElementById('backToLobbyBtn').addEventListener('click', async () => {
-    if (localStorage.getItem(STORAGE_LOGIN_TYPE)) {
-      if (!(await customConfirm('ログアウトしてロビーに戻ります。\nよろしいですか？'))) return;
-      localStorage.removeItem(STORAGE_LOGIN_TYPE);
-      localStorage.removeItem(STORAGE_EDITOR);
-    }
+    if (!(await customConfirm('ロビーに戻ります。\nよろしいですか？'))) return;
     location.href = location.pathname;
   });
 
