@@ -1239,44 +1239,47 @@ joinSection.appendChild(form);
     }
 
     // Event handlers — join existing team
-document.getElementById('lobbyGoBtn').addEventListener('click', async () => {
-  const v = document.getElementById('lobbyTeamInput').value.trim();
-  if (!v) { document.getElementById('lobbyTeamInput').focus(); return; }
+    const lobbyGoBtn = document.getElementById('lobbyGoBtn');
+    const lobbyTeamInput = document.getElementById('lobbyTeamInput');
 
-  // まずローカルにあれば即入る
-  const members = localStorage.getItem(v + ':volley-members');
-  if (members) {
-    location.href = '?team=' + encodeURIComponent(v);
-    return;
-  }
+    // lobbyGoBtn / lobbyTeamInput が無いUI構成でも、ここで落ちないようにガード
+    if (lobbyGoBtn && lobbyTeamInput) {
+      lobbyGoBtn.addEventListener('click', async () => {
+        const v = lobbyTeamInput.value.trim();
+        if (!v) { lobbyTeamInput.focus(); return; }
 
-  // ローカルに無い場合はサーバーに存在確認（新規端末対策）
-  try {
-    const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
-    const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(v), { method: 'GET' });
+        // まずローカルにあれば即入る
+        const members = localStorage.getItem(v + ':volley-members');
+        if (members) {
+          location.href = '?team=' + encodeURIComponent(v);
+          return;
+        }
 
-    if (res.ok) {
-      location.href = '?team=' + encodeURIComponent(v);
-      return;
+        // ローカルに無い場合はサーバーに存在確認（新規端末対策）
+        try {
+          const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
+          const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(v), { method: 'GET' });
+
+          if (res.ok) {
+            location.href = '?team=' + encodeURIComponent(v);
+            return;
+          }
+        } catch (e) {
+          // 通信失敗は下のエラー表示へ
+        }
+
+        // ここに来たら「チームが無い」扱い
+        lobbyTeamInput.style.borderColor = '#ef4444';
+        lobbyTeamInput.placeholder = 'このグループIDは存在しません';
+        lobbyTeamInput.value = '';
+        lobbyTeamInput.focus();
+        setTimeout(() => { lobbyTeamInput.style.borderColor = ''; lobbyTeamInput.placeholder = 'グループID'; }, 3000);
+      });
+
+      lobbyTeamInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') lobbyGoBtn.click();
+      });
     }
-  } catch (e) {
-    // 通信失敗は下のエラー表示へ
-  }
-
-  // ここに来たら「チームが無い」扱い
-  const errBox = document.getElementById('lobbyTeamInput');
-  errBox.style.borderColor = '#ef4444';
-  errBox.placeholder = 'このグループIDは存在しません';
-  errBox.value = '';
-  errBox.focus();
-  setTimeout(() => { errBox.style.borderColor = ''; errBox.placeholder = 'グループID'; }, 3000);
-});
-
-
-
-    document.getElementById('lobbyTeamInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('lobbyGoBtn').click();
-    });
 
     // Event handlers — create new team
     document.getElementById('lobbyAdminPw').addEventListener('input', e => {
@@ -1324,25 +1327,24 @@ document.getElementById('lobbyGoBtn').addEventListener('click', async () => {
     const CREATE_CSS = 'width:100%;max-width:360px';
     const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:360px';
 
-    document.getElementById('createTeamBtn').addEventListener('click', (e) => {
-  e.preventDefault(); // フォームsubmit対策
-  const sec = document.getElementById('createTeamSection');
-  const join = document.getElementById('joinSection');
-  if (!sec || !join) return;
+ document.addEventListener('click', (e) => {
+  const createBtn = e.target.closest('#createTeamBtn');
+  const backBtn   = e.target.closest('#backToJoinBtn');
+  if (!createBtn && !backBtn) return;
 
-  const isHidden = getComputedStyle(sec).display === 'none'; // inline依存をやめる
-  sec.style.cssText = isHidden ? CREATE_CSS : CREATE_CSS_HIDDEN;
-  join.style.cssText = isHidden ? JOIN_CSS_HIDDEN : JOIN_CSS;
-});
-
-document.getElementById('backToJoinBtn').addEventListener('click', (e) => {
   e.preventDefault();
-  const sec = document.getElementById('createTeamSection');
+
+  const sec  = document.getElementById('createTeamSection');
   const join = document.getElementById('joinSection');
   if (!sec || !join) return;
 
-  sec.style.cssText = CREATE_CSS_HIDDEN;
-  join.style.cssText = JOIN_CSS;
+  if (createBtn) {
+    sec.style.cssText  = CREATE_CSS;
+    join.style.cssText = JOIN_CSS_HIDDEN;
+  } else {
+    sec.style.cssText  = CREATE_CSS_HIDDEN;
+    join.style.cssText = JOIN_CSS;
+  }
 });
 
  // Invite join button (event delegation)
