@@ -1098,7 +1098,20 @@
       history.replaceState(null, '', location.pathname);
     }
     document.body.innerHTML = '';
-    function getRecent() { return getRecentTeams(); }
+    function getRecent() {
+      const recent = getRecentTeams();
+      let changed = false;
+      const normalized = recent.map(t => {
+        const localName = (localStorage.getItem(t.id + ':volley-app-title') || '').trim();
+        if (!t.name && localName) {
+          changed = true;
+          return { ...t, name: localName };
+        }
+        return t;
+      });
+      if (changed) localStorage.setItem(RECENT_KEY, JSON.stringify(normalized));
+      return normalized;
+    }
 
     // Lobby custom confirm
     function lobbyConfirm(msg) {
@@ -1173,9 +1186,10 @@ form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
 form.innerHTML = 
   '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
     '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
-    '<div>・新しく参加するグループはPINが必要です</div>' +
-    '<div>・この端末でログイン済みのグループはPIN不要です</div>' +
+    '<div>・初回参加は「名前＋PIN（4桁）」で登録します</div>' +
+    '<div>・別端末は「グループIDからログイン」で入れます</div>' +
     '<div>・同じグループ内で同じPINは使えません</div>' +
+    '<div>・別端末でログインすると前の端末はログアウトされます</div>' +
   '</div>' +
   '<button id="createTeamBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">新規にグループを作る</button>';
 joinSection.appendChild(form);
@@ -1240,7 +1254,8 @@ joinSection.appendChild(form);
         item.onmouseenter = () => item.style.boxShadow = '0 2px 8px rgba(91,33,182,0.12)';
         item.onmouseleave = () => item.style.boxShadow = 'none';
         const left = document.createElement('div');
-        left.innerHTML = '<div style="font-weight:600">' + (t.name || t.id).replace(/</g,'&lt;') + '</div>';
+        const displayName = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || '（グループ名未設定）';
+        left.innerHTML = '<div style="font-weight:600">' + displayName.replace(/</g,'&lt;') + '</div>';
         const time = document.createElement('div');
         time.style.cssText = 'font-size:11px;color:var(--text-light);white-space:nowrap;margin-left:12px';
         if (t.lastVisited) {
@@ -1255,7 +1270,7 @@ joinSection.appendChild(form);
         delBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const name = (t.name || t.id);
+          const name = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || 'このグループ';
           if (!(await lobbyConfirm('「' + name + '」を一覧から削除しますか？'))) return;
           let r = getRecent().filter(x => x.id !== t.id);
           localStorage.setItem(RECENT_KEY, JSON.stringify(r));
@@ -2852,7 +2867,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
         if (serverSessionId && serverSessionId !== localSession.id) {
           clearLoginState();
           alert('別の端末でログインされたため、この端末はログアウトされました。');
-          location.href = '?team=' + encodeURIComponent(_teamParam);
+          location.href = location.pathname;
           return false;
         }
       }
@@ -2929,7 +2944,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
         clearLoginState();
         _skipNextSyncOnce = true;
         alert('別の端末でログインされたため、この端末はログアウトされました。');
-        location.href = '?team=' + encodeURIComponent(_teamParam);
+        location.href = location.pathname;
         return true;
       }
     }
