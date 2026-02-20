@@ -1352,6 +1352,24 @@ joinSection.appendChild(form);
     return localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin';
   }
 
+  function ensureAdminMemberRecord() {
+    const adminName = getAdminName();
+    if (!adminName) return false;
+    const members = loadMembers();
+    const idx = members.findIndex(m => m && m.name === adminName);
+    if (idx === -1) {
+      members.unshift({ name: adminName, role: '管理者' });
+      saveMembers(members);
+      return true;
+    }
+    if ((members[idx].role || '') !== '管理者') {
+      members[idx].role = '管理者';
+      saveMembers(members);
+      return true;
+    }
+    return false;
+  }
+
   const ATTENDANCE_KEYS = { practice: _T + 'volley-attendance-practice', match: _T + 'volley-attendance-match' };
   let currentMode = localStorage.getItem(STORAGE_MODE) || 'practice';
 
@@ -2754,6 +2772,10 @@ loginModal.classList.add('show');
         // Members: server is source of truth (reflect deletions too)
     if (Array.isArray(data.members)) {
       const local = loadMembers();
+      // Avoid wiping local members on first sync when server is still empty.
+      if (data.members.length === 0 && local.length > 0) {
+        // keep local members and push them on syncToServer()
+      } else {
       const localMap = new Map(local.map(m => [m.name, m]));
 
       // Build next members list in server order
@@ -2784,6 +2806,7 @@ loginModal.classList.add('show');
           location.href = location.pathname; // lobby (no ?team=)
           return true;
         }
+      }
       }
     }
     // Schedule: merge, server wins for same date
@@ -2847,6 +2870,7 @@ loginModal.classList.add('show');
     }
     mergeAttendance(data.attendancePractice, ATTENDANCE_KEYS.practice);
     mergeAttendance(data.attendanceMatch, ATTENDANCE_KEYS.match);
+    if (ensureAdminMemberRecord()) changed = true;
     return changed;
   }
 
