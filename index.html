@@ -13,11 +13,15 @@
   :root {
     --primary: #5b21b6;
     --primary-light: #7c3aed;
-    --bg: #f5f3ff;
+    --bg: #eef0ff;
     --card: #ffffff;
     --text: #1e1b4b;
     --text-light: #6b7280;
     --border: #e5e7eb;
+    --surface-border: rgba(148, 163, 184, 0.22);
+    --surface-glass: rgba(255, 255, 255, 0.9);
+    --shadow-soft: 0 12px 36px rgba(30, 27, 75, 0.12);
+    --shadow-card: 0 14px 32px rgba(76, 29, 149, 0.12);
     --present: #16a34a;
     --absent: #dc2626;
     --late: #f59e0b;
@@ -31,22 +35,53 @@
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-    background: var(--bg);
+    background:
+      radial-gradient(1200px 540px at 16% -10%, rgba(129, 140, 248, 0.34), transparent 62%),
+      radial-gradient(880px 460px at 92% 8%, rgba(168, 85, 247, 0.26), transparent 66%),
+      radial-gradient(760px 460px at 48% 112%, rgba(129, 140, 248, 0.2), transparent 68%),
+      linear-gradient(160deg, #e9edff 0%, #f3efff 44%, #f9f7ff 100%);
     color: var(--text);
     height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    isolation: isolate;
+  }
+
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  body::before {
+    z-index: -2;
+    background:
+      radial-gradient(380px 260px at 22% 16%, rgba(255, 255, 255, 0.62), transparent 72%),
+      radial-gradient(420px 300px at 80% 24%, rgba(255, 255, 255, 0.34), transparent 76%);
+  }
+
+  body::after {
+    z-index: -1;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.07));
   }
 
   /* === Header === */
   header {
-    background: var(--primary);
+    width: min(1080px, calc(100% - 28px));
+    margin: 14px auto 10px;
+    background: linear-gradient(135deg, #4c1d95 0%, #5b21b6 56%, #6d28d9 100%);
     color: #fff;
-    padding: 14px 20px 12px;
+    padding: 16px 20px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
     flex-shrink: 0;
     z-index: 10;
-    box-shadow: 0 2px 12px rgba(91,33,182,0.2);
+    box-shadow: 0 16px 34px rgba(76, 29, 149, 0.28);
+    backdrop-filter: blur(4px);
   }
 
   .header-top {
@@ -71,7 +106,7 @@
   .title-edit-row button:active { background: rgba(255,255,255,0.35); }
 
   .settings-btn {
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.16);
     border: none;
     color: #fff;
     width: 32px; height: 32px;
@@ -81,6 +116,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform .18s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .settings-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255,255,255,0.28);
+    box-shadow: 0 8px 16px rgba(30, 27, 75, 0.2);
   }
   .settings-btn:active { background: rgba(255,255,255,0.3); }
 
@@ -101,18 +142,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform .18s ease, background .2s ease;
+  }
+  .date-row button:hover {
+    transform: translateY(-1px);
+    background: rgba(255,255,255,0.24);
   }
   .date-row button:active { background: rgba(255,255,255,0.3); }
 
   #dateInput {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.36);
     color: #fff;
-    padding: 5px 10px;
-    border-radius: 10px;
+    padding: 7px 10px;
+    border-radius: 12px;
     font-size: 15px;
     flex: 1;
     text-align: center;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  #dateInput:focus {
+    border-color: rgba(255,255,255,0.68);
+    background: rgba(255,255,255,0.2);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.18);
+    outline: none;
   }
   #dateInput::-webkit-calendar-picker-indicator { filter: invert(1); }
 
@@ -161,57 +214,74 @@
 
   .lobby-subcopy {
     width: 100%;
-    max-width: 360px;
-    margin: 0 0 14px;
-    font-size: 12px;
-    color: var(--text-light);
+    max-width: 420px;
+    margin: 0 0 18px;
+    font-size: 13px;
+    color: #4b5563;
     text-align: center;
+    font-weight: 500;
   }
 
   .lobby-login-btn,
   .lobby-create-btn {
     width: 100%;
-    padding: 12px;
+    padding: 13px 14px;
     border: none;
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
+    transition: transform .18s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
   }
 
   .lobby-login-btn {
     background: linear-gradient(135deg, var(--primary-light), var(--primary));
     color: #fff;
-    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.25);
+    box-shadow: 0 10px 24px rgba(76, 29, 149, 0.3);
     margin-bottom: 8px;
+  }
+  .lobby-login-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+    box-shadow: 0 14px 28px rgba(76, 29, 149, 0.35);
   }
 
   .lobby-create-btn {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff, #f8f5ff);
     color: var(--primary);
-    border: 2px solid var(--primary);
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.14);
+  }
+  .lobby-create-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.2);
   }
 
   .lobby-login-btn:active,
-  .lobby-create-btn:active { transform: translateY(1px); }
+  .lobby-create-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 4px 12px rgba(30, 27, 75, 0.18);
+  }
 
   .lobby-relogin-panel {
     width: 100%;
-    margin-top: 8px;
-    padding: 10px 12px;
-    background: #f7f2ff;
-    border: 1px solid #ddd6fe;
-    border-radius: 12px;
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.22);
+    border-radius: 14px;
   }
 
   .lobby-card {
     width: 100%;
-    max-width: 360px;
-    margin-bottom: 12px;
-    padding: 12px 14px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    max-width: 420px;
+    margin-bottom: 14px;
+    padding: 14px 15px;
+    background: var(--surface-glass);
+    border: 1px solid var(--surface-border);
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(5px);
   }
 
   .lobby-section-title {
@@ -223,16 +293,17 @@
 
   .lobby-help {
     width: 100%;
-    max-width: 360px;
-    margin-bottom: 12px;
+    max-width: 420px;
+    margin-bottom: 14px;
   }
 
   .lobby-help details {
-    margin-bottom: 8px;
-    padding: 10px 12px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    margin-bottom: 10px;
+    padding: 11px 13px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(30, 27, 75, 0.08);
   }
 
   .lobby-help summary {
@@ -273,20 +344,24 @@
 
   .lobby-version {
     position: fixed;
-    right: 12px;
-    bottom: 8px;
+    right: 14px;
+    bottom: 10px;
     font-size: 10px;
-    color: var(--text-light);
-    opacity: 0.65;
+    color: #4b5563;
+    opacity: 0.62;
     letter-spacing: 0.02em;
     pointer-events: none;
   }
 
   /* === Schedule Section === */
   .schedule-section {
-    padding: 14px 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+    width: min(1080px, calc(100% - 28px));
+    margin: 0 auto;
+    padding: 16px 22px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
     flex-shrink: 0;
   }
 
@@ -378,9 +453,13 @@
 
   /* === Context Bar (selected date info) === */
   .context-bar {
-    padding: 12px 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+    width: min(1080px, calc(100% - 28px));
+    margin: 10px auto 0;
+    padding: 14px 22px;
+    background: rgba(255, 255, 255, 0.93);
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -414,12 +493,16 @@
 
   /* === Summary === */
   .summary {
+    width: min(1080px, calc(100% - 28px));
+    margin: 10px auto 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 14px;
-    padding: 10px 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+    gap: 8px 16px;
+    padding: 13px 22px;
+    background: rgba(255, 255, 255, 0.93);
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
     font-size: 13px;
     transition: background 0.4s ease;
     flex-shrink: 0;
@@ -436,9 +519,13 @@
 
   /* === Info lists (none / present) === */
   .info-list {
-    padding: 8px 20px;
-    background: #fafafa;
-    border-bottom: 1px solid var(--border);
+    width: min(1080px, calc(100% - 28px));
+    margin: 8px auto 0;
+    padding: 10px 22px;
+    background: rgba(255, 255, 255, 0.89);
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(30, 27, 75, 0.08);
     font-size: 12px;
     color: var(--text-light);
     display: flex;
@@ -459,30 +546,35 @@
     color: var(--text-light);
     cursor: pointer;
     white-space: nowrap;
+    transition: transform .16s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .copy-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(30, 27, 75, 0.12);
   }
   .copy-btn:active { background: var(--bg); }
 
   /* === Member Cards === */
   main {
-    padding: 10px 16px 100px;
-    max-width: 600px;
-    margin: 0 auto;
+    padding: 12px 4px 110px;
+    width: min(1080px, calc(100% - 28px));
+    margin: 10px auto 18px;
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
-    width: 100%;
+    border-radius: 18px;
   }
 
   .member-card {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    border: 1px solid var(--surface-border);
+    padding: 14px 14px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 28px rgba(30, 27, 75, 0.11);
     transition: background 0.6s ease;
   }
   .member-card.highlight { background: #ede9fe; }
@@ -547,11 +639,12 @@
     background: #fff;
     font-size: 17px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
   }
+  .status-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(30, 27, 75, 0.12); }
   .status-btn:active { transform: scale(0.92); }
 
   .status-btn[data-status="present"] { font-size: 20px; }
@@ -618,7 +711,8 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(15, 23, 42, 0.44);
+    backdrop-filter: blur(4px);
     z-index: 100;
     align-items: center;
     justify-content: center;
@@ -626,11 +720,12 @@
   .modal-overlay.show { display: flex; }
 
   .modal {
-    background: var(--card);
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 22px;
+    border: 1px solid var(--surface-border);
     padding: 24px;
     width: min(90vw, 360px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    box-shadow: 0 22px 48px rgba(15, 23, 42, 0.22);
   }
   .modal h2 { font-size: 18px; margin-bottom: 16px; }
 
@@ -660,8 +755,21 @@
   }
 
   .btn-cancel { background: var(--border); color: var(--text); }
-  .btn-confirm { background: var(--primary); color: #fff; }
-  .btn-confirm:active { background: var(--primary-light); }
+  .btn-confirm {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(76, 29, 149, 0.22);
+  }
+  .btn-cancel,
+  .btn-confirm {
+    transition: transform .16s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .btn-cancel:hover,
+  .btn-confirm:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
+  }
+  .btn-confirm:active { filter: brightness(0.98); }
 
   .modal-close-x {
     position: absolute;
@@ -921,6 +1029,68 @@
   }
   .ms-add-input:focus { border-color: var(--primary); }
   .ms-add-btn { padding: 10px 20px; border-radius: 12px; }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="number"],
+  input[type="time"],
+  select,
+  textarea {
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+
+  input[type="text"]:focus,
+  input[type="tel"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="time"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: rgba(124, 58, 237, 0.62) !important;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16);
+    outline: none;
+    background: #fff;
+  }
+
+  @media (max-width: 768px) {
+    header,
+    .schedule-section,
+    .context-bar,
+    .summary,
+    .info-list,
+    main {
+      width: calc(100% - 20px);
+    }
+
+    header {
+      margin: 10px auto 8px;
+      border-radius: 18px;
+      padding: 14px 14px 12px;
+    }
+
+    .schedule-section,
+    .context-bar,
+    .summary,
+    .info-list {
+      padding-left: 14px;
+      padding-right: 14px;
+      border-radius: 14px;
+    }
+
+    main {
+      margin-top: 8px;
+      padding-bottom: 96px;
+    }
+
+    .lobby-card,
+    .lobby-help,
+    .lobby-subcopy {
+      max-width: 100%;
+    }
+
+    .lobby-logo { font-size: 34px; }
+  }
 </style>
 </head>
 <body>
@@ -1118,6 +1288,7 @@ if (MAINTENANCE_MODE) {
     </div>
     <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
       <button id="backToLobbyBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">ロビーに戻る</button>
+      <button id="showInviteBtn" style="width:100%;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
       <button id="deleteGroupBtn" style="width:100%;padding:8px;border:1px solid var(--absent);border-radius:8px;background:#fff;color:var(--absent);font-size:12px;font-weight:600;cursor:pointer;opacity:0.7">グループを削除する</button>
     </div>
     <div class="modal-actions" style="margin-top:16px">
@@ -1156,7 +1327,6 @@ if (MAINTENANCE_MODE) {
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
     <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
@@ -1374,7 +1544,8 @@ if (MAINTENANCE_MODE) {
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
-        '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:0">ログインする</button>' +
+        '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:6px">ログインする</button>' +
+        '<button id="cancelReloginBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
       '</div>';
     joinSection.appendChild(actionCard);
 
@@ -1405,7 +1576,7 @@ if (MAINTENANCE_MODE) {
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
         '<button id="lobbyCreateBtn" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">作成する</button>' +
       '</div>' +
-      '<button id="backToJoinBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer">戻る</button>';
+      '<button id="backToJoinBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer">キャンセル</button>';
     createTeamWrapper.appendChild(createSection);
     lobby.appendChild(createTeamWrapper);
 
@@ -1624,6 +1795,18 @@ document.getElementById('openReloginBtn').addEventListener('click', () => {
   if (!idInput.value) idInput.focus();
   else document.getElementById('reloginName').focus();
 });
+
+function closeReloginPanel() {
+  const panel = document.getElementById('reloginPanel');
+  const err = document.getElementById('reloginError');
+  panel.style.display = 'none';
+  if (err) {
+    err.textContent = '';
+    err.style.display = 'none';
+  }
+}
+
+document.getElementById('cancelReloginBtn').addEventListener('click', closeReloginPanel);
 
 document.getElementById('reloginPin').addEventListener('input', e => {
   e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
