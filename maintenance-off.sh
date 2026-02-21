@@ -1,10 +1,8 @@
 #!/bin/bash
 
-git checkout main
-
-sed -i '' 's/MAINTENANCE_MODE = true/MAINTENANCE_MODE = false/' index.html
-
-git add -A
-git commit -m "maintenance off"
-git push
-
+git status
+sed -i '' 's/const MAINTENANCE_MODE = true;/const MAINTENANCE_MODE = false;/' index.html
+grep -n "MAINTENANCE_MODE" index.html
+git add index.html
+git commit -m "Maintenance OFF"
+git push origin main
