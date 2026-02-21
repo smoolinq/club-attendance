@@ -232,6 +232,22 @@
     font-weight: 700;
     cursor: pointer;
     transition: transform .18s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lobby-login-btn::after,
+  .lobby-create-btn::after {
+    content: "";
+    position: absolute;
+    top: -30%;
+    left: -140%;
+    width: 68%;
+    height: 180%;
+    background: linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.44) 52%, rgba(255,255,255,0) 100%);
+    transform: skewX(-20deg);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .lobby-login-btn {
@@ -247,20 +263,30 @@
   }
 
   .lobby-create-btn {
-    background: linear-gradient(180deg, #ffffff, #f8f5ff);
-    color: var(--primary);
-    border: 1px solid rgba(124, 58, 237, 0.35);
-    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.14);
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    border: none;
+    box-shadow: 0 10px 24px rgba(76, 29, 149, 0.3);
   }
   .lobby-create-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.2);
+    filter: brightness(1.02);
+    box-shadow: 0 14px 28px rgba(76, 29, 149, 0.35);
   }
 
   .lobby-login-btn:active,
   .lobby-create-btn:active {
     transform: translateY(1px);
+    background: linear-gradient(135deg, #4c1d95, #5b21b6);
     box-shadow: 0 4px 12px rgba(30, 27, 75, 0.18);
+  }
+  .lobby-login-btn:active::after,
+  .lobby-create-btn:active::after,
+  .lobby-login-btn:focus-visible::after,
+  .lobby-create-btn:focus-visible::after {
+    opacity: 1;
+    left: 160%;
+    transition: left .45s ease, opacity .22s ease;
   }
 
   .lobby-relogin-panel {
@@ -700,11 +726,56 @@
 
 
   .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-light);
+    display: flex;
+    justify-content: center;
+    padding: 56px 20px;
   }
-  .empty-state p { font-size: 15px; margin-top: 8px; }
+  .empty-state-card {
+    width: min(420px, 100%);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(124, 58, 237, 0.18);
+    border-radius: 18px;
+    box-shadow: 0 14px 30px rgba(76, 29, 149, 0.14);
+    padding: 24px 20px 20px;
+    text-align: center;
+  }
+  .empty-state-icon {
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 10px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(124, 58, 237, 0.08));
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .empty-state-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.35;
+  }
+  .empty-state-sub {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.65;
+  }
+  .empty-state-hint {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+  }
 
   /* === Modal === */
   .modal-overlay {
@@ -1095,6 +1166,22 @@
 </head>
 <body>
 <script>
+<<<<<<< HEAD
+document.addEventListener("DOMContentLoaded", () => {
+  const MAINTENANCE_MODE = true;
+
+  if (MAINTENANCE_MODE) {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;">
+        <div>
+          <h1>メンテナンス中</h1>
+          <p>現在アップデート作業中です。</p>
+        </div>
+      </div>
+    `;
+  }
+});
+=======
 const MAINTENANCE_MODE = true;
 
 if (MAINTENANCE_MODE) {
@@ -1108,6 +1195,7 @@ if (MAINTENANCE_MODE) {
   `;
   throw new Error("Maintenance mode");
 }
+>>>>>>> stg
 </script>
 
 <header>
@@ -1446,6 +1534,13 @@ if (MAINTENANCE_MODE) {
       return normalized;
     }
 
+    function hasLocalLogin(teamId) {
+      const t = teamId + ':';
+      const loginType = (localStorage.getItem(t + 'volley-login-type') || '').trim();
+      const editor = (localStorage.getItem(t + 'volley-editor') || '').trim();
+      return !!(loginType && editor);
+    }
+
     // Lobby custom confirm
     function lobbyConfirm(msg) {
       return new Promise(resolve => {
@@ -1500,7 +1595,7 @@ if (MAINTENANCE_MODE) {
       if (!inviteData.name) {
         (async () => {
           try {
-            const res = await fetch('https://club-attendance-api-stg2.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
+            const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
             if (!res.ok) return;
             const data = await res.json();
             const fetchedName = typeof data?.title === 'string' ? data.title.trim() : '';
@@ -1594,6 +1689,10 @@ if (MAINTENANCE_MODE) {
         item.appendChild(left);
         item.appendChild(time);
         item.addEventListener('click', () => {
+          if (hasLocalLogin(t.id)) {
+            location.href = '?team=' + encodeURIComponent(t.id);
+            return;
+          }
           const panel = document.getElementById('reloginPanel');
           const teamInput = document.getElementById('reloginGroupId');
           const nameInput = document.getElementById('reloginName');
@@ -1804,7 +1903,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
   err.style.display = 'none';
   try {
-    const res = await fetch('https://club-attendance-api-stg2.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
+    const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
     if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
     const data = await res.json();
     if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
@@ -2267,7 +2366,14 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       document.getElementById('noneList').style.display = 'none';
       document.getElementById('presentList').style.display = 'none';
       document.getElementById('headerNoneCount').style.display = 'none';
-      list.innerHTML = '<div class="empty-state"><p>予定がありません</p></div>';
+      list.innerHTML = '<div class="empty-state">' +
+        '<div class="empty-state-card">' +
+          '<div class="empty-state-icon">📅</div>' +
+          '<div class="empty-state-title">予定はまだありません</div>' +
+          '<div class="empty-state-sub">右上の編集から練習/試合を追加できます</div>' +
+          '<div class="empty-state-hint">予定を追加</div>' +
+        '</div>' +
+      '</div>';
       return;
     }
 
@@ -3254,7 +3360,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   });
 
   // --- Server Sync ---
-  const SYNC_API = 'https://club-attendance-api-stg2.smoolinq.workers.dev/';
+  const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
 
   function buildSyncData() {
     return {

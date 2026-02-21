@@ -232,6 +232,22 @@
     font-weight: 700;
     cursor: pointer;
     transition: transform .18s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lobby-login-btn::after,
+  .lobby-create-btn::after {
+    content: "";
+    position: absolute;
+    top: -30%;
+    left: -140%;
+    width: 68%;
+    height: 180%;
+    background: linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.44) 52%, rgba(255,255,255,0) 100%);
+    transform: skewX(-20deg);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .lobby-login-btn {
@@ -247,20 +263,30 @@
   }
 
   .lobby-create-btn {
-    background: linear-gradient(180deg, #ffffff, #f8f5ff);
-    color: var(--primary);
-    border: 1px solid rgba(124, 58, 237, 0.35);
-    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.14);
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    border: none;
+    box-shadow: 0 10px 24px rgba(76, 29, 149, 0.3);
   }
   .lobby-create-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.2);
+    filter: brightness(1.02);
+    box-shadow: 0 14px 28px rgba(76, 29, 149, 0.35);
   }
 
   .lobby-login-btn:active,
   .lobby-create-btn:active {
     transform: translateY(1px);
+    background: linear-gradient(135deg, #4c1d95, #5b21b6);
     box-shadow: 0 4px 12px rgba(30, 27, 75, 0.18);
+  }
+  .lobby-login-btn:active::after,
+  .lobby-create-btn:active::after,
+  .lobby-login-btn:focus-visible::after,
+  .lobby-create-btn:focus-visible::after {
+    opacity: 1;
+    left: 160%;
+    transition: left .45s ease, opacity .22s ease;
   }
 
   .lobby-relogin-panel {
@@ -1508,6 +1534,13 @@ if (MAINTENANCE_MODE) {
       return normalized;
     }
 
+    function hasLocalLogin(teamId) {
+      const t = teamId + ':';
+      const loginType = (localStorage.getItem(t + 'volley-login-type') || '').trim();
+      const editor = (localStorage.getItem(t + 'volley-editor') || '').trim();
+      return !!(loginType && editor);
+    }
+
     // Lobby custom confirm
     function lobbyConfirm(msg) {
       return new Promise(resolve => {
@@ -1656,6 +1689,10 @@ if (MAINTENANCE_MODE) {
         item.appendChild(left);
         item.appendChild(time);
         item.addEventListener('click', () => {
+          if (hasLocalLogin(t.id)) {
+            location.href = '?team=' + encodeURIComponent(t.id);
+            return;
+          }
           const panel = document.getElementById('reloginPanel');
           const teamInput = document.getElementById('reloginGroupId');
           const nameInput = document.getElementById('reloginName');
