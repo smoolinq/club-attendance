@@ -925,6 +925,7 @@
 </head>
 <body>
 <script>
+<<<<<<< HEAD
 document.addEventListener("DOMContentLoaded", () => {
   const MAINTENANCE_MODE = true;
 
@@ -939,6 +940,21 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 });
+=======
+const MAINTENANCE_MODE = true;
+
+if (MAINTENANCE_MODE) {
+  document.body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;">
+      <div>
+        <h1>メンテナンス中</h1>
+        <p>現在アップデート作業中です。</p>
+      </div>
+    </div>
+  `;
+  throw new Error("Maintenance mode");
+}
+>>>>>>> stg
 </script>
 
 <header>
