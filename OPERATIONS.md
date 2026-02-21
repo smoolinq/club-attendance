@@ -1,6 +1,8 @@
 # 🔒 運用固定メモ（絶対守る）
 
-## 🟢 作業開始（必ずSTG）
+────────────────────
+🟢 ① 作業開始（必ずSTG）
+────────────────────
 git checkout stg
 git pull
 
@@ -9,16 +11,39 @@ git add -A
 git commit -m "stg: update"
 git push
 
----
 
-## 🔵 本番へ反映
+────────────────────
+🔵 ② 本番へ反映（STG → main）
+────────────────────
 git checkout main
 git pull --rebase origin main
 git merge stg
 git push
 
----
 
-## 🔴 本番メンテ切替（mainでやる）
-MAINTENANCE_MODE = true  → メンテON
-MAINTENANCE_MODE = false → 公開
+────────────────────
+🔴 ③ 本番メンテON（公開停止）
+────────────────────
+git checkout main
+git pull
+
+# index.html の
+MAINTENANCE_MODE = true に変更
+
+git add -A
+git commit -m "maintenance on"
+git push
+
+
+────────────────────
+🟢 ④ 本番メンテOFF（公開再開）
+────────────────────
+git checkout main
+git pull
+
+# index.html の
+MAINTENANCE_MODE = false に変更
+
+git add -A
+git commit -m "maintenance off"
+git push
