@@ -31,6 +31,25 @@
     --match: #db2777;
   }
 
+  @keyframes softPulse {
+    0%, 100% { opacity: 0.18; transform: translateY(0); }
+    50% { opacity: 0.32; transform: translateY(-2px); }
+  }
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+  @keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.08); }
+  }
+
+  @keyframes sheenSlide {
+    0% { transform: translateX(-140%) skewX(-22deg); opacity: 0; }
+    30% { opacity: 0.22; }
+    100% { transform: translateX(180%) skewX(-22deg); opacity: 0; }
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -75,35 +94,79 @@
     margin: 14px auto 10px;
     background: linear-gradient(135deg, #4c1d95 0%, #5b21b6 56%, #6d28d9 100%);
     color: #fff;
-    padding: 16px 20px 14px;
+    padding: 10px 20px 8px;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.24);
     flex-shrink: 0;
     z-index: 10;
     box-shadow: 0 16px 34px rgba(76, 29, 149, 0.28);
     backdrop-filter: blur(4px);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: "";
+    position: absolute;
+    inset: -35% -20% auto;
+    height: 64%;
+    background: radial-gradient(closest-side, rgba(255,255,255,0.26), rgba(255,255,255,0));
+    pointer-events: none;
+    animation: softPulse 6s ease-in-out infinite;
   }
 
   .header-top {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
+    column-gap: 10px;
+    margin-bottom: 2px;
+    position: relative;
   }
+  .title-block {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .title-block h1 { margin: 0; }
 
-  header h1 { font-size: 17px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .title-edit-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+  header h1 { font-size: 17px; font-weight: 700; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-top > .title-block { min-width: 0; justify-self: start; }
+  .title-edit-row { display: flex; align-items: center; gap: 6px; flex: 0 1 auto; width: min(30ch, calc(100vw - 280px)); min-width: 0; }
   .title-edit-row input {
-    flex: 1; min-width: 0; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
-    color: #fff; font-size: 16px; font-weight: 700; padding: 4px 8px; border-radius: 8px; outline: none;
+    flex: 1 1 auto; width: 100%; min-width: 0; background: rgba(255,255,255,0.95); border: 1px solid rgba(124,58,237,0.35);
+    color: var(--text); font-size: 16px; font-weight: 700; padding: 4px 8px; border-radius: 8px; outline: none;
   }
-  .title-edit-row input:focus { border-color: rgba(255,255,255,0.7); }
+  .title-edit-row input:focus { border-color: rgba(124,58,237,0.65); box-shadow: 0 0 0 3px rgba(124,58,237,0.16); }
   .title-edit-row button {
     background: rgba(255,255,255,0.2); border: none; color: #fff; width: 28px; height: 28px;
     border-radius: 50%; font-size: 14px; cursor: pointer; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
   .title-edit-row button:active { background: rgba(255,255,255,0.35); }
+  .group-title-edit-btn {
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.16);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background .18s ease, opacity .18s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(30, 27, 75, 0.14);
+  }
+  .group-title-edit-btn:hover { background: rgba(255,255,255,0.24); }
+  .group-title-edit-btn:disabled {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.55);
+    cursor: not-allowed;
+    opacity: 0.85;
+  }
 
   .settings-btn {
     background: rgba(255,255,255,0.16);
@@ -128,7 +191,33 @@
   .date-row {
     display: flex;
     align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding-top: 0;
+    margin-top: -6px;
+  }
+  .date-main {
+    position: relative;
+    display: flex;
+    align-items: center;
     gap: 6px;
+  }
+
+  #loginStatus {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    cursor: default;
   }
 
   .date-row button {
@@ -157,8 +246,12 @@
     padding: 7px 10px;
     border-radius: 12px;
     font-size: 15px;
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 170px;
+    width: 170px;
     text-align: center;
+    text-align-last: center;
+    font-variant-numeric: tabular-nums;
     transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
   }
   #dateInput:focus {
@@ -168,6 +261,22 @@
     outline: none;
   }
   #dateInput::-webkit-calendar-picker-indicator { filter: invert(1); }
+  #dateInput::-webkit-datetime-edit,
+  #dateInput::-webkit-date-and-time-value,
+  #dateInput::-webkit-datetime-edit-fields-wrapper {
+    text-align: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .date-row .today-badge {
+    position: absolute;
+    left: 100%;
+    margin-left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    align-self: auto;
+  }
 
   .today-badge {
     font-size: 10px;
@@ -177,10 +286,11 @@
     border-radius: 8px;
     padding: 3px 8px;
     white-space: nowrap;
+    animation: badgePulse 2.8s ease-in-out infinite;
   }
 
   .header-none-count {
-    margin-top: 8px;
+    margin-top: 2px;
     font-size: 12px;
     font-weight: 600;
     color: rgba(255,255,255,0.8);
@@ -201,6 +311,8 @@
     letter-spacing: 0.02em;
     line-height: 1.05;
     margin-bottom: 2px;
+    animation: logoFloat 4.6s ease-in-out infinite;
+    transform-origin: center;
   }
 
   .lobby-subtitle {
@@ -209,7 +321,8 @@
     font-weight: 700;
     color: #625f84;
     letter-spacing: 0.08em;
-    margin-bottom: 6px;
+    margin-top: 9px;
+    margin-bottom: 8px;
   }
 
   .lobby-subcopy {
@@ -249,6 +362,15 @@
     opacity: 0;
     pointer-events: none;
   }
+  .lobby-login-btn::before,
+  .lobby-create-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 90% at 20% 0%, rgba(255,255,255,0.24), rgba(255,255,255,0));
+    pointer-events: none;
+  }
 
   .lobby-login-btn {
     background: linear-gradient(135deg, var(--primary-light), var(--primary));
@@ -260,6 +382,11 @@
     transform: translateY(-1px);
     filter: brightness(1.02);
     box-shadow: 0 14px 28px rgba(76, 29, 149, 0.35);
+  }
+  .lobby-login-btn:hover::after,
+  .lobby-create-btn:hover::after {
+    opacity: 1;
+    animation: sheenSlide .7s ease;
   }
 
   .lobby-create-btn {
@@ -298,6 +425,31 @@
     border-radius: 14px;
   }
 
+  #reloginPanel .lobby-login-btn,
+  #reloginPanel .lobby-create-btn,
+  #createTeamPanel .lobby-login-btn,
+  #createTeamPanel .lobby-create-btn {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    box-shadow: 0 6px 14px rgba(76, 29, 149, 0.18);
+    filter: none;
+  }
+
+  #reloginPanel .lobby-login-btn:hover,
+  #reloginPanel .lobby-create-btn:hover,
+  #createTeamPanel .lobby-login-btn:hover,
+  #createTeamPanel .lobby-create-btn:hover {
+    box-shadow: 0 8px 16px rgba(76, 29, 149, 0.22);
+    filter: brightness(1.01);
+  }
+
+  #reloginPanel .lobby-login-btn:active,
+  #reloginPanel .lobby-create-btn:active,
+  #createTeamPanel .lobby-login-btn:active,
+  #createTeamPanel .lobby-create-btn:active {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    box-shadow: 0 4px 10px rgba(76, 29, 149, 0.16);
+  }
+
   .lobby-card {
     width: 100%;
     max-width: 420px;
@@ -315,6 +467,20 @@
     font-weight: 700;
     color: var(--text);
     margin-bottom: 8px;
+  }
+
+  .lobby-panel-title {
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 13px 14px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 10px 24px rgba(76, 29, 149, 0.3);
+    line-height: 1.2;
   }
 
   .lobby-help {
@@ -370,13 +536,42 @@
 
   .lobby-version {
     position: fixed;
-    right: 14px;
-    bottom: 10px;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
     font-size: 10px;
     color: #4b5563;
     opacity: 0.62;
     letter-spacing: 0.02em;
     pointer-events: none;
+    text-align: center;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .global-copyright {
+    position: fixed;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #4b5563;
+    opacity: 0.68;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    z-index: 30;
+    white-space: nowrap;
+  }
+  .overlay-copyright {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #4b5563;
+    opacity: 0.7;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   /* === Schedule Section === */
@@ -469,6 +664,7 @@
   .chip-selected {
     outline: 3px solid var(--primary);
     outline-offset: 1px;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
   }
 
   .schedule-empty {
@@ -633,6 +829,22 @@
     flex: 1;
     min-width: 0;
   }
+  .member-name.self-highlight {
+    color: #4c1d95;
+    font-weight: 800;
+  }
+  .self-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #5b21b6;
+    background: #ede9fe;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    vertical-align: middle;
+  }
 
   .badge-none {
     font-size: 10px;
@@ -775,7 +987,15 @@
     color: var(--primary);
     background: rgba(124, 58, 237, 0.08);
     border: 1px solid rgba(124, 58, 237, 0.2);
+    cursor: pointer;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
   }
+  .empty-state-hint:hover {
+    background: rgba(124, 58, 237, 0.13);
+    box-shadow: 0 8px 20px rgba(76, 29, 149, 0.12);
+    transform: translateY(-1px);
+  }
+  .empty-state-hint:active { transform: translateY(0); }
 
   /* === Modal === */
   .modal-overlay {
@@ -1036,14 +1256,24 @@
 
   .schedule-edit-btn {
     margin-left: auto;
+    height: 24px;
     font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 8px;
+    padding: 2px 9px;
+    border-radius: 10px;
     border: 1px solid var(--primary);
     background: transparent;
     color: var(--primary);
     cursor: pointer;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .schedule-edit-btn .schedule-edit-icon {
+    font-size: 14px;
+    line-height: 1;
   }
   .schedule-edit-btn:active { opacity: 0.6; }
   .schedule-title { display: flex; align-items: center; }
@@ -1137,7 +1367,7 @@
     header {
       margin: 10px auto 8px;
       border-radius: 18px;
-      padding: 14px 14px 12px;
+      padding: 8px 14px 7px;
     }
 
     .schedule-section,
@@ -1161,14 +1391,142 @@
     }
 
     .lobby-logo { font-size: 34px; }
+
+    #dateInput {
+      min-width: 152px;
+      width: 152px;
+    }
+
+    .date-row .today-badge {
+      margin-left: 6px;
+    }
+    .date-row { margin-top: -4px; }
+
+    #loginStatus {
+      max-width: 160px;
+      font-size: 11px !important;
+    }
+    .title-edit-row { width: min(22ch, calc(100vw - 200px)); }
+  }
+
+  /* === UI Polish Pass === */
+  .lobby-card {
+    border-radius: 20px;
+    border-color: rgba(124, 58, 237, 0.2);
+    box-shadow: 0 16px 34px rgba(30, 27, 75, 0.12);
+  }
+  .lobby-help details {
+    border-radius: 16px;
+    border-color: rgba(124, 58, 237, 0.14);
+  }
+  .lobby-help summary { letter-spacing: 0.01em; }
+
+  .schedule-section,
+  .context-bar,
+  .summary,
+  .info-list {
+    border-color: rgba(124, 58, 237, 0.14);
+    box-shadow: 0 12px 30px rgba(30, 27, 75, 0.11);
+  }
+
+  .schedule-section {
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));
+  }
+
+  .schedule-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 800;
+    color: #312e81;
+  }
+
+  .context-date {
+    color: #1f2152;
+    letter-spacing: 0.01em;
+  }
+
+  .summary {
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));
+  }
+  .summary .dot {
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+  }
+
+  .member-card {
+    border-color: rgba(124, 58, 237, 0.12);
+    box-shadow: 0 14px 28px rgba(30, 27, 75, 0.1);
+    transition: transform .16s ease, box-shadow .2s ease, background .4s ease;
+  }
+  .member-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 34px rgba(30, 27, 75, 0.14);
+    border-color: rgba(124, 58, 237, 0.24);
+  }
+
+  .status-btn {
+    border-width: 1.5px;
+    border-color: rgba(148, 163, 184, 0.48);
+  }
+  .status-btn:not(.active-present):not(.active-absent):not(.active-late):not(.active-early) {
+    background: linear-gradient(180deg, #fff, #f8fafc);
+  }
+
+  .modal {
+    border-radius: 20px;
+    border-color: rgba(124, 58, 237, 0.18);
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.24);
+  }
+  .btn-cancel {
+    background: linear-gradient(180deg, #ffffff, #f3f4f6);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #334155;
+    font-weight: 700;
+  }
+  .btn-confirm {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  }
+
+  #changeAdminBtn {
+    border-color: rgba(245, 158, 11, 0.6) !important;
+    color: #92400e !important;
+    background: linear-gradient(180deg, #fffdf7, #fff) !important;
+    border-radius: 11px !important;
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.15) !important;
+  }
+  #changeAdminConfirm {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    box-shadow: 0 10px 18px rgba(217, 119, 6, 0.25) !important;
+    border-radius: 10px !important;
+  }
+  #changeAdminCancel {
+    background: linear-gradient(180deg,#ffffff,#f5f3ff) !important;
+    border: 1px solid rgba(124,58,237,0.28) !important;
+    color: var(--primary) !important;
+    box-shadow: 0 6px 14px rgba(76,29,149,0.1) !important;
+  }
+
+  #openRecoverPanelBtn {
+    background: linear-gradient(180deg, rgba(124,58,237,0.12), rgba(124,58,237,0.07)) !important;
+    border-color: rgba(124,58,237,0.34) !important;
+  }
+
+  #invitePopup .modal,
+  #appSettingsModal .modal {
+    background: linear-gradient(180deg, #fcfcff, #f8f7ff);
+  }
+
+  @media (max-width: 768px) {
+    .member-card:hover { transform: none; }
+    .schedule-title { font-size: 13px; }
   }
 </style>
 </head>
 <body>
 <script>
-<<<<<<< HEAD
 document.addEventListener("DOMContentLoaded", () => {
-  const MAINTENANCE_MODE = true;
+  const MAINTENANCE_MODE = false;
 
   if (MAINTENANCE_MODE) {
     document.body.innerHTML = `
@@ -1181,27 +1539,15 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 });
-=======
-const MAINTENANCE_MODE = true;
-
-if (MAINTENANCE_MODE) {
-  document.body.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;">
-      <div>
-        <h1>メンテナンス中</h1>
-        <p>現在アップデート作業中です。</p>
-      </div>
-    </div>
-  `;
-  throw new Error("Maintenance mode");
-}
->>>>>>> stg
 </script>
 
 <header>
   <div class="header-top">
-    <h1 id="appTitle" style="cursor:pointer"></h1>
-    <span id="loginStatus" style="font-size:12px;padding:4px 8px;background:rgba(255,255,255,0.15);border-radius:8px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;cursor:pointer"></span>
+    <div class="title-block">
+      <h1 id="appTitle"></h1>
+      <button id="editGroupNameBtn" class="group-title-edit-btn" type="button">🏷️ 名前変更</button>
+    </div>
+    <span id="loginStatus"></span>
     <div style="display:flex;gap:6px">
       <button class="settings-btn" id="memberSettingsBtn" title="メンバー管理"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
       <button class="settings-btn" id="gearBtn" title="締切設定"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
@@ -1209,10 +1555,12 @@ if (MAINTENANCE_MODE) {
     </div>
   </div>
   <div class="date-row">
-    <button id="prevDay">‹</button>
-    <input type="date" id="dateInput">
-    <button id="nextDay">›</button>
-    <span class="today-badge" id="todayBadge" style="display:none">今日</span>
+    <div class="date-main">
+      <button id="prevDay">‹</button>
+      <input type="date" id="dateInput">
+      <button id="nextDay">›</button>
+      <span class="today-badge" id="todayBadge" style="display:none">今日</span>
+    </div>
   </div>
   <div class="header-none-count" id="headerNoneCount"></div>
 </header>
@@ -1331,7 +1679,7 @@ if (MAINTENANCE_MODE) {
     <button class="modal-close-x" id="adminModalCloseX">&times;</button>
     <h2>管理者設定</h2>
     <div style="margin-bottom:16px">
-      <label style="font-size:14px;font-weight:600;display:block;margin-bottom:6px">管理者パスワード変更</label>
+      <label style="font-size:14px;font-weight:600;display:block;margin-bottom:6px">管理者PIN（4桁）変更</label>
       <input type="password" id="adminNewPwInput" placeholder="新しいパスワード" style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
     </div>
     <div class="modal-actions">
@@ -1340,6 +1688,19 @@ if (MAINTENANCE_MODE) {
     </div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <button id="adminResetBtn" style="width:100%;padding:10px;border:1px solid var(--absent);border-radius:12px;background:#fff;color:var(--absent);font-size:14px;font-weight:600;cursor:pointer">管理者リセット</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="groupNameModal">
+  <div class="modal" style="position:relative;max-width:360px">
+    <button class="modal-close-x" id="groupNameCloseX">&times;</button>
+    <h2>グループ名を変更</h2>
+    <input type="text" id="groupNameInput" maxlength="18" placeholder="グループ名を入力" autocomplete="off">
+    <div id="groupNameError" style="display:none;font-size:12px;color:var(--absent);margin-top:8px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="groupNameCancel">キャンセル</button>
+      <button class="btn-confirm" id="groupNameSave">保存</button>
     </div>
   </div>
 </div>
@@ -1356,6 +1717,7 @@ if (MAINTENANCE_MODE) {
     <div style="text-align:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:12px">
       <div style="font-size:13px;color:var(--text-light)">バージョン</div>
       <div id="appVersionDisplay" style="font-size:15px;font-weight:700;color:var(--text);margin-top:2px"></div>
+      <div id="appCopyrightDisplay" style="font-size:11px;color:var(--text-light);margin-top:6px"></div>
     </div>
     <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
       <button id="backToLobbyBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">ロビーに戻る</button>
@@ -1398,16 +1760,17 @@ if (MAINTENANCE_MODE) {
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
+    <button id="changeAdminBtn" style="display:none;width:auto;max-width:100%;margin:8px auto 0;padding:8px 14px;border:1px solid var(--late);border-radius:10px;background:#fff;color:var(--late);font-size:12px;font-weight:700;cursor:pointer;display:block">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
       <div id="changeAdminList"></div>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn-cancel" id="changeAdminCancel" style="flex:1;padding:8px;font-size:13px">キャンセル</button>
+        <button class="btn-cancel" id="changeAdminCancel" style="flex:1;padding:8px 12px;font-size:13px;border:1px solid rgba(124,58,237,0.3);border-radius:10px;background:linear-gradient(180deg,#fff,#f5f3ff);color:var(--primary);font-weight:700;box-shadow:0 4px 12px rgba(76,29,149,0.12)">キャンセル</button>
         <button id="changeAdminConfirm" style="flex:1;padding:8px;border:none;border-radius:12px;background:var(--late);color:#fff;font-size:13px;font-weight:600;cursor:pointer">変更する</button>
       </div>
     </div>
   </div>
+  <div class="overlay-copyright">© 2026 smoolinq</div>
 </div>
 
 <div class="modal-overlay" id="customConfirmOverlay" style="z-index:3000">
@@ -1472,6 +1835,7 @@ if (MAINTENANCE_MODE) {
     <div style="border-top:1px solid var(--border);margin:4px 0"></div>
     <button id="calMenuDelete" style="display:block;width:100%;padding:10px 14px;border:none;background:none;text-align:left;font-size:14px;border-radius:10px;cursor:pointer;color:var(--absent)">🗑 削除</button>
   </div>
+  <div class="overlay-copyright">© 2026 smoolinq</div>
 </div>
 
 <script>
@@ -1482,9 +1846,20 @@ if (MAINTENANCE_MODE) {
   const _pendingInviteName = (_urlParams.get("inviteName") || '').trim();
   const RECENT_KEY = 'volley-recent-teams';
   const INVITE_KEY = 'volley-invite-link';
+  const ADMIN_RECOVERY_SUFFIX = 'volley-admin-recovery-code';
 
   function createSessionId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function generateRecoveryCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for (let i = 0; i < 12; i++) {
+      out += chars[Math.floor(Math.random() * chars.length)];
+      if (i === 3 || i === 7) out += '-';
+    }
+    return out;
   }
 
   function getRecentTeams() {
@@ -1494,6 +1869,22 @@ if (MAINTENANCE_MODE) {
   function isKnownTeam(teamId) {
     if (!teamId) return false;
     return getRecentTeams().some(t => t.id === teamId);
+  }
+
+  function ensureGlobalCopyrightFooter() {
+    let footer = document.getElementById('globalCopyright');
+    if (!footer) {
+      footer = document.createElement('div');
+      footer.id = 'globalCopyright';
+      footer.className = 'global-copyright';
+      document.body.appendChild(footer);
+    }
+    footer.textContent = '© 2026 smoolinq';
+  }
+  function setGlobalCopyrightVisible(visible) {
+    const footer = document.getElementById('globalCopyright');
+    if (!footer) return;
+    footer.style.display = visible ? '' : 'none';
   }
 
   const _fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
@@ -1560,6 +1951,51 @@ if (MAINTENANCE_MODE) {
       });
     }
 
+    function showRecoveryCodeModal(recoveryCode) {
+      return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+        ov.innerHTML =
+          '<div style="max-width:380px;width:100%;background:#fff;border-radius:18px;padding:20px 18px 16px;box-shadow:0 18px 44px rgba(15,23,42,0.28)">' +
+            '<div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px;text-align:center">復旧コードを保存してください</div>' +
+            '<div style="font-size:13px;line-height:1.7;color:var(--text-light);margin-bottom:10px">' +
+              'この復旧コードは、管理者PINを忘れたときに必要です。<br>' +
+              'スクリーンショットまたはメモで必ず保存してください。<br>' +
+              'この画面を閉じると再表示できません。' +
+            '</div>' +
+            '<div style="padding:12px;border:1px dashed rgba(124,58,237,0.45);border-radius:12px;background:#faf5ff;font-size:18px;font-weight:800;letter-spacing:1.2px;color:var(--primary);text-align:center;user-select:all;margin-bottom:10px" id="recoveryCodeText"></div>' +
+            '<button id="copyRecoveryCodeBtn" style="width:100%;padding:10px;border:1px solid rgba(124,58,237,0.3);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">復旧コードをコピー</button>' +
+            '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text);line-height:1.5;margin-bottom:12px;cursor:pointer">' +
+              '<input id="confirmRecoverySaved" type="checkbox" style="margin-top:2px">' +
+              '<span>復旧コードをスクリーンショットまたはメモで保存しました</span>' +
+            '</label>' +
+            '<button id="closeRecoveryModalBtn" disabled style="width:100%;padding:11px;border:none;border-radius:12px;background:#d1d5db;color:#fff;font-size:14px;font-weight:800;cursor:not-allowed">OK</button>' +
+          '</div>';
+        document.body.appendChild(ov);
+        const codeEl = ov.querySelector('#recoveryCodeText');
+        const copyBtn = ov.querySelector('#copyRecoveryCodeBtn');
+        const check = ov.querySelector('#confirmRecoverySaved');
+        const okBtn = ov.querySelector('#closeRecoveryModalBtn');
+        codeEl.textContent = recoveryCode;
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(recoveryCode).then(() => {
+            copyBtn.textContent = 'コピーしました';
+            setTimeout(() => { copyBtn.textContent = '復旧コードをコピー'; }, 1500);
+          });
+        });
+        check.addEventListener('change', () => {
+          okBtn.disabled = !check.checked;
+          okBtn.style.background = check.checked ? 'linear-gradient(135deg, var(--primary-light), var(--primary))' : '#d1d5db';
+          okBtn.style.cursor = check.checked ? 'pointer' : 'not-allowed';
+        });
+        okBtn.addEventListener('click', () => {
+          if (!check.checked) return;
+          ov.remove();
+          resolve(true);
+        });
+      });
+    }
+
     const lobby = document.createElement('div');
     lobby.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;padding:24px 24px 56px;background:var(--bg)';
 
@@ -1568,17 +2004,13 @@ if (MAINTENANCE_MODE) {
     joinSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:100%';
 
     const hero = document.createElement('div');
-    hero.style.cssText = 'text-align:center;margin-bottom:28px';
+    hero.style.cssText = 'text-align:center;margin-top:24px;margin-bottom:28px';
     hero.innerHTML =
   '<div class="lobby-logo">出欠ちゃん</div>' +
-  '<div class="lobby-subtitle">管理アプリ</div>';
+  '<div class="lobby-subtitle">グループ管理Webアプリ</div>';
 
 
     joinSection.appendChild(hero);
-    const subcopy = document.createElement('div');
-    subcopy.className = 'lobby-subcopy';
-    subcopy.textContent = 'グループIDで参加、または新規作成';
-    joinSection.appendChild(subcopy);
     let inviteData = null;
     try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
     if (inviteData && inviteData.id) {
@@ -1617,13 +2049,33 @@ if (MAINTENANCE_MODE) {
     actionCard.innerHTML =
       '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
       '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
+      '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れた</button>' +
       '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div class="lobby-panel-title">グループIDからログイン</div>' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
-        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
+        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
         '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:6px">ログインする</button>' +
         '<button id="cancelReloginBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
+      '</div>' +
+      '<div id="createTeamPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div class="lobby-panel-title">新規にグループを作る</div>' +
+        '<input id="lobbyGroupName" type="text" maxlength="18" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
+        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
+        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理者PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
+        '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
+        '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px">作成する</button>' +
+        '<button id="backToJoinBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
+      '</div>' +
+      '<div id="recoverAdminPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div class="lobby-panel-title">管理者PINを再設定する</div>' +
+        '<input id="recoverTeamId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">' +
+        '<input id="recoverCode" type="text" placeholder="復旧コード" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:1px">' +
+        '<input id="recoverNewPin" type="tel" inputmode="numeric" maxlength="4" placeholder="新しい管理者PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;letter-spacing:4px;margin-top:6px">' +
+        '<div id="recoverError" style="display:none;font-size:12px;color:var(--absent);margin:4px 2px 8px;text-align:center"></div>' +
+        '<button id="recoverSubmitBtn" class="lobby-login-btn" style="margin-bottom:6px">再設定する</button>' +
+        '<button id="cancelRecoverBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
       '</div>';
     joinSection.appendChild(actionCard);
 
@@ -1637,28 +2089,6 @@ if (MAINTENANCE_MODE) {
     joinSection.appendChild(recentSection);
 
     lobby.appendChild(joinSection);
-
-    // Create new team (wrapper, initially hidden)
-    const createTeamWrapper = document.createElement('div');
-    createTeamWrapper.id = 'createTeamSection';
-    createTeamWrapper.style.cssText = 'display:none;width:100%;max-width:420px';
-
-    const createSection = document.createElement('div');
-    createSection.className = 'lobby-card';
-    createSection.style.cssText = 'margin-bottom:20px';
-    createSection.innerHTML =
-      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;text-align:center">新規グループ作成</div>' +
-      '<div class="lobby-relogin-panel" style="margin-top:0">' +
-        '<input id="lobbyGroupName" type="text" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
-        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
-        '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
-        '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px">作成する</button>' +
-        '<button id="backToJoinBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
-      '</div>' +
-      '';
-    createTeamWrapper.appendChild(createSection);
-    lobby.appendChild(createTeamWrapper);
 
     function renderRecentList() {
       const recent = getRecent();
@@ -1696,12 +2126,17 @@ if (MAINTENANCE_MODE) {
             return;
           }
           const panel = document.getElementById('reloginPanel');
-          const createBtn = document.getElementById('createTeamBtn');
+          const createPanel = document.getElementById('createTeamPanel');
+          const recoverPanel = document.getElementById('recoverAdminPanel');
+          const reloginBtn = document.getElementById('openReloginBtn');
           const teamInput = document.getElementById('reloginGroupId');
           const nameInput = document.getElementById('reloginName');
           const err = document.getElementById('reloginError');
           panel.style.display = '';
-          if (createBtn) createBtn.style.display = 'none';
+          setLobbyActionButtons(false, false, false);
+          if (createPanel) createPanel.style.display = 'none';
+          if (recoverPanel) recoverPanel.style.display = 'none';
+          if (reloginBtn) reloginBtn.style.display = '';
           teamInput.value = t.id;
           if (err) err.style.display = 'none';
           nameInput.focus();
@@ -1764,7 +2199,7 @@ if (MAINTENANCE_MODE) {
             '<ul class="faq-sublist"><li>参加中のメンバーに「招待リンク表示」から共有してもらってください</li></ul>' +
           '</li>' +
           '<li>' +
-            '<strong class="faq-title">・PINを忘れた</strong>' +
+            '<strong class="faq-title">・メンバーがPINを忘れた</strong>' +
             '<ul class="faq-sublist"><li>管理者にメンバー設定の更新を依頼してください</li></ul>' +
           '</li>' +
           '<li>' +
@@ -1781,6 +2216,8 @@ if (MAINTENANCE_MODE) {
     lobby.appendChild(version);
 
     document.body.appendChild(lobby);
+    ensureGlobalCopyrightFooter();
+    setGlobalCopyrightVisible(true);
 
     // Generate random team ID (8 chars alphanumeric)
     function generateTeamId() {
@@ -1808,10 +2245,12 @@ if (MAINTENANCE_MODE) {
       errEl.style.display = 'none';
       const teamId = generateTeamId();
       const t = teamId + ':';
+      const recoveryCode = generateRecoveryCode();
       // Set up localStorage for the new team
       localStorage.setItem(t + 'volley-app-title', groupName);
       localStorage.setItem(t + 'volley-admin-pw', adminPw);
       localStorage.setItem(t + 'volley-admin-name', adminName);
+      localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, recoveryCode);
       localStorage.setItem(t + 'volley-login-type', 'admin');
       localStorage.setItem(t + 'volley-editor', adminName);
       localStorage.setItem(t + 'volley-login-session', JSON.stringify({
@@ -1827,6 +2266,7 @@ if (MAINTENANCE_MODE) {
       let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
       recent.unshift({ id: teamId, name: groupName, lastVisited: new Date().toISOString() });
       localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+      await showRecoveryCodeModal(recoveryCode);
       location.href = '?team=' + encodeURIComponent(teamId);
     });
     document.getElementById('lobbyGroupName').addEventListener('keydown', e => {
@@ -1839,28 +2279,62 @@ if (MAINTENANCE_MODE) {
       if (e.key === 'Enter') document.getElementById('lobbyCreateBtn').click();
     });
 
-    const JOIN_CSS = 'display:flex;flex-direction:column;align-items:center;width:100%';
-    const JOIN_CSS_HIDDEN = 'display:none';
-    const CREATE_CSS = 'width:100%;max-width:420px';
-    const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:420px';
+    function setLobbyActionButtons(showRelogin, showCreate, showRecover) {
+      const reloginBtn = document.getElementById('openReloginBtn');
+      const createBtn = document.getElementById('createTeamBtn');
+      const recoverBtn = document.getElementById('openRecoverPanelBtn');
+      if (reloginBtn) reloginBtn.style.display = showRelogin ? '' : 'none';
+      if (createBtn) createBtn.style.display = showCreate ? '' : 'none';
+      if (recoverBtn) recoverBtn.style.display = showRecover ? '' : 'none';
+    }
 
  document.addEventListener('click', (e) => {
   const createBtn = e.target.closest('#createTeamBtn');
   const backBtn   = e.target.closest('#backToJoinBtn');
-  if (!createBtn && !backBtn) return;
+  const openRecoverBtn = e.target.closest('#openRecoverPanelBtn');
+  const cancelRecoverBtn = e.target.closest('#cancelRecoverBtn');
+  if (!createBtn && !backBtn && !openRecoverBtn && !cancelRecoverBtn) return;
 
   e.preventDefault();
 
-  const sec  = document.getElementById('createTeamSection');
-  const join = document.getElementById('joinSection');
-  if (!sec || !join) return;
+  const createPanel = document.getElementById('createTeamPanel');
+  const reloginPanel = document.getElementById('reloginPanel');
+  const recoverPanel = document.getElementById('recoverAdminPanel');
+  if (!createPanel || !reloginPanel || !recoverPanel) return;
 
   if (createBtn) {
-    sec.style.cssText  = CREATE_CSS;
-    join.style.cssText = JOIN_CSS_HIDDEN;
-  } else {
-    sec.style.cssText  = CREATE_CSS_HIDDEN;
-    join.style.cssText = JOIN_CSS;
+    createPanel.style.display = '';
+    reloginPanel.style.display = 'none';
+    recoverPanel.style.display = 'none';
+    setLobbyActionButtons(false, false, false);
+    const err = document.getElementById('lobbyCreateError');
+    if (err) err.style.display = 'none';
+    const first = document.getElementById('lobbyGroupName');
+    if (first) first.focus();
+    return;
+  }
+
+  if (backBtn) {
+    createPanel.style.display = 'none';
+    setLobbyActionButtons(true, true, true);
+    return;
+  }
+
+  if (openRecoverBtn) {
+    recoverPanel.style.display = '';
+    reloginPanel.style.display = 'none';
+    createPanel.style.display = 'none';
+    setLobbyActionButtons(false, false, false);
+    const err = document.getElementById('recoverError');
+    if (err) err.style.display = 'none';
+    const idInput = document.getElementById('recoverTeamId');
+    if (idInput) idInput.focus();
+    return;
+  }
+
+  if (cancelRecoverBtn) {
+    recoverPanel.style.display = 'none';
+    setLobbyActionButtons(true, true, true);
   }
 });
 
@@ -1876,9 +2350,12 @@ document.addEventListener('click', (e) => {
 
 document.getElementById('openReloginBtn').addEventListener('click', () => {
   const panel = document.getElementById('reloginPanel');
-  const createBtn = document.getElementById('createTeamBtn');
+  const createPanel = document.getElementById('createTeamPanel');
+  const recoverPanel = document.getElementById('recoverAdminPanel');
   panel.style.display = '';
-  if (createBtn) createBtn.style.display = 'none';
+  setLobbyActionButtons(false, false, false);
+  if (createPanel) createPanel.style.display = 'none';
+  if (recoverPanel) recoverPanel.style.display = 'none';
   const idInput = document.getElementById('reloginGroupId');
   if (!idInput.value) idInput.focus();
   else document.getElementById('reloginName').focus();
@@ -1886,10 +2363,9 @@ document.getElementById('openReloginBtn').addEventListener('click', () => {
 
 function closeReloginPanel() {
   const panel = document.getElementById('reloginPanel');
-  const createBtn = document.getElementById('createTeamBtn');
   const err = document.getElementById('reloginError');
   panel.style.display = 'none';
-  if (createBtn) createBtn.style.display = '';
+  setLobbyActionButtons(true, true, true);
   if (err) {
     err.textContent = '';
     err.style.display = 'none';
@@ -1899,6 +2375,9 @@ function closeReloginPanel() {
 document.getElementById('cancelReloginBtn').addEventListener('click', closeReloginPanel);
 
 document.getElementById('reloginPin').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+});
+document.getElementById('recoverNewPin').addEventListener('input', e => {
   e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
 });
 document.getElementById('reloginBtn').addEventListener('click', async () => {
@@ -1925,6 +2404,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     if (data.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(data.deadline));
     if (data.adminName) localStorage.setItem(t + 'volley-admin-name', data.adminName);
     if (data.adminPw) localStorage.setItem(t + 'volley-admin-pw', data.adminPw);
+    if (typeof data.recoveryCode === 'string' && data.recoveryCode) localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
     localStorage.setItem(t + 'volley-editor', name);
     localStorage.setItem(t + 'volley-login-type', 'member');
     localStorage.setItem(t + 'volley-login-session', JSON.stringify({
@@ -1940,8 +2420,69 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   }
 });
 
+document.getElementById('recoverSubmitBtn').addEventListener('click', async () => {
+  const err = document.getElementById('recoverError');
+  const teamId = (document.getElementById('recoverTeamId').value || '').trim().toLowerCase();
+  const normalizeRecoveryCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const recoveryCode = normalizeRecoveryCode(document.getElementById('recoverCode').value);
+  const newPin = (document.getElementById('recoverNewPin').value || '').trim();
+  if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
+  if (!recoveryCode) { err.textContent = '復旧コードを入力してください'; err.style.display = ''; return; }
+  if (!/^\d{4}$/.test(newPin)) { err.textContent = '新しい管理者PINは4桁の数字で入力してください'; err.style.display = ''; return; }
+  err.style.display = 'none';
+  try {
+    const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+    const res = await fetch(api);
+    if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
+    const data = await res.json();
+    const serverCode = normalizeRecoveryCode(data?.recoveryCode);
+    if (!serverCode || serverCode !== recoveryCode) {
+      err.textContent = '復旧コードが一致しません';
+      err.style.display = '';
+      return;
+    }
+    const rotatedCode = generateRecoveryCode();
+    const payload = {
+      title: data?.title || '',
+      members: Array.isArray(data?.members) ? data.members : [],
+      schedule: Array.isArray(data?.schedule) ? data.schedule : [],
+      deadline: data?.deadline || undefined,
+      adminName: data?.adminName || '',
+      adminPw: newPin,
+      recoveryCode: rotatedCode,
+      loginSession: data?.loginSession || null,
+      attendancePractice: data?.attendancePractice || {},
+      attendanceMatch: data?.attendanceMatch || {}
+    };
+    const saveRes = await fetch(api, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!saveRes.ok) { err.textContent = 'PINの更新に失敗しました'; err.style.display = ''; return; }
+
+    const t = teamId + ':';
+    if (payload.title) localStorage.setItem(t + 'volley-app-title', payload.title);
+    localStorage.setItem(t + 'volley-admin-pw', newPin);
+    if (payload.adminName) localStorage.setItem(t + 'volley-admin-name', payload.adminName);
+    localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, rotatedCode);
+    if (payload.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(payload.deadline));
+    localStorage.setItem(t + 'volley-members', JSON.stringify(payload.members || []));
+    localStorage.setItem(t + 'volley-schedule', JSON.stringify(payload.schedule || []));
+
+    await showRecoveryCodeModal(rotatedCode);
+    alert('管理者PINを更新しました。');
+    location.href = '?team=' + encodeURIComponent(teamId);
+  } catch {
+    err.textContent = '通信エラーが発生しました';
+    err.style.display = '';
+  }
+});
+
 
 } else {
+  ensureGlobalCopyrightFooter();
+  setGlobalCopyrightVisible(true);
 
   // Check if team was deleted
   const DELETED_TEAMS_KEY = 'volley-deleted-teams';
@@ -2002,6 +2543,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   const STORAGE_EDITOR = _T + 'volley-editor';
   const STORAGE_ADMINS = _T + 'volley-admins';
   const STORAGE_ADMIN_NAME = _T + 'volley-admin-name';
+  const STORAGE_ADMIN_RECOVERY = _T + ADMIN_RECOVERY_SUFFIX;
   const STORAGE_LOGIN_SESSION = _T + 'volley-login-session';
 
   function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
@@ -2312,11 +2854,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       const dow = DAYS[d.getDay()];
       const isToday = item.date === today;
       const isSelected = item.date === selectedDate && currentMode === item.mode;
-      const rule = dlRules[item.mode];
-      const dl = new Date(d);
-      dl.setDate(dl.getDate() - rule.daysBefore);
-      dl.setHours(rule.hour, 0, 0, 0);
-      const isPast = now > dl;
+      const isPast = item.date < today;
       return `<button class="schedule-chip chip-${item.mode}${isToday ? ' chip-today' : ''}${isSelected ? ' chip-selected' : ''}${isPast ? ' chip-past-deadline' : ''}"
                       data-sdate="${item.date}" data-smode="${item.mode}">
                 ${day}<span class="chip-dow">${dow}</span>
@@ -2324,7 +2862,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     }
 
     const monthNum = parseInt(monthPrefix.split('-')[1]);
-    let html = `<div class="schedule-title">${monthNum}月の予定<button class="schedule-edit-btn" id="scheduleEditBtn">📅 編集</button></div>`;
+    let html = `<div class="schedule-title">${monthNum}月の予定<button class="schedule-edit-btn" id="scheduleEditBtn"><span class="schedule-edit-icon">📅</span><span>編集</span></button></div>`;
 
     if (practiceItems.length > 0) {
       html += `<div class="schedule-row"><span class="schedule-label schedule-label-practice">練習</span>${practiceItems.map(chipHTML).join('')}</div>`;
@@ -2371,6 +2909,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       const selDate = new Date(dateInput.value + 'T00:00:00');
       contextBar.innerHTML = `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>`;
       summary.innerHTML = '';
+      summary.style.display = 'none';
       document.getElementById('noneList').style.display = 'none';
       document.getElementById('presentList').style.display = 'none';
       document.getElementById('headerNoneCount').style.display = 'none';
@@ -2378,14 +2917,18 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
         '<div class="empty-state-card">' +
           '<div class="empty-state-icon">📅</div>' +
           '<div class="empty-state-title">予定はまだありません</div>' +
-          '<div class="empty-state-sub">右上の編集から練習/試合を追加できます</div>' +
-          '<div class="empty-state-hint">予定を追加</div>' +
+          '<button type="button" id="emptyStateAddBtn" class="empty-state-hint">予定を編集</button>' +
         '</div>' +
       '</div>';
+      const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
+      if (emptyStateAddBtn) {
+        emptyStateAddBtn.addEventListener('click', () => openCalendarEdit());
+      }
       return;
     }
 
     // --- Context Bar ---
+    summary.style.display = '';
     const dlRulesAll = getDeadlineRules();
     const rule = dlRulesAll[currentMode];
     const dlEnabled = rule.enabled;
@@ -2397,9 +2940,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       deadlineDate.setDate(deadlineDate.getDate() - rule.daysBefore);
       var dlMonth = deadlineDate.getMonth() + 1;
       var dlDay = deadlineDate.getDate();
-      const deadlineTime = new Date(deadlineDate);
-      deadlineTime.setHours(rule.hour, 0, 0, 0);
-      render._isPastDeadline = now > deadlineTime;
+      render._isPastDeadline = dateInput.value < todayStr();
       const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
       dlUrgent = isDeadlineToday || render._isPastDeadline;
     } else {
@@ -2507,6 +3048,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     let cardsHTML = readOnly ? `<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">${readOnlyMsg}</div></div>` : '';
     cardsHTML += members.map((m, idx) => {
       const name = m.name;
+      const isSelf = !!editorName && name === editorName;
       const isLocked = readOnly || (editorName && !isAdmin() && name !== editorName);
       const current = dayData[name] || 'none';
       const hasTime = TIME_STATUSES.includes(current);
@@ -2528,7 +3070,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
             <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
             <button class="reorder-btn" data-move="${idx}" data-dir="1" ${idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
           </div>
-          <span class="member-name">${escapeHTML(name)}${nameBadge}</span>
+          <span class="member-name${isSelf ? ' self-highlight' : ''}">${escapeHTML(name)}${isSelf ? '<span class="self-pill">あなた</span>' : ''}${nameBadge}</span>
           <div class="status-buttons">
             ${['present', 'absent', 'late', 'early'].map(s =>
               `<button class="status-btn ${(current === s || (current === 'late_early' && (s === 'late' || s === 'early')) || (['late','early','late_early'].includes(current) && s === 'present')) ? 'active-' + s : ''}"
@@ -2655,6 +3197,8 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   function updateLoginStatus() {
     const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
     const el = document.getElementById('loginStatus');
+    const editTitleBtn = document.getElementById('editGroupNameBtn');
+    el.style.cursor = 'default';
     if (type === 'admin') {
       const name = localStorage.getItem(STORAGE_EDITOR) || '';
       el.textContent = (name || '管理者') + '(管理者)';
@@ -2667,8 +3211,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       el.textContent = '未ログイン';
       el.style.opacity = '0.5';
     }
-    const titleEl = document.getElementById('appTitle');
-    if (titleEl) titleEl.style.cursor = isAdmin() ? 'pointer' : 'default';
+    if (editTitleBtn) editTitleBtn.disabled = !isAdmin();
   }
   updateLoginStatus();
 
@@ -2720,7 +3263,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
   if (members.some(m => String(m.pin || '') === pin)) { showLoginError('このPINはすでに使われています'); return; }
   const adminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
-  if (pin === adminPw) { showLoginError('このPINは管理者パスワードと重複するため使えません'); return; }
+  if (pin === adminPw) { showLoginError('このPINは管理者PIN（4桁）と重複するため使えません'); return; }
 
   if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
 
@@ -2791,18 +3334,68 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   });
 
   document.getElementById('adminResetBtn').addEventListener('click', () => {
-    if (!confirm('管理者パスワードを初期値(0000)にリセットします。よろしいですか？')) return;
+    if (!confirm('管理者PIN（4桁）を初期値(0000)にリセットします。よろしいですか？')) return;
     localStorage.removeItem(STORAGE_ADMIN_PW);
     adminModal.classList.remove('show');
     alert('リセットしました。パスワードは 0000 です。');
   });
+
+  function showTransferRecoveryCodeModal(recoveryCode, newAdminName) {
+    return new Promise(resolve => {
+      const ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+      ov.innerHTML =
+        '<div style="width:min(520px,100%);background:#fff;border:1px solid rgba(124,58,237,0.2);border-radius:16px;box-shadow:0 24px 56px rgba(76,29,149,0.22);padding:18px">' +
+          '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:10px">管理者を変更しました</div>' +
+          '<div style="font-size:13px;line-height:1.7;color:var(--text);margin-bottom:10px">' +
+            '新しい管理者は「' + escapeHTML(newAdminName) + '」です。<br>' +
+            '下の復旧コードは必ずスクリーンショットまたはメモで保存し、新管理者へ安全に共有してください。' +
+          '</div>' +
+          '<div style="padding:12px;border:1px dashed rgba(124,58,237,0.45);border-radius:12px;background:#faf5ff;font-size:18px;font-weight:800;letter-spacing:1.2px;color:var(--primary);text-align:center;user-select:all;margin-bottom:10px" id="transferRecoveryCodeText"></div>' +
+          '<div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">' +
+            '<button type="button" id="copyTransferRecoveryCodeBtn" style="padding:8px 12px;border:1px solid rgba(124,58,237,0.25);border-radius:10px;background:#fff;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">復旧コードをコピー</button>' +
+          '</div>' +
+          '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text);line-height:1.5;margin-bottom:12px;cursor:pointer">' +
+            '<input id="confirmTransferRecoverySaved" type="checkbox" style="margin-top:2px">' +
+            '<span>復旧コードをスクリーンショットまたはメモで保存し、新しい管理者に共有することを確認しました</span>' +
+          '</label>' +
+          '<div style="display:flex;justify-content:flex-end">' +
+            '<button type="button" id="closeTransferRecoveryModalBtn" disabled style="padding:10px 14px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-weight:700;opacity:0.45;cursor:not-allowed">OK</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(ov);
+      const codeEl = ov.querySelector('#transferRecoveryCodeText');
+      const copyBtn = ov.querySelector('#copyTransferRecoveryCodeBtn');
+      const check = ov.querySelector('#confirmTransferRecoverySaved');
+      const okBtn = ov.querySelector('#closeTransferRecoveryModalBtn');
+      codeEl.textContent = recoveryCode;
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(recoveryCode).then(() => {
+          copyBtn.textContent = 'コピーしました';
+          setTimeout(() => { copyBtn.textContent = '復旧コードをコピー'; }, 1600);
+        });
+      });
+      check.addEventListener('change', () => {
+        const ready = !!check.checked;
+        okBtn.disabled = !ready;
+        okBtn.style.opacity = ready ? '1' : '0.45';
+        okBtn.style.cursor = ready ? 'pointer' : 'not-allowed';
+      });
+      okBtn.addEventListener('click', () => {
+        ov.remove();
+        resolve();
+      });
+    });
+  }
 
   // --- App Settings ---
   const APP_VERSION = '1.0.0';
   const appSettingsModal = document.getElementById('appSettingsModal');
   const deleteGroupModal = document.getElementById('deleteGroupModal');
 
-  document.getElementById('appVersionDisplay').textContent = 'Ver ' + APP_VERSION;
+  document.getElementById('appVersionDisplay').textContent = 'Version ' + APP_VERSION;
+  const appCopyrightDisplay = document.getElementById('appCopyrightDisplay');
+  if (appCopyrightDisplay) appCopyrightDisplay.textContent = '© 2026 smoolinq';
 
   document.getElementById('appSettingsBtn').addEventListener('click', () => {
     appSettingsModal.classList.add('show');
@@ -2853,7 +3446,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       localStorage.setItem('volley-recent-teams', JSON.stringify(rt.filter(t => t.id !== _teamParam)));
     } catch {}
     // Clear all team data
-    [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME,
+    [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME, STORAGE_ADMIN_RECOVERY,
      STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, _T + 'volley-app-title',
      ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
     deleteGroupModal.classList.remove('show');
@@ -3239,7 +3832,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     const panel = document.getElementById('changeAdminPanel');
     if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
     const members = loadMembers();
-    const currentAdmin = localStorage.getItem(STORAGE_EDITOR) || '';
+    const currentAdmin = getAdminName();
     const listEl = document.getElementById('changeAdminList');
     listEl.innerHTML = members.filter(m => m.name !== currentAdmin).map(m =>
       '<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:14px">' +
@@ -3252,31 +3845,44 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   document.getElementById('changeAdminCancel').addEventListener('click', () => {
     document.getElementById('changeAdminPanel').style.display = 'none';
   });
-  document.getElementById('changeAdminConfirm').addEventListener('click', () => {
+  document.getElementById('changeAdminConfirm').addEventListener('click', async () => {
     const selected = document.querySelector('input[name="newAdmin"]:checked');
     if (!selected) { alert('メンバーを選択してください'); return; }
     const newAdminName = selected.value;
-    if (!confirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は全て失われます。\n管理者パスワードは初期値(0000)にリセットされます。\n\nよろしいですか？')) return;
-    // Reset admin password to 0000
-    localStorage.removeItem(STORAGE_ADMIN_PW);
-    // Update member roles
-    const ms = loadMembers();
     const oldAdmin = getAdminName();
+    if (!oldAdmin) { alert('現在の管理者情報を取得できません'); return; }
+    const ms = loadMembers();
+    const nextAdmin = ms.find(m => m && m.name === newAdminName);
+    if (!nextAdmin) { alert('選択したメンバーが見つかりません'); return; }
+    const nextAdminPin = String(nextAdmin.pin || '').trim();
+    if (!/^\d{4}$/.test(nextAdminPin)) {
+      alert('新しい管理者のPIN（4桁）が未設定です。先にメンバーPINを設定してください。');
+      return;
+    }
+    const ok = await customConfirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は失われます。\n管理者PINは「' + newAdminName + '」さんのPIN（4桁）に切り替わります。\n復旧コードは再発行されます。\n\nよろしいですか？');
+    if (!ok) return;
+
+    const rotatedRecoveryCode = generateRecoveryCode();
     ms.forEach(m => {
       if (m.name === oldAdmin) m.role = 'メンバー';
       if (m.name === newAdminName) m.role = '管理者';
     });
     saveMembers(ms);
-    // Update persistent admin name
     localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
-    // Logout current admin → become member
+    localStorage.setItem(STORAGE_ADMIN_PW, nextAdminPin);
+    localStorage.setItem(STORAGE_ADMIN_RECOVERY, rotatedRecoveryCode);
     setLoginState('member', oldAdmin);
     document.getElementById('changeAdminPanel').style.display = 'none';
     document.getElementById('memberSettingsModal').classList.remove('show');
     updateLoginStatus();
     render();
-    syncToServer();
-    alert('管理者権限を解除しました。\n「' + newAdminName + '」さんに管理者パスワード(0000)でログインするよう伝えてください。');
+    const synced = await syncToServer();
+    if (!synced) {
+      alert('管理者変更はローカルに保存しましたが、サーバー同期に失敗しました。通信状態を確認して再読み込みしてください。');
+      return;
+    }
+    await showTransferRecoveryCodeModal(rotatedRecoveryCode, newAdminName);
+    alert('管理者変更が完了しました。\n新しい管理者はメンバーPIN（4桁）でログインできます。');
   });
 
   // --- Invite Link (popup) ---
@@ -3331,40 +3937,59 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   const STORAGE_TITLE = _T + 'volley-app-title';
   const DEFAULT_TITLE = 'ママさんバレー 出席管理';
   const appTitleEl = document.getElementById('appTitle');
+  const editGroupNameBtn = document.getElementById('editGroupNameBtn');
+  const groupNameModal = document.getElementById('groupNameModal');
+  const groupNameInput = document.getElementById('groupNameInput');
+  const groupNameError = document.getElementById('groupNameError');
   appTitleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
-  appTitleEl.style.cursor = isAdmin() ? 'pointer' : 'default';
 
-  appTitleEl.addEventListener('click', () => {
+  function openTitleEditorModal() {
     if (!isAdmin()) { alert('管理者のみ編集できます'); return; }
-    if (document.querySelector('.title-edit-row')) return;
     const current = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
-    const row = document.createElement('div');
-    row.className = 'title-edit-row';
-    row.innerHTML = '<input type="text" maxlength="30"><button title="保存">✓</button><button title="キャンセル">✕</button>';
-    const input = row.querySelector('input');
-    const [saveBtn, cancelBtn] = row.querySelectorAll('button');
-    input.value = current;
-    appTitleEl.style.display = 'none';
-    appTitleEl.parentNode.insertBefore(row, appTitleEl);
-    input.focus();
-    input.select();
-    function save() {
-      const v = input.value.trim() || DEFAULT_TITLE;
-      localStorage.setItem(STORAGE_TITLE, v);
-      appTitleEl.textContent = v;
-      // Update recent teams with this name
-      try {
-        const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
-        const entry = rt.find(t => t.id === _teamParam);
-        if (entry) { entry.name = v; localStorage.setItem('volley-recent-teams', JSON.stringify(rt)); }
-      } catch {}
-      syncToServer();
-      close();
+    groupNameInput.value = current;
+    groupNameError.style.display = 'none';
+    groupNameError.textContent = '';
+    groupNameModal.classList.add('show');
+    groupNameInput.focus();
+    groupNameInput.setSelectionRange(groupNameInput.value.length, groupNameInput.value.length);
+  }
+  if (editGroupNameBtn) {
+    editGroupNameBtn.addEventListener('click', openTitleEditorModal);
+  }
+  function closeGroupNameModal() {
+    groupNameModal.classList.remove('show');
+    groupNameError.style.display = 'none';
+    groupNameError.textContent = '';
+  }
+  async function saveGroupNameFromModal() {
+    const v = groupNameInput.value.trim();
+    if (!v) {
+      groupNameError.textContent = 'グループ名が未記入です';
+      groupNameError.style.display = '';
+      groupNameInput.focus();
+      return;
     }
-    function close() { row.remove(); appTitleEl.style.display = ''; }
-    saveBtn.addEventListener('click', save);
-    cancelBtn.addEventListener('click', close);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') close(); });
+    if (!(await customConfirm('グループ名を「' + v + '」に変更しますか？'))) return;
+    localStorage.setItem(STORAGE_TITLE, v);
+    appTitleEl.textContent = v;
+    try {
+      const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
+      const entry = rt.find(t => t.id === _teamParam);
+      if (entry) { entry.name = v; localStorage.setItem('volley-recent-teams', JSON.stringify(rt)); }
+    } catch {}
+    syncToServer();
+    closeGroupNameModal();
+  }
+  document.getElementById('groupNameCancel').addEventListener('click', closeGroupNameModal);
+  document.getElementById('groupNameCloseX').addEventListener('click', closeGroupNameModal);
+  document.getElementById('groupNameSave').addEventListener('click', () => { saveGroupNameFromModal(); });
+  groupNameModal.addEventListener('click', e => { if (e.target === groupNameModal) closeGroupNameModal(); });
+  groupNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (e.isComposing || e.keyCode === 229) return;
+      saveGroupNameFromModal();
+    }
+    if (e.key === 'Escape') closeGroupNameModal();
   });
 
   // --- Server Sync ---
@@ -3378,6 +4003,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
       deadline: getDeadlineRules(),
       adminName: getAdminName(),
       adminPw: localStorage.getItem(STORAGE_ADMIN_PW) || '0000',
+      recoveryCode: localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '',
       loginSession: getLoginSession(),
       attendancePractice: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.practice) || '{}'),
       attendanceMatch: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.match) || '{}')
@@ -3507,6 +4133,11 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     if (data.adminPw) {
       const local = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
       if (data.adminPw !== local) { localStorage.setItem(STORAGE_ADMIN_PW, data.adminPw); changed = true; }
+    }
+    // Recovery code: always sync from server
+    if (typeof data.recoveryCode === 'string' && data.recoveryCode) {
+      const local = localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '';
+      if (data.recoveryCode !== local) { localStorage.setItem(STORAGE_ADMIN_RECOVERY, data.recoveryCode); changed = true; }
     }
     // Attendance: per-member, newer _editedAt wins
     function mergeAttendance(serverAtt, key) {
