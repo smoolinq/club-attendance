@@ -1300,6 +1300,33 @@
     font-size: 15px;
     font-weight: 600;
   }
+  .ms-name.current-user {
+    color: #4c1d95;
+    font-weight: 800;
+  }
+  .admin-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #4c1d95;
+    background: linear-gradient(135deg, #f3e8ff, #ede9fe);
+    border: 1px solid rgba(124, 58, 237, 0.32);
+    box-shadow: 0 4px 10px rgba(76, 29, 149, 0.14);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .admin-role-badge::before {
+    content: "★";
+    font-size: 9px;
+    line-height: 1;
+    color: #7c3aed;
+  }
   .ms-role {
     padding: 4px 8px;
     border: 1px solid var(--border);
@@ -1315,22 +1342,6 @@
     cursor: pointer;
     padding: 4px 8px;
   }
-  .ms-add-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-  }
-  .ms-add-input {
-    flex: 1;
-    padding: 10px 12px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 15px;
-    outline: none;
-  }
-  .ms-add-input:focus { border-color: var(--primary); }
-  .ms-add-btn { padding: 10px 20px; border-radius: 12px; }
-
   input[type="text"],
   input[type="tel"],
   input[type="password"],
@@ -1590,18 +1601,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <main id="memberList"></main>
 
-<div class="modal-overlay" id="modal">
-  <div class="modal" style="position:relative">
-    <button class="modal-close-x" id="modalCloseX">&times;</button>
-    <h2 id="modalTitle">メンバー追加</h2>
-    <input type="text" id="memberNameInput" placeholder="名前を入力">
-    <div class="modal-actions">
-      <button class="btn-cancel" id="modalCancel">キャンセル</button>
-      <button class="btn-confirm" id="modalConfirm">追加</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="settingsModal">
   <div class="modal" style="position:relative">
     <button class="modal-close-x" id="settingsCloseX">&times;</button>
@@ -1722,6 +1721,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
       <button id="backToLobbyBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">ロビーに戻る</button>
       <button id="showInviteBtn" style="width:100%;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
+      <button id="leaveGroupBtn" style="display:none;width:100%;padding:10px;border:1px solid #f59e0b;border-radius:12px;background:#fff;color:#92400e;font-size:13px;font-weight:700;cursor:pointer">退会する</button>
       <button id="deleteGroupBtn" style="width:100%;padding:8px;border:1px solid var(--absent);border-radius:8px;background:#fff;color:var(--absent);font-size:12px;font-weight:600;cursor:pointer;opacity:0.7">グループを削除する</button>
     </div>
     <div class="modal-actions" style="margin-top:16px">
@@ -1756,11 +1756,7 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
   <div class="cal-edit-body" style="flex:1">
     <div id="memberSettingsList"></div>
-    <div class="ms-add-row">
-      <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
-      <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
-    </div>
-    <button id="changeAdminBtn" style="display:none;width:auto;max-width:100%;margin:8px auto 0;padding:8px 14px;border:1px solid var(--late);border-radius:10px;background:#fff;color:var(--late);font-size:12px;font-weight:700;cursor:pointer;display:block">管理者を変更する</button>
+    <button id="changeAdminBtn" style="display:none;width:fit-content;max-width:100%;margin:14px 0 0 auto;padding:6px 11px;border:1px solid var(--late);border-radius:10px;background:#fff;color:var(--late);font-size:11px;font-weight:700;cursor:pointer">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
       <div id="changeAdminList"></div>
@@ -2394,9 +2390,18 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
     const data = await res.json();
     if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
+    const adminName = String(data?.adminName || '').trim();
+    const adminPw = String(data?.adminPw || '0000');
+    const isAdminLogin = name === adminName && pin === adminPw;
     const member = data.members.find(m => m && m.name === name);
-    if (!member) { err.textContent = 'この名前は登録されていません'; err.style.display = ''; return; }
-    if (String(member.pin || '') !== pin) { err.textContent = 'PINが違います'; err.style.display = ''; return; }
+    if (!isAdminLogin) {
+      if (!member) { err.textContent = 'この名前は登録されていません'; err.style.display = ''; return; }
+      if (String(member.pin || '') !== pin) {
+        err.textContent = name === adminName ? '管理者PINが違います' : 'PINが違います';
+        err.style.display = '';
+        return;
+      }
+    }
     const t = teamId + ':';
     if (data.title) localStorage.setItem(t + 'volley-app-title', data.title);
     if (Array.isArray(data.members)) localStorage.setItem(t + 'volley-members', JSON.stringify(data.members));
@@ -2406,10 +2411,10 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     if (data.adminPw) localStorage.setItem(t + 'volley-admin-pw', data.adminPw);
     if (typeof data.recoveryCode === 'string' && data.recoveryCode) localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
     localStorage.setItem(t + 'volley-editor', name);
-    localStorage.setItem(t + 'volley-login-type', 'member');
+    localStorage.setItem(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
     localStorage.setItem(t + 'volley-login-session', JSON.stringify({
       id: createSessionId(),
-      type: 'member',
+      type: isAdminLogin ? 'admin' : 'member',
       editor: name,
       updatedAt: new Date().toISOString()
     }));
@@ -2907,22 +2912,27 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     const list = document.getElementById('memberList');
     if (!hasSchedule) {
       const selDate = new Date(dateInput.value + 'T00:00:00');
+      const isPastSelectedDate = dateInput.value < todayStr();
       contextBar.innerHTML = `<span class="context-date">${selDate.getMonth()+1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>`;
       summary.innerHTML = '';
       summary.style.display = 'none';
       document.getElementById('noneList').style.display = 'none';
       document.getElementById('presentList').style.display = 'none';
       document.getElementById('headerNoneCount').style.display = 'none';
-      list.innerHTML = '<div class="empty-state">' +
-        '<div class="empty-state-card">' +
-          '<div class="empty-state-icon">📅</div>' +
-          '<div class="empty-state-title">予定はまだありません</div>' +
-          '<button type="button" id="emptyStateAddBtn" class="empty-state-hint">予定を編集</button>' +
-        '</div>' +
-      '</div>';
-      const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
-      if (emptyStateAddBtn) {
-        emptyStateAddBtn.addEventListener('click', () => openCalendarEdit());
+      if (isPastSelectedDate) {
+        list.innerHTML = '<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">このイベントは終了しています</div></div>';
+      } else {
+        list.innerHTML = '<div class="empty-state">' +
+          '<div class="empty-state-card">' +
+            '<div class="empty-state-icon">📅</div>' +
+            '<div class="empty-state-title">予定はまだありません</div>' +
+            '<button type="button" id="emptyStateAddBtn" class="empty-state-hint">予定を編集</button>' +
+          '</div>' +
+        '</div>';
+        const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
+        if (emptyStateAddBtn) {
+          emptyStateAddBtn.addEventListener('click', () => openCalendarEdit());
+        }
       }
       return;
     }
@@ -2968,7 +2978,7 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     const dayData = getDayAttendance();
 
     if (members.length === 0) {
-      list.innerHTML = '<div class="empty-state"><p>メンバーがいません<br>＋ボタンから追加してください</p></div>';
+      list.innerHTML = '<div class="empty-state"><p>メンバーがいません<br>招待リンクまたはグループIDで参加してください</p></div>';
       summary.innerHTML = '';
       document.getElementById('headerNoneCount').style.display = 'none';
       return;
@@ -3398,6 +3408,15 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
   if (appCopyrightDisplay) appCopyrightDisplay.textContent = '© 2026 smoolinq';
 
   document.getElementById('appSettingsBtn').addEventListener('click', () => {
+    const leaveBtn = document.getElementById('leaveGroupBtn');
+    const deleteBtn = document.getElementById('deleteGroupBtn');
+    if (isAdmin()) {
+      if (leaveBtn) leaveBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = '';
+    } else {
+      if (leaveBtn) leaveBtn.style.display = '';
+      if (deleteBtn) deleteBtn.style.display = 'none';
+    }
     appSettingsModal.classList.add('show');
   });
   document.getElementById('appSettingsClose').addEventListener('click', () => appSettingsModal.classList.remove('show'));
@@ -3406,6 +3425,47 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
   // Back to lobby
   document.getElementById('backToLobbyBtn').addEventListener('click', async () => {
     if (!(await customConfirm('ロビーに戻ります。\nよろしいですか？'))) return;
+    location.href = location.pathname;
+  });
+
+  document.getElementById('leaveGroupBtn').addEventListener('click', async () => {
+    const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+    const name = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+    if (loginType !== 'member' || !name) {
+      alert('メンバーとしてログイン中のみ退会できます');
+      return;
+    }
+    const ok = await customConfirm(
+      '退会するとこのグループで使用していたPINは無効になります。\n' +
+      '再度参加する場合は、招待リンクまたはグループIDから\n' +
+      '名前とPINを新規登録してください。\n\n退会しますか？'
+    );
+    if (!ok) return;
+
+    const members = loadMembers();
+    const idx = members.findIndex(m => m && m.name === name);
+    if (idx === -1) {
+      clearLoginState();
+      location.href = location.pathname;
+      return;
+    }
+
+    const prevMembers = members.slice();
+    members.splice(idx, 1);
+    saveMembers(members);
+    const synced = await syncToServer();
+    if (!synced) {
+      saveMembers(prevMembers);
+      alert('退会の同期に失敗しました。通信状態を確認して再度お試しください。');
+      return;
+    }
+
+    clearLoginState();
+    try {
+      const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
+      localStorage.setItem('volley-recent-teams', JSON.stringify(rt.filter(t => t.id !== _teamParam)));
+    } catch {}
+    alert('退会しました。');
     location.href = location.pathname;
   });
 
@@ -3452,30 +3512,6 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     deleteGroupModal.classList.remove('show');
     location.href = location.pathname;
   });
-
-  // --- Modal ---
-  const modal = document.getElementById('modal');
-  const nameInput = document.getElementById('memberNameInput');
-
-  function closeModal() { modal.classList.remove('show'); nameInput.value = ''; }
-  document.getElementById('modalCancel').addEventListener('click', closeModal);
-  document.getElementById('modalCloseX').addEventListener('click', closeModal);
-  document.getElementById('modalConfirm').addEventListener('click', addMember);
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addMember(); });
-  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-  async function addMember() {
-    const name = nameInput.value.trim();
-    if (!name) return;
-    const members = loadMembers();
-    if (members.some(m => m.name === name)) { alert('既に追加済み'); return; }
-    if (!(await customConfirm(name + 'さんを追加しますか？'))) return;
-    members.push({name, role: '一般'});
-    saveMembers(members);
-    closeModal();
-    render();
-    syncToServer();
-  }
 
   // --- Settings Modal ---
   const settingsModal = document.getElementById('settingsModal');
@@ -3784,22 +3820,46 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     const list = document.getElementById('memberSettingsList');
     const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみ</div>';
     const adminN = getAdminName();
-    list.innerHTML = notice + members.map((m, i) =>
-      '<div class="ms-item">' +
-        '<span class="ms-name">' + escapeHTML(m.name) + (m.name === adminN ? ' <span style="font-size:10px;color:var(--primary);background:#ede9fe;border-radius:6px;padding:1px 6px;margin-left:4px;font-weight:700">管理者</span>' : '') + '</span>' +
-        (admin ?
-          '<select class="ms-role" data-ms-idx="' + i + '">' +
-            (m.name === adminN ? ['管理者'].concat(ROLES) : ROLES).map(r => '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + r + '</option>').join('') +
-          '</select>' :
-          '<span class="ms-role">' + escapeHTML(m.role || 'メンバー') + '</span>') +
+    const currentUser = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+    list.innerHTML = notice + members.map((m, i) => {
+      const roleValue = ROLES.includes(m.role) ? m.role : 'メンバー';
+      return '<div class="ms-item">' +
+        '<span class="ms-name' + (m.name === currentUser ? ' current-user' : '') + '">' + escapeHTML(m.name) + (m.name === adminN ? ' <span class="admin-role-badge">管理者</span>' : '') + '</span>' +
+        (admin
+          ? '<select class="ms-role" data-ms-idx="' + i + '">' +
+              ROLES.map(r => '<option value="' + r + '"' + (roleValue === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+            '</select>'
+          : '<span class="ms-role">' + escapeHTML(roleValue) + '</span>') +
         (admin && m.name !== adminN ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
-      '</div>'
-    ).join('');
-    const addRow = document.querySelector('.ms-add-row');
-    addRow.style.display = admin ? '' : 'none';
-    document.getElementById('changeAdminBtn').style.display = admin ? '' : 'none';
+      '</div>';
+    }).join('');
+    document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
     document.getElementById('changeAdminPanel').style.display = 'none';
     if (admin) {
+      list.querySelectorAll('.ms-role[data-ms-idx]').forEach(sel => {
+        const ms = loadMembers();
+        const idx = parseInt(sel.dataset.msIdx, 10);
+        const current = (ms[idx] && ms[idx].role) || 'メンバー';
+        sel.dataset.prevRole = current;
+        sel.addEventListener('focus', () => {
+          sel.dataset.prevRole = sel.value;
+        });
+        sel.addEventListener('change', async () => {
+          const next = sel.value;
+          const prev = sel.dataset.prevRole || current;
+          if (next === prev) return;
+          const name = (ms[idx] && ms[idx].name) || '';
+          const ok = await customConfirm('「' + name + '」の役職を「' + next + '」に変更しますか？');
+          if (!ok) {
+            sel.value = prev;
+            return;
+          }
+          ms[idx].role = next;
+          saveMembers(ms);
+          syncToServer();
+          renderMemberSettings();
+        });
+      });
 
 
             list.querySelectorAll('.ms-delete').forEach(btn => {
@@ -3914,24 +3974,6 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
   });
   document.getElementById('inviteCloseBtn').addEventListener('click', () => invitePopup.classList.remove('show'));
   invitePopup.addEventListener('click', e => { if (e.target === invitePopup) invitePopup.classList.remove('show'); });
-
-  document.getElementById('msAddBtn').addEventListener('click', async () => {
-    const input = document.getElementById('msAddName');
-    const name = input.value.trim();
-    if (!name) return;
-    const members = loadMembers();
-    if (members.some(m => m.name === name)) { alert('既に追加済み'); return; }
-    if (!(await customConfirm(name + 'さんを追加しますか？'))) return;
-    members.push({name, role: '一般'});
-    saveMembers(members);
-    input.value = '';
-    renderMemberSettings();
-    syncToServer();
-  });
-
-  document.getElementById('msAddName').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('msAddBtn').click();
-  });
 
   // --- Editable Title ---
   const STORAGE_TITLE = _T + 'volley-app-title';
