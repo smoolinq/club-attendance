@@ -1556,7 +1556,7 @@
 <body>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const MAINTENANCE_MODE = false;
+  const MAINTENANCE_MODE = true;
 
   if (MAINTENANCE_MODE) {
     document.body.innerHTML = `
@@ -1862,6 +1862,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const RECENT_KEY = 'volley-recent-teams';
   const INVITE_KEY = 'volley-invite-link';
   const ADMIN_RECOVERY_SUFFIX = 'volley-admin-recovery-code';
+  const CREATED_TEAMS_KEY = 'volley-created-teams';
+  const MAX_CREATED_TEAMS_PER_DEVICE = 5;
 
   function createSessionId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -1879,6 +1881,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getRecentTeams() {
     try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+  }
+
+  function getCreatedTeams() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CREATED_TEAMS_KEY)) || [];
+      const clean = raw
+        .filter(id => typeof id === 'string')
+        .map(id => id.trim().toLowerCase())
+        .filter(Boolean);
+      return Array.from(new Set(clean));
+    } catch {
+      return [];
+    }
+  }
+
+  function setCreatedTeams(teamIds) {
+    const clean = Array.from(new Set((teamIds || [])
+      .filter(id => typeof id === 'string')
+      .map(id => id.trim().toLowerCase())
+      .filter(Boolean)));
+    localStorage.setItem(CREATED_TEAMS_KEY, JSON.stringify(clean));
+  }
+
+  function pruneCreatedTeams() {
+    const deleted = (() => {
+      try { return JSON.parse(localStorage.getItem('volley-deleted-teams')) || []; } catch { return []; }
+    })();
+    const next = getCreatedTeams().filter(teamId => {
+      if (deleted.includes(teamId)) return false;
+      return !!localStorage.getItem(teamId + ':volley-admin-name');
+    });
+    setCreatedTeams(next);
+    return next;
   }
 
   function isKnownTeam(teamId) {
@@ -2215,7 +2250,7 @@ document.addEventListener("DOMContentLoaded", () => {
           '</li>' +
           '<li>' +
             '<strong class="faq-title">・メンバーがPINを忘れた</strong>' +
-            '<ul class="faq-sublist"><li>管理者にメンバー設定の更新を依頼してください</li></ul>' +
+            '<ul class="faq-sublist"><li>管理者にメンバー設定の更新を依頼してください</li><li>退会後に再参加する場合、以前使っていたPINも再利用できます（同一グループ内で未使用なら可）</li></ul>' +
           '</li>' +
           '<li>' +
             '<strong class="faq-title">・履歴を消した</strong>' +
@@ -2256,6 +2291,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!groupName) { errEl.textContent = 'グループ名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyGroupName').focus(); return; }
       if (!adminName) { errEl.textContent = '管理者名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminName').focus(); return; }
       if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
+      const createdTeams = pruneCreatedTeams();
+      if (createdTeams.length >= MAX_CREATED_TEAMS_PER_DEVICE) {
+        errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
+        errEl.style.display = '';
+        return;
+      }
       if (!(await lobbyConfirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\nパスワード: ' + adminPw + '\n\nよろしいですか？'))) return;
       errEl.style.display = 'none';
       const teamId = generateTeamId();
@@ -2281,6 +2322,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
       recent.unshift({ id: teamId, name: groupName, lastVisited: new Date().toISOString() });
       localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+      setCreatedTeams([teamId, ...createdTeams]);
       await showRecoveryCodeModal(recoveryCode);
       location.href = '?team=' + encodeURIComponent(teamId);
     });
@@ -3463,9 +3505,10 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
       return;
     }
     const ok = await customConfirm(
-      '退会するとこのグループで使用していたPINは無効になります。\n' +
+      '退会するとこの端末のログイン情報が削除されます。\n' +
       '再度参加する場合は、招待リンクまたはグループIDから\n' +
-      '名前とPINを新規登録してください。\n\n退会しますか？'
+      '名前とPINを新規登録してください。\n' +
+      '以前使っていたPINも、同一グループ内で未使用なら再利用できます。\n\n退会しますか？'
     );
     if (!ok) return;
 
@@ -3478,11 +3521,15 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     }
 
     const prevMembers = members.slice();
+    const prevSessionRaw = localStorage.getItem(STORAGE_LOGIN_SESSION);
     members.splice(idx, 1);
     saveMembers(members);
-    const synced = await syncToServer();
+    localStorage.removeItem(STORAGE_LOGIN_SESSION);
+    const synced = await syncToServer({ ignoreSessionConflict: true });
     if (!synced) {
       saveMembers(prevMembers);
+      if (prevSessionRaw) localStorage.setItem(STORAGE_LOGIN_SESSION, prevSessionRaw);
+      else localStorage.removeItem(STORAGE_LOGIN_SESSION);
       alert('退会の同期に失敗しました。通信状態を確認して再度お試しください。');
       return;
     }
@@ -3537,6 +3584,7 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME, STORAGE_ADMIN_RECOVERY,
      STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, _T + 'volley-app-title',
      ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
+    setCreatedTeams(getCreatedTeams().filter(id => id !== _teamParam));
     deleteGroupModal.classList.remove('show');
     location.href = location.pathname;
   });
@@ -4080,10 +4128,11 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     };
   }
 
-  async function syncToServer() {
+  async function syncToServer(options) {
     try {
+      const opts = options || {};
       const localSession = getLoginSession();
-      if (localSession && localSession.id) {
+      if (!opts.ignoreSessionConflict && localSession && localSession.id) {
         const latest = await syncFromServer();
         const serverSessionId = latest && latest.loginSession ? latest.loginSession.id : '';
         if (serverSessionId && serverSessionId !== localSession.id) {
