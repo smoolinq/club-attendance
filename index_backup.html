@@ -142,66 +142,144 @@
 
   .lobby-logo {
     font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
-    font-size: 34px;
+    font-size: 36px;
     font-weight: 800;
     color: var(--primary);
     letter-spacing: 0.02em;
     line-height: 1.05;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .lobby-subtitle {
     font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: #625f84;
     letter-spacing: 0.08em;
-    margin-bottom: 18px;
+    margin-bottom: 6px;
   }
 
+  .lobby-subcopy {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--text-light);
+    text-align: center;
+  }
+
+  .lobby-login-btn,
   .lobby-create-btn {
     width: 100%;
     padding: 12px;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--primary-light), var(--primary));
-    color: #fff;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.25);
   }
 
+  .lobby-login-btn {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.25);
+    margin-bottom: 8px;
+  }
+
+  .lobby-create-btn {
+    background: #fff;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+  }
+
+  .lobby-login-btn:active,
   .lobby-create-btn:active { transform: translateY(1px); }
 
-  .lobby-relogin-card {
+  .lobby-relogin-panel {
     width: 100%;
-    max-width: 360px;
-    margin-bottom: 16px;
-    padding: 12px 14px;
+    margin-top: 8px;
+    padding: 10px 12px;
     background: #f7f2ff;
     border: 1px solid #ddd6fe;
+    border-radius: 12px;
+  }
+
+  .lobby-card {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 14px;
   }
 
-  .lobby-relogin-summary {
-    font-size: 13px;
+  .lobby-section-title {
+    font-size: 12px;
     font-weight: 700;
-    cursor: pointer;
-    color: var(--primary);
-    text-align: center;
+    color: var(--text);
+    margin-bottom: 8px;
   }
 
-  .lobby-relogin-btn {
+  .lobby-help {
     width: 100%;
-    padding: 10px;
-    border: none;
+    max-width: 360px;
+    margin-bottom: 12px;
+  }
+
+  .lobby-help details {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--primary-light), var(--primary));
-    color: #fff;
-    font-size: 14px;
+  }
+
+  .lobby-help summary {
+    font-size: 12px;
     font-weight: 700;
+    color: var(--primary);
     cursor: pointer;
+  }
+
+  .faq-list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .faq-list > li {
+    margin: 0 0 6px;
+  }
+
+  .faq-title {
+    display: block;
+    font-weight: 700;
+  }
+
+  .faq-sublist {
+    margin: 2px 0 0 18px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .faq-sublist li {
+    display: block;
+    white-space: normal;
+  }
+
+  .lobby-version {
+    position: fixed;
+    right: 12px;
+    bottom: 8px;
+    font-size: 10px;
+    color: var(--text-light);
+    opacity: 0.65;
+    letter-spacing: 0.02em;
+    pointer-events: none;
   }
 
   /* === Schedule Section === */
@@ -1164,6 +1242,10 @@
       history.replaceState(null, '', location.pathname);
     }
     document.body.innerHTML = '';
+    document.body.style.overflowY = 'auto';
+    document.body.style.overflowX = 'hidden';
+    document.body.style.height = 'auto';
+    document.body.style.display = 'block';
     function getRecent() {
       const recent = getRecentTeams();
       let changed = false;
@@ -1199,7 +1281,7 @@
     }
 
     const lobby = document.createElement('div');
-    lobby.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg)';
+    lobby.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;padding:24px 24px 56px;background:var(--bg)';
 
     const joinSection = document.createElement('div');
     joinSection.id = 'joinSection';
@@ -1213,7 +1295,10 @@
 
 
     joinSection.appendChild(hero);
-
+    const subcopy = document.createElement('div');
+    subcopy.className = 'lobby-subcopy';
+    subcopy.textContent = 'グループIDで参加、または新規作成';
+    joinSection.appendChild(subcopy);
     let inviteData = null;
     try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch {}
     if (inviteData && inviteData.id) {
@@ -1247,53 +1332,28 @@
       }
     }
 
-    const form = document.createElement('div');
-form.style.cssText = 'width:100%;max-width:360px;margin-bottom:24px';
-form.innerHTML = 
-  '<div style="width:100%;margin:0 0 18px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-size:13px;line-height:1.65;color:var(--text)">' +
-    '<div style="font-weight:800;margin-bottom:6px">🔐 ログインについて</div>' +
-    '<div>・新規にグループを作る時は管理者として登録されます</div>' +
-    '<div>・招待リンクは誰でも発行できます</div>' +
-    '<div>・別端末は「グループIDからログイン」で入れます</div>' +
-    '<div>・同じグループ内で同じPINは使えません</div>' +
-    '<div>・別端末でログインすると前の端末はログアウトされます</div>' +
-    '<details style="margin-top:10px;padding:10px 12px;background:#f7f2ff;border:1px solid #ddd6fe;border-radius:12px">' +
-      '<summary style="font-size:12px;font-weight:700;cursor:pointer;color:var(--primary)">管理者権限</summary>' +
-      '<div style="margin-top:8px;font-size:12px;line-height:1.65;color:var(--text)">' +
-        '<div>・メンバーの役職変更</div>' +
-        '<div>・メンバーの削除</div>' +
-        '<div>・練習予定の作成・編集・削除</div>' +
-        '<div>・試合予定の作成・編集・削除</div>' +
-        '<div>・予定ごとの締切設定</div>' +
-        '<div>・メンバーの出欠確認・管理</div>' +
-        '<div>・グループ名の変更</div>' +
-        '<div>・グループの削除</div>' +
-      '</div>' +
-    '</details>' +
-  '</div>' +
-  '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>';
-joinSection.appendChild(form);
-
-    const relogin = document.createElement('details');
-    relogin.id = 'reloginSection';
-    relogin.className = 'lobby-relogin-card';
-    relogin.innerHTML =
-      '<summary class="lobby-relogin-summary">グループIDからログイン</summary>' +
-      '<div style="margin-top:10px">' +
+    const actionCard = document.createElement('div');
+    actionCard.className = 'lobby-card';
+    actionCard.innerHTML =
+      '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
+      '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
+      '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none">' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
-        '<button id="reloginBtn" class="lobby-relogin-btn">ログインする</button>' +
+        '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:0">ログインする</button>' +
       '</div>';
-    joinSection.appendChild(relogin);
+    joinSection.appendChild(actionCard);
 
-    const orRow = document.createElement('div');
-    orRow.id = 'orRow';
-    orRow.style.cssText = 'display:none;width:100%;max-width:360px;align-items:center;gap:12px;margin-bottom:24px';
-    orRow.innerHTML = '<div style="flex:1;height:1px;background:var(--border)"></div><span style="font-size:12px;color:var(--text-light)">または</span><div style="flex:1;height:1px;background:var(--border)"></div>';
-    joinSection.appendChild(orRow);
-    if (getRecent().length > 0) { orRow.style.display = 'flex'; }
+    const recentSection = document.createElement('div');
+    recentSection.className = 'lobby-card';
+    recentSection.innerHTML = '<div class="lobby-section-title">最近のグループ</div>';
+    const recentList = document.createElement('div');
+    recentList.id = 'recentList';
+    recentList.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    recentSection.appendChild(recentList);
+    joinSection.appendChild(recentSection);
 
     lobby.appendChild(joinSection);
 
@@ -1317,53 +1377,119 @@ joinSection.appendChild(form);
     createTeamWrapper.appendChild(createSection);
     lobby.appendChild(createTeamWrapper);
 
-    // Recent teams list
-    const recent = getRecent();
-    if (recent.length > 0) {
-      const section = document.createElement('div');
-      section.style.cssText = 'width:100%;max-width:360px';
-      section.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">最近のグループ</div>';
-      const list = document.createElement('div');
-      list.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+    function renderRecentList() {
+      const recent = getRecent();
+      recentList.innerHTML = '';
+      if (recent.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:10px 2px;font-size:12px;color:var(--text-light);text-align:center';
+        empty.textContent = '最近のグループはまだありません';
+        recentList.appendChild(empty);
+        return;
+      }
       recent.forEach(t => {
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:6px';
-        const item = document.createElement('a');
-        item.href = '?team=' + encodeURIComponent(t.id);
-        item.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);font-size:14px;transition:box-shadow .15s';
-        item.onmouseenter = () => item.style.boxShadow = '0 2px 8px rgba(91,33,182,0.12)';
-        item.onmouseleave = () => item.style.boxShadow = 'none';
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:space-between;padding:11px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:13px;cursor:pointer;text-align:left';
         const left = document.createElement('div');
+        left.style.cssText = 'min-width:0';
         const displayName = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || '（グループ名未設定）';
-        left.innerHTML = '<div style="font-weight:600">' + displayName.replace(/</g,'&lt;') + '</div>';
+        left.innerHTML =
+          '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-light);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + t.id + '</div>';
         const time = document.createElement('div');
-        time.style.cssText = 'font-size:11px;color:var(--text-light);white-space:nowrap;margin-left:12px';
+        time.style.cssText = 'font-size:10px;color:var(--text-light);white-space:nowrap;margin-left:8px;align-self:flex-start';
         if (t.lastVisited) {
           const d = new Date(t.lastVisited);
-          time.textContent = (d.getMonth()+1) + '/' + d.getDate();
+          time.textContent = d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
         }
         item.appendChild(left);
         item.appendChild(time);
+        item.addEventListener('click', () => {
+          const panel = document.getElementById('reloginPanel');
+          const teamInput = document.getElementById('reloginGroupId');
+          const nameInput = document.getElementById('reloginName');
+          const err = document.getElementById('reloginError');
+          panel.style.display = '';
+          teamInput.value = t.id;
+          if (err) err.style.display = 'none';
+          nameInput.focus();
+        });
         const delBtn = document.createElement('button');
+        delBtn.type = 'button';
         delBtn.textContent = '×';
-        delBtn.style.cssText = 'flex-shrink:0;width:32px;height:32px;border:none;border-radius:10px;background:transparent;color:var(--text-light);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center';
+        delBtn.style.cssText = 'flex-shrink:0;width:24px;height:24px;border:none;border-radius:8px;background:transparent;color:var(--text-light);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center';
         delBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
           const name = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || 'このグループ';
           if (!(await lobbyConfirm('「' + name + '」を一覧から削除しますか？'))) return;
-          let r = getRecent().filter(x => x.id !== t.id);
-          localStorage.setItem(RECENT_KEY, JSON.stringify(r));
-          row.remove();
-          if (r.length === 0) { section.remove(); document.getElementById('orRow').style.display = 'none'; }
+          const next = getRecent().filter(x => x.id !== t.id);
+          localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+          renderRecentList();
         });
         row.appendChild(item);
         row.appendChild(delBtn);
-        list.appendChild(row);
+        recentList.appendChild(row);
       });
-      section.appendChild(list);
-      lobby.appendChild(section);
     }
+    renderRecentList();
+
+    const help = document.createElement('div');
+    help.className = 'lobby-help';
+    help.innerHTML =
+      '<details>' +
+        '<summary>使い方</summary>' +
+        '<ol style="margin:8px 0 0 18px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
+          '<li>グループIDからログイン、または新規にグループを作成します。</li>' +
+          '<li>初回参加は名前とPIN（4桁）を登録してログインします。</li>' +
+          '<li>ログイン後に出欠入力や予定確認を行います。</li>' +
+        '</ol>' +
+      '</details>' +
+      '<details>' +
+        '<summary>ログインについて</summary>' +
+        '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
+          '<li>グループID・名前・PINで再ログインできます。</li>' +
+          '<li>同じグループ内でPINは重複登録できません。</li>' +
+          '<li>別端末でログインすると、先にログインしていた端末はログアウトされます。</li>' +
+        '</ul>' +
+      '</details>' +
+      '<details>' +
+        '<summary>管理者権限について</summary>' +
+        '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
+          '<li>メンバーの役職変更・削除</li>' +
+          '<li>練習予定と試合予定の作成・編集・削除</li>' +
+          '<li>予定ごとの締切設定</li>' +
+          '<li>メンバーの出欠確認・管理</li>' +
+          '<li>グループ名の変更</li>' +
+          '<li>グループの削除</li>' +
+        '</ul>' +
+      '</details>' +
+      '<details>' +
+        '<summary>困ったとき</summary>' +
+        '<ul class="faq-list">' +
+          '<li>' +
+            '<strong class="faq-title">・グループIDが分からない</strong>' +
+            '<ul class="faq-sublist"><li>参加中のメンバーに「招待リンク表示」から共有してもらってください</li></ul>' +
+          '</li>' +
+          '<li>' +
+            '<strong class="faq-title">・PINを忘れた</strong>' +
+            '<ul class="faq-sublist"><li>管理者にメンバー設定の更新を依頼してください</li></ul>' +
+          '</li>' +
+          '<li>' +
+            '<strong class="faq-title">・履歴を消した</strong>' +
+            '<ul class="faq-sublist"><li>チームデータは消えません。グループIDから再ログインできます</li></ul>' +
+          '</li>' +
+        '</ul>' +
+      '</details>';
+    lobby.appendChild(help);
+
+    const version = document.createElement('div');
+    version.className = 'lobby-version';
+    version.textContent = 'Version 1.0.0';
+    lobby.appendChild(version);
 
     document.body.appendChild(lobby);
 
@@ -1457,6 +1583,14 @@ document.addEventListener('click', (e) => {
   if (!inviteData || !inviteData.id) { alert('招待データがありません'); return; }
   sessionStorage.setItem('inviteFromCard', '1');
   location.href = '?team=' + encodeURIComponent(inviteData.id);
+});
+
+document.getElementById('openReloginBtn').addEventListener('click', () => {
+  const panel = document.getElementById('reloginPanel');
+  panel.style.display = '';
+  const idInput = document.getElementById('reloginGroupId');
+  if (!idInput.value) idInput.focus();
+  else document.getElementById('reloginName').focus();
 });
 
 document.getElementById('reloginPin').addEventListener('input', e => {
