@@ -1101,6 +1101,7 @@ if (MAINTENANCE_MODE) {
     </div>
     <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
       <button id="backToLobbyBtn" style="width:100%;padding:12px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;cursor:pointer">ロビーに戻る</button>
+      <button id="showInviteBtn" style="width:100%;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
       <button id="deleteGroupBtn" style="width:100%;padding:8px;border:1px solid var(--absent);border-radius:8px;background:#fff;color:var(--absent);font-size:12px;font-weight:600;cursor:pointer;opacity:0.7">グループを削除する</button>
     </div>
     <div class="modal-actions" style="margin-top:16px">
@@ -1139,7 +1140,6 @@ if (MAINTENANCE_MODE) {
       <input type="text" id="msAddName" placeholder="名前を入力" class="ms-add-input">
       <button class="btn-confirm ms-add-btn" id="msAddBtn">追加</button>
     </div>
-    <button id="showInviteBtn" style="width:100%;margin-top:12px;padding:10px;border:2px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer">招待リンクを表示</button>
     <button id="changeAdminBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:2px solid var(--late);border-radius:12px;background:#fff;color:var(--late);font-size:13px;font-weight:600;cursor:pointer">管理者を変更する</button>
     <div id="changeAdminPanel" style="display:none;margin-top:10px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px">
       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">新しい管理者を選択</div>
@@ -1353,11 +1353,15 @@ if (MAINTENANCE_MODE) {
       '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
       '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
       '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:4px">' +
+          '<button id="closeReloginBtn" type="button" aria-label="閉じる" style="width:24px;height:24px;border:none;border-radius:8px;background:transparent;color:var(--text-light);font-size:16px;cursor:pointer;line-height:1">×</button>' +
+        '</div>' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
-        '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:0">ログインする</button>' +
+        '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:6px">ログインする</button>' +
+        '<button id="cancelReloginBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
       '</div>';
     joinSection.appendChild(actionCard);
 
@@ -1607,6 +1611,19 @@ document.getElementById('openReloginBtn').addEventListener('click', () => {
   if (!idInput.value) idInput.focus();
   else document.getElementById('reloginName').focus();
 });
+
+function closeReloginPanel() {
+  const panel = document.getElementById('reloginPanel');
+  const err = document.getElementById('reloginError');
+  panel.style.display = 'none';
+  if (err) {
+    err.textContent = '';
+    err.style.display = 'none';
+  }
+}
+
+document.getElementById('closeReloginBtn').addEventListener('click', closeReloginPanel);
+document.getElementById('cancelReloginBtn').addEventListener('click', closeReloginPanel);
 
 document.getElementById('reloginPin').addEventListener('input', e => {
   e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
