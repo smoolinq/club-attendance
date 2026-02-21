@@ -1641,20 +1641,22 @@ if (MAINTENANCE_MODE) {
     // Create new team (wrapper, initially hidden)
     const createTeamWrapper = document.createElement('div');
     createTeamWrapper.id = 'createTeamSection';
-    createTeamWrapper.style.cssText = 'display:none;width:100%;max-width:360px';
+    createTeamWrapper.style.cssText = 'display:none;width:100%;max-width:420px';
 
     const createSection = document.createElement('div');
-    createSection.style.cssText = 'margin-bottom:32px';
+    createSection.className = 'lobby-card';
+    createSection.style.cssText = 'margin-bottom:20px';
     createSection.innerHTML =
-      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">新規グループ作成</div>' +
-      '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;text-align:center">新規グループ作成</div>' +
+      '<div class="lobby-relogin-panel" style="margin-top:0">' +
         '<input id="lobbyGroupName" type="text" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px">' +
+        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
+        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理パスワード（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
-        '<button id="lobbyCreateBtn" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">作成する</button>' +
+        '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px">作成する</button>' +
+        '<button id="backToJoinBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
       '</div>' +
-      '<button id="backToJoinBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer">キャンセル</button>';
+      '';
     createTeamWrapper.appendChild(createSection);
     lobby.appendChild(createTeamWrapper);
 
@@ -1694,10 +1696,12 @@ if (MAINTENANCE_MODE) {
             return;
           }
           const panel = document.getElementById('reloginPanel');
+          const createBtn = document.getElementById('createTeamBtn');
           const teamInput = document.getElementById('reloginGroupId');
           const nameInput = document.getElementById('reloginName');
           const err = document.getElementById('reloginError');
           panel.style.display = '';
+          if (createBtn) createBtn.style.display = 'none';
           teamInput.value = t.id;
           if (err) err.style.display = 'none';
           nameInput.focus();
@@ -1837,8 +1841,8 @@ if (MAINTENANCE_MODE) {
 
     const JOIN_CSS = 'display:flex;flex-direction:column;align-items:center;width:100%';
     const JOIN_CSS_HIDDEN = 'display:none';
-    const CREATE_CSS = 'width:100%;max-width:360px';
-    const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:360px';
+    const CREATE_CSS = 'width:100%;max-width:420px';
+    const CREATE_CSS_HIDDEN = 'display:none;width:100%;max-width:420px';
 
  document.addEventListener('click', (e) => {
   const createBtn = e.target.closest('#createTeamBtn');
@@ -1872,7 +1876,9 @@ document.addEventListener('click', (e) => {
 
 document.getElementById('openReloginBtn').addEventListener('click', () => {
   const panel = document.getElementById('reloginPanel');
+  const createBtn = document.getElementById('createTeamBtn');
   panel.style.display = '';
+  if (createBtn) createBtn.style.display = 'none';
   const idInput = document.getElementById('reloginGroupId');
   if (!idInput.value) idInput.focus();
   else document.getElementById('reloginName').focus();
@@ -1880,8 +1886,10 @@ document.getElementById('openReloginBtn').addEventListener('click', () => {
 
 function closeReloginPanel() {
   const panel = document.getElementById('reloginPanel');
+  const createBtn = document.getElementById('createTeamBtn');
   const err = document.getElementById('reloginError');
   panel.style.display = 'none';
+  if (createBtn) createBtn.style.display = '';
   if (err) {
     err.textContent = '';
     err.style.display = 'none';
