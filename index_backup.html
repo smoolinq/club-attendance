@@ -1315,7 +1315,7 @@
       if (!inviteData.name) {
         (async () => {
           try {
-            const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
+            const res = await fetch('https://club-attendance-api-stg.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
             if (!res.ok) return;
             const data = await res.json();
             const fetchedName = typeof data?.title === 'string' ? data.title.trim() : '';
@@ -1606,7 +1606,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
   err.style.display = 'none';
   try {
-    const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
+    const res = await fetch('https://club-attendance-api-stg.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
     if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
     const data = await res.json();
     if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
@@ -3056,7 +3056,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   });
 
   // --- Server Sync ---
-  const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
+  const SYNC_API = 'https://club-attendance-api-stg.smoolinq.workers.dev/';
 
   function buildSyncData() {
     return {
