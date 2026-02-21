@@ -194,7 +194,7 @@
     justify-content: center;
     width: 100%;
     padding-top: 0;
-    margin-top: -6px;
+    margin-top: -10px;
   }
   .date-main {
     position: relative;
@@ -215,9 +215,29 @@
     white-space: nowrap;
     font-size: 12px;
     padding: 4px 8px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.22);
+    backdrop-filter: blur(2px);
     cursor: default;
+  }
+  #loginStatus.status-admin {
+    color: #fff;
+    background: rgba(76, 29, 149, 0.55);
+    border-color: rgba(255,255,255,0.35);
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  #loginStatus.status-member {
+    color: #1f1147;
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(139, 92, 246, 0.45);
+    font-weight: 800;
+  }
+  #loginStatus.status-none {
+    color: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.24);
+    font-weight: 600;
   }
 
   .date-row button {
@@ -290,7 +310,7 @@
   }
 
   .header-none-count {
-    margin-top: 2px;
+    margin-top: 6px;
     font-size: 12px;
     font-weight: 600;
     color: rgba(255,255,255,0.8);
@@ -1411,7 +1431,7 @@
     .date-row .today-badge {
       margin-left: 6px;
     }
-    .date-row { margin-top: -4px; }
+    .date-row { margin-top: -7px; }
 
     #loginStatus {
       max-width: 160px;
@@ -3209,17 +3229,21 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     const el = document.getElementById('loginStatus');
     const editTitleBtn = document.getElementById('editGroupNameBtn');
     el.style.cursor = 'default';
+    el.classList.remove('status-admin', 'status-member', 'status-none');
     if (type === 'admin') {
       const name = localStorage.getItem(STORAGE_EDITOR) || '';
       el.textContent = (name || '管理者') + '(管理者)';
       el.style.opacity = '1';
+      el.classList.add('status-admin');
     } else if (type === 'member') {
       const name = localStorage.getItem(STORAGE_EDITOR) || '';
       el.textContent = name ? name + 'でログイン中' : '未ログイン';
       el.style.opacity = name ? '1' : '0.5';
+      el.classList.add(name ? 'status-member' : 'status-none');
     } else {
       el.textContent = '未ログイン';
       el.style.opacity = '0.5';
+      el.classList.add('status-none');
     }
     if (editTitleBtn) editTitleBtn.disabled = !isAdmin();
   }
@@ -3411,7 +3435,7 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
     const leaveBtn = document.getElementById('leaveGroupBtn');
     const deleteBtn = document.getElementById('deleteGroupBtn');
     if (isAdmin()) {
-      if (leaveBtn) leaveBtn.style.display = 'none';
+      if (leaveBtn) leaveBtn.style.display = '';
       if (deleteBtn) deleteBtn.style.display = '';
     } else {
       if (leaveBtn) leaveBtn.style.display = '';
@@ -3431,6 +3455,10 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
   document.getElementById('leaveGroupBtn').addEventListener('click', async () => {
     const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
     const name = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+    if (loginType === 'admin') {
+      alert('管理者はそのまま退会できません。\n\n先に「管理者を変更する」か「グループを削除する」を実行してください。');
+      return;
+    }
     if (loginType !== 'member' || !name) {
       alert('メンバーとしてログイン中のみ退会できます');
       return;
@@ -3495,6 +3523,7 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
       err.style.display = '';
       return;
     }
+    if (!confirm('本当にグループを削除しますか？\nこの操作は元に戻せません。')) return;
     // Mark team as deleted
     let deleted = [];
     try { deleted = JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch {}
