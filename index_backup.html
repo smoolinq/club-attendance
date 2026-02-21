@@ -1353,9 +1353,6 @@ if (MAINTENANCE_MODE) {
       '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
       '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
       '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none">' +
-        '<div style="display:flex;justify-content:flex-end;margin-bottom:4px">' +
-          '<button id="closeReloginBtn" type="button" aria-label="閉じる" style="width:24px;height:24px;border:none;border-radius:8px;background:transparent;color:var(--text-light);font-size:16px;cursor:pointer;line-height:1">×</button>' +
-        '</div>' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
@@ -1392,7 +1389,7 @@ if (MAINTENANCE_MODE) {
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
         '<button id="lobbyCreateBtn" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer">作成する</button>' +
       '</div>' +
-      '<button id="backToJoinBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer">戻る</button>';
+      '<button id="backToJoinBtn" style="width:100%;margin-top:10px;padding:12px;border:2px solid var(--border);border-radius:12px;background:#fff;color:var(--text-light);font-size:14px;font-weight:600;cursor:pointer">キャンセル</button>';
     createTeamWrapper.appendChild(createSection);
     lobby.appendChild(createTeamWrapper);
 
@@ -1622,7 +1619,6 @@ function closeReloginPanel() {
   }
 }
 
-document.getElementById('closeReloginBtn').addEventListener('click', closeReloginPanel);
 document.getElementById('cancelReloginBtn').addEventListener('click', closeReloginPanel);
 
 document.getElementById('reloginPin').addEventListener('input', e => {
