@@ -1769,6 +1769,85 @@
       padding: 4px 8px;
     }
 
+    .pin-reveal-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid rgba(124, 58, 237, 0.28);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #fff, #f5f3ff);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ms-item {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ms-item-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ms-meta {
+      width: 100%;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ms-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .ms-chip-pending {
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+    }
+
+    .ms-chip-inactive {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+
+    .ms-action-btn {
+      padding: 4px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(124, 58, 237, 0.28);
+      background: #fff;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ms-action-btn.warn {
+      border-color: #f59e0b;
+      color: #b45309;
+      background: #fffdf5;
+    }
+
+    .ms-action-btn.danger {
+      border-color: #fca5a5;
+      color: #b91c1c;
+      background: #fff5f5;
+    }
+
     input[type="text"],
     input[type="tel"],
     input[type="password"],
@@ -2209,7 +2288,8 @@
       </div>
       <div style="text-align:center;margin-bottom:16px;padding:12px;background:#f8f7ff;border:1px solid rgba(124,58,237,0.2);border-radius:12px">
         <div style="font-size:12px;color:var(--text-light)">あなたのPIN</div>
-        <div id="appMyPinDisplay" style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--text);margin-top:4px">----</div>
+        <div id="appMyPinDisplay" style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--text);margin-top:4px">••••</div>
+        <button id="appMyPinRevealBtn" type="button" class="pin-reveal-btn">3秒だけ表示する</button>
       </div>
       <div style="padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
         <button id="backToLobbyBtn"
@@ -2605,6 +2685,7 @@
       actionCard.innerHTML =
         '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
         '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
+        '<button id="openPinHelpBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(59,130,246,0.34);border-radius:12px;background:rgba(59,130,246,0.08);color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer">PINヘルプ（忘れたとき）</button>' +
         '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れた</button>' +
         '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none" data-mode="join">' +
         '<div id="reloginPanelTitle" class="lobby-panel-title">グループIDからログイン</div>' +
@@ -2640,6 +2721,16 @@
         '<div id="recoverError" style="display:none;font-size:12px;color:var(--absent);margin:4px 2px 8px;text-align:center"></div>' +
         '<button id="recoverSubmitBtn" class="lobby-login-btn" style="margin-bottom:6px">再設定する</button>' +
         '<button id="cancelRecoverBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
+        '</div>' +
+        '<div id="pinHelpPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div class="lobby-panel-title">自分のPINを確認</div>' +
+        '<input id="pinHelpTeamId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">' +
+        '<input id="pinHelpName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px">' +
+        '<input id="pinHelpCode" type="text" placeholder="復旧コード（あれば）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:1px">' +
+        '<div id="pinHelpResult" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;font-weight:700;text-align:center">PIN: ••••</div>' +
+        '<div id="pinHelpError" style="display:none;font-size:12px;color:var(--absent);margin:4px 2px 8px;text-align:center"></div>' +
+        '<button id="pinHelpSubmitBtn" class="lobby-login-btn" style="margin-bottom:6px">本人確認して表示</button>' +
+        '<button id="cancelPinHelpBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
         '</div>';
       joinSection.appendChild(actionCard);
 
@@ -2696,7 +2787,7 @@
             const nameInput = document.getElementById('reloginName');
             const err = document.getElementById('reloginError');
             panel.style.display = '';
-            setLobbyActionButtons(false, false, false);
+            setLobbyActionButtons(false, false, false, false);
             if (createPanel) createPanel.style.display = 'none';
             if (recoverPanel) recoverPanel.style.display = 'none';
             if (reloginBtn) reloginBtn.style.display = '';
@@ -2821,7 +2912,7 @@
           adminName,
           adminPw,
           recoveryCode,
-          members: [{ name: adminName, pin: adminPw }],
+          members: [{ name: adminName, pin: adminPw, state: 'active' }],
           schedule: []
         };
         try {
@@ -2858,7 +2949,7 @@
           editor: adminName,
           updatedAt: new Date().toISOString()
         }));
-        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName, pin: adminPw }]));
+        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName, pin: adminPw, state: 'active' }]));
         localStorage.setItem(t + 'volley-schedule', '[]');
         // Record to recent teams with group name
         const RECENT_KEY = 'volley-recent-teams';
@@ -2879,13 +2970,15 @@
         if (e.key === 'Enter') document.getElementById('lobbyCreateBtn').click();
       });
 
-      function setLobbyActionButtons(showRelogin, showCreate, showRecover) {
+      function setLobbyActionButtons(showRelogin, showCreate, showRecover, showPinHelp) {
         const reloginBtn = document.getElementById('openReloginBtn');
         const createBtn = document.getElementById('createTeamBtn');
         const recoverBtn = document.getElementById('openRecoverPanelBtn');
+        const pinHelpBtn = document.getElementById('openPinHelpBtn');
         if (reloginBtn) reloginBtn.style.display = showRelogin ? '' : 'none';
         if (createBtn) createBtn.style.display = showCreate ? '' : 'none';
         if (recoverBtn) recoverBtn.style.display = showRecover ? '' : 'none';
+        if (pinHelpBtn) pinHelpBtn.style.display = showPinHelp ? '' : 'none';
       }
 
       function setReloginMode(mode) {
@@ -2934,20 +3027,24 @@
         const backBtn = e.target.closest('#backToJoinBtn');
         const openRecoverBtn = e.target.closest('#openRecoverPanelBtn');
         const cancelRecoverBtn = e.target.closest('#cancelRecoverBtn');
-        if (!createBtn && !backBtn && !openRecoverBtn && !cancelRecoverBtn) return;
+        const openPinHelpBtn = e.target.closest('#openPinHelpBtn');
+        const cancelPinHelpBtn = e.target.closest('#cancelPinHelpBtn');
+        if (!createBtn && !backBtn && !openRecoverBtn && !cancelRecoverBtn && !openPinHelpBtn && !cancelPinHelpBtn) return;
 
         e.preventDefault();
 
         const createPanel = document.getElementById('createTeamPanel');
         const reloginPanel = document.getElementById('reloginPanel');
         const recoverPanel = document.getElementById('recoverAdminPanel');
-        if (!createPanel || !reloginPanel || !recoverPanel) return;
+        const pinHelpPanel = document.getElementById('pinHelpPanel');
+        if (!createPanel || !reloginPanel || !recoverPanel || !pinHelpPanel) return;
 
         if (createBtn) {
           createPanel.style.display = '';
           reloginPanel.style.display = 'none';
           recoverPanel.style.display = 'none';
-          setLobbyActionButtons(false, false, false);
+          pinHelpPanel.style.display = 'none';
+          setLobbyActionButtons(false, false, false, false);
           const err = document.getElementById('lobbyCreateError');
           if (err) err.style.display = 'none';
           const first = document.getElementById('lobbyGroupName');
@@ -2957,7 +3054,9 @@
 
         if (backBtn) {
           createPanel.style.display = 'none';
-          setLobbyActionButtons(true, true, true);
+          recoverPanel.style.display = 'none';
+          pinHelpPanel.style.display = 'none';
+          setLobbyActionButtons(true, true, true, true);
           return;
         }
 
@@ -2965,7 +3064,8 @@
           recoverPanel.style.display = '';
           reloginPanel.style.display = 'none';
           createPanel.style.display = 'none';
-          setLobbyActionButtons(false, false, false);
+          pinHelpPanel.style.display = 'none';
+          setLobbyActionButtons(false, false, false, false);
           const err = document.getElementById('recoverError');
           if (err) err.style.display = 'none';
           const idInput = document.getElementById('recoverTeamId');
@@ -2975,7 +3075,28 @@
 
         if (cancelRecoverBtn) {
           recoverPanel.style.display = 'none';
-          setLobbyActionButtons(true, true, true);
+          setLobbyActionButtons(true, true, true, true);
+          return;
+        }
+
+        if (openPinHelpBtn) {
+          pinHelpPanel.style.display = '';
+          recoverPanel.style.display = 'none';
+          reloginPanel.style.display = 'none';
+          createPanel.style.display = 'none';
+          setLobbyActionButtons(false, false, false, false);
+          const err = document.getElementById('pinHelpError');
+          const res = document.getElementById('pinHelpResult');
+          if (err) err.style.display = 'none';
+          if (res) res.style.display = 'none';
+          const idInput = document.getElementById('pinHelpTeamId');
+          if (idInput) idInput.focus();
+          return;
+        }
+
+        if (cancelPinHelpBtn) {
+          pinHelpPanel.style.display = 'none';
+          setLobbyActionButtons(true, true, true, true);
         }
       });
 
@@ -2994,7 +3115,7 @@
         const createPanel = document.getElementById('createTeamPanel');
         const recoverPanel = document.getElementById('recoverAdminPanel');
         panel.style.display = '';
-        setLobbyActionButtons(false, false, false);
+        setLobbyActionButtons(false, false, false, false);
         if (createPanel) createPanel.style.display = 'none';
         if (recoverPanel) recoverPanel.style.display = 'none';
         resetReloginSelection();
@@ -3007,7 +3128,7 @@
         const panel = document.getElementById('reloginPanel');
         const err = document.getElementById('reloginError');
         panel.style.display = 'none';
-        setLobbyActionButtons(true, true, true);
+        setLobbyActionButtons(true, true, true, true);
         resetReloginSelection();
         if (err) {
           err.textContent = '';
@@ -3050,8 +3171,8 @@
           const adminName = String(data?.adminName || '').trim();
           const adminPw = String(data?.adminPw || '0000');
           const isAdminLogin = name === adminName && pin === adminPw;
-          const members = (Array.isArray(data.members) ? data.members : []).slice();
-          const member = members.find(m => m && m.name === name);
+          const members = (Array.isArray(data.members) ? data.members : []).map(normalizeMemberRecord).filter(Boolean);
+          const member = findMemberByName(members, name);
           const reloginMode = (document.getElementById('reloginPanel')?.dataset.mode || 'join') === 'relogin';
           const sessionPayload = {
             id: createSessionId(),
@@ -3071,6 +3192,11 @@
                 err.style.display = '';
                 return;
               }
+              if (member.state === 'inactive') {
+                err.textContent = 'この名前は退会中です。管理者に復帰を依頼してください';
+                err.style.display = '';
+                return;
+              }
               if (String(member.pin || '') !== pin) {
                 err.textContent = 'PINが違います';
                 err.style.display = '';
@@ -3078,12 +3204,17 @@
               }
             } else {
               if (member) {
-                err.textContent = 'この名前は登録済みです。再ログインを選んでください';
+                err.textContent = member.state === 'inactive'
+                  ? 'この名前は退会中メンバーが使用中です。管理者に復帰を依頼してください'
+                  : 'この名前は登録済みです。再ログインを選んでください';
                 err.style.display = '';
                 return;
               }
-              if (members.some(m => m && String(m.pin || '') === pin)) {
-                err.textContent = 'このPINはすでに使われています';
+              const samePin = members.find(m => m && String(m.pin || '') === pin);
+              if (samePin) {
+                err.textContent = samePin.state === 'inactive'
+                  ? 'このPINは退会中メンバーが使用中です。管理者に復帰を依頼してください'
+                  : 'このPINはすでに使われています';
                 err.style.display = '';
                 return;
               }
@@ -3092,7 +3223,7 @@
                 err.style.display = '';
                 return;
               }
-              members.push({ name, pin });
+              members.push({ name, pin, state: 'active' });
               const payload = {
                 title: data?.title || '',
                 members,
@@ -3195,6 +3326,66 @@
         }
       });
 
+      let pinHelpTimer = null;
+      document.getElementById('pinHelpSubmitBtn').addEventListener('click', async () => {
+        const err = document.getElementById('pinHelpError');
+        const resEl = document.getElementById('pinHelpResult');
+        const teamId = (document.getElementById('pinHelpTeamId').value || '').trim().toLowerCase();
+        const name = (document.getElementById('pinHelpName').value || '').trim();
+        const normalizeRecoveryCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const recoveryCode = normalizeRecoveryCode(document.getElementById('pinHelpCode').value);
+        if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
+        if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
+        if (!recoveryCode) {
+          err.textContent = '復旧コードがない場合は管理者にPIN再設定を依頼してください';
+          err.style.display = '';
+          if (resEl) resEl.style.display = 'none';
+          return;
+        }
+        err.style.display = 'none';
+        if (resEl) resEl.style.display = 'none';
+        try {
+          const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+          const r = await fetch(api);
+          if (!r.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
+          const data = await r.json();
+          if (!Array.isArray(data?.members)) { err.textContent = 'メンバー情報を取得できません'; err.style.display = ''; return; }
+          if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
+          const serverCode = normalizeRecoveryCode(data?.recoveryCode);
+          if (!serverCode || serverCode !== recoveryCode) {
+            err.textContent = '復旧コードが一致しません';
+            err.style.display = '';
+            return;
+          }
+          const target = data.members.map(normalizeMemberRecord).find(m => m && m.name === name);
+          if (!target || target.state === 'inactive') {
+            err.textContent = 'この名前は利用できません。管理者に確認してください';
+            err.style.display = '';
+            return;
+          }
+          if (!/^\d{4}$/.test(String(target.pin || ''))) {
+            err.textContent = 'PINが未設定です。管理者に再設定を依頼してください';
+            err.style.display = '';
+            return;
+          }
+          if (resEl) {
+            resEl.textContent = 'PIN: ' + target.pin + '（3秒後に隠れます）';
+            resEl.style.display = '';
+          }
+          appendSecurityLog('pin_reveal_lobby_help', name, teamId);
+          if (pinHelpTimer) clearTimeout(pinHelpTimer);
+          pinHelpTimer = setTimeout(() => {
+            if (resEl) {
+              resEl.textContent = 'PIN: ••••';
+              resEl.style.display = 'none';
+            }
+          }, 3000);
+        } catch {
+          err.textContent = '通信エラーが発生しました';
+          err.style.display = '';
+        }
+      });
+
 
     } else {
       document.body.classList.remove('lobby-mode');
@@ -3255,7 +3446,7 @@
         if (!editorName) return;
         let members = [];
         try { members = JSON.parse(localStorage.getItem(tp + 'volley-members')) || []; } catch { }
-        const isMember = members.some(m => m.name === editorName);
+        const isMember = members.some(m => m && m.name === editorName && m.state !== 'inactive');
         if (!isMember) {
           localStorage.removeItem(tp + 'volley-login-type');
           localStorage.removeItem(tp + 'volley-editor');
@@ -3280,7 +3471,22 @@
       function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
 
       const STORAGE_LOGIN_TYPE = _T + 'volley-login-type';
+      const STORAGE_SECURITY_LOG = _T + 'volley-security-log';
       let _skipNextSyncOnce = false;
+
+      function appendSecurityLog(action, target, detail) {
+        try {
+          const logs = JSON.parse(localStorage.getItem(STORAGE_SECURITY_LOG) || '[]');
+          logs.unshift({
+            at: new Date().toISOString(),
+            by: (localStorage.getItem(STORAGE_EDITOR) || '').trim() || 'unknown',
+            action: String(action || ''),
+            target: String(target || ''),
+            detail: String(detail || '')
+          });
+          localStorage.setItem(STORAGE_SECURITY_LOG, JSON.stringify(logs.slice(0, 200)));
+        } catch { }
+      }
 
       function getLoginSession() {
         try { return JSON.parse(localStorage.getItem(STORAGE_LOGIN_SESSION) || 'null'); } catch { return null; }
@@ -3339,11 +3545,16 @@
         const members = loadMembers();
         const idx = members.findIndex(m => m && m.name === adminName);
         if (idx === -1) {
-          members.unshift({ name: adminName, pin: adminPw });
+          members.unshift({ name: adminName, pin: adminPw, state: 'active' });
           saveMembers(members);
           return true;
         }
         let changed = false;
+        if (members[idx].state === 'inactive') {
+          members[idx].state = 'active';
+          members[idx].inactivatedAt = '';
+          changed = true;
+        }
         if (!/^\d{4}$/.test(String(members[idx].pin || ''))) {
           members[idx].pin = adminPw;
           changed = true;
@@ -3395,6 +3606,8 @@
       }
 
       const DEFAULT_MEMBERS = [];
+      const MEMBER_PENDING_HOURS = 24;
+      const MEMBER_RESTORE_DAYS = 30;
 
       // --- Schedule ---
       const STORAGE_SCHEDULE = _T + 'volley-schedule';
@@ -3432,16 +3645,71 @@
       }
 
       // --- Data ---
+      function normalizeMemberRecord(member) {
+        if (!member) return null;
+        if (typeof member === 'string') return { name: member, state: 'active' };
+        const out = { ...member };
+        if (out.role != null) delete out.role;
+        out.name = String(out.name || '').trim();
+        out.pin = String(out.pin || '').trim();
+        if (out.state !== 'inactive') out.state = 'active';
+        if (out.pendingRemovalAt && typeof out.pendingRemovalAt !== 'string') out.pendingRemovalAt = '';
+        if (out.pendingRemovalReason && typeof out.pendingRemovalReason !== 'string') out.pendingRemovalReason = '';
+        if (out.pendingRemovalBy && typeof out.pendingRemovalBy !== 'string') out.pendingRemovalBy = '';
+        if (out.inactivatedAt && typeof out.inactivatedAt !== 'string') out.inactivatedAt = '';
+        return out;
+      }
+
       function loadMembers() {
         const raw = localStorage.getItem(STORAGE_MEMBERS);
         let arr = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
-        if (arr.length > 0 && typeof arr[0] === 'string') {
-          arr = arr.map(n => ({ name: n }));
-          saveMembers(arr);
-        }
+        arr = (Array.isArray(arr) ? arr : []).map(normalizeMemberRecord).filter(Boolean);
         return arr;
       }
       function saveMembers(members) { localStorage.setItem(STORAGE_MEMBERS, JSON.stringify(members)); }
+      function activeMembers(members) { return (members || []).filter(m => m && m.state !== 'inactive'); }
+      function inactiveMembers(members) { return (members || []).filter(m => m && m.state === 'inactive'); }
+      function findMemberByName(members, name) {
+        const key = String(name || '').trim();
+        return (members || []).find(m => m && String(m.name || '').trim() === key) || null;
+      }
+
+      function applyPendingRemovalRules() {
+        const members = loadMembers();
+        const now = Date.now();
+        const currentEditor = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        const changed = members.some(m => {
+          if (!m || !m.pendingRemovalAt || m.state === 'inactive') return false;
+          const pendingAt = Date.parse(m.pendingRemovalAt);
+          if (!Number.isFinite(pendingAt)) {
+            m.pendingRemovalAt = '';
+            m.pendingRemovalReason = '';
+            m.pendingRemovalBy = '';
+            return true;
+          }
+          if (currentEditor && m.name === currentEditor) {
+            m.pendingRemovalAt = '';
+            m.pendingRemovalReason = '';
+            m.pendingRemovalBy = '';
+            return true;
+          }
+          const dueAt = pendingAt + MEMBER_PENDING_HOURS * 60 * 60 * 1000;
+          if (now >= dueAt) {
+            m.state = 'inactive';
+            m.inactivatedAt = new Date().toISOString();
+            m.pendingRemovalAt = '';
+            m.pendingRemovalReason = '';
+            m.pendingRemovalBy = '';
+            return true;
+          }
+          return false;
+        });
+        if (changed) {
+          saveMembers(members);
+          return true;
+        }
+        return false;
+      }
       function loadAttendance() {
         const raw = localStorage.getItem(getAttendanceKey());
         return raw ? JSON.parse(raw) : {};
@@ -3653,6 +3921,7 @@
 
       // --- Render ---
       function render() {
+        applyPendingRemovalRules();
         document.getElementById('todayBadge').style.display =
           dateInput.value === todayStr() ? '' : 'none';
 
@@ -3728,7 +3997,7 @@
         const readOnly = isPastEvent || (render._isPastDeadline && !isAdmin());
 
         // --- Members ---
-        const members = loadMembers();
+        const members = activeMembers(loadMembers());
         const dayData = getDayAttendance();
 
         if (members.length === 0) {
@@ -4029,14 +4298,30 @@
         if (!/^\d{4}$/.test(pin)) { showLoginError('PINは4桁の数字で入力してください'); return; }
 
         const members = loadMembers();
-        if (members.some(m => m.name === name)) { showLoginError('この名前は既に登録されています'); return; }
-        if (members.some(m => String(m.pin || '') === pin)) { showLoginError('このPINはすでに使われています'); return; }
+        const sameName = findMemberByName(members, name);
+        if (sameName) {
+          if (sameName.state === 'inactive') {
+            showLoginError('この名前は退会中メンバーが使用中です。管理者に復帰を依頼してください');
+          } else {
+            showLoginError('この名前は既に登録されています');
+          }
+          return;
+        }
+        const samePin = members.find(m => m && String(m.pin || '') === pin);
+        if (samePin) {
+          if (samePin.state === 'inactive') {
+            showLoginError('このPINは退会中メンバーが使用中です。管理者に復帰を依頼してください');
+          } else {
+            showLoginError('このPINはすでに使われています');
+          }
+          return;
+        }
         const adminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
         if (pin === adminPw) { showLoginError('このPINは管理者PIN（4桁）と重複するため使えません'); return; }
 
         if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
 
-        members.push({ name: name, pin });
+        members.push({ name: name, pin, state: 'active' });
         saveMembers(members);
 
         setLoginState('member', name);
@@ -4184,8 +4469,14 @@
         const leaveBtn = document.getElementById('leaveGroupBtn');
         const deleteBtn = document.getElementById('deleteGroupBtn');
         const pinDisplay = document.getElementById('appMyPinDisplay');
+        const revealBtn = document.getElementById('appMyPinRevealBtn');
         const myPin = getCurrentUserPinForSettings();
-        if (pinDisplay) pinDisplay.textContent = /^\d{4}$/.test(myPin) ? myPin : '未設定';
+        if (pinDisplay) pinDisplay.textContent = '••••';
+        if (revealBtn) {
+          revealBtn.dataset.pinValue = /^\d{4}$/.test(myPin) ? myPin : '';
+          revealBtn.disabled = !revealBtn.dataset.pinValue;
+          revealBtn.textContent = revealBtn.disabled ? 'PIN未設定' : '3秒だけ表示する';
+        }
         if (isAdmin()) {
           if (leaveBtn) leaveBtn.style.display = '';
           if (deleteBtn) deleteBtn.style.display = '';
@@ -4194,6 +4485,21 @@
           if (deleteBtn) deleteBtn.style.display = 'none';
         }
         appSettingsModal.classList.add('show');
+      });
+      let appPinRevealTimer = null;
+      document.getElementById('appMyPinRevealBtn').addEventListener('click', () => {
+        const pinDisplay = document.getElementById('appMyPinDisplay');
+        const revealBtn = document.getElementById('appMyPinRevealBtn');
+        const pinValue = String(revealBtn?.dataset.pinValue || '');
+        if (!/^\d{4}$/.test(pinValue)) return;
+        appendSecurityLog('pin_reveal_self', (localStorage.getItem(STORAGE_EDITOR) || '').trim(), 'app_settings');
+        if (pinDisplay) pinDisplay.textContent = pinValue;
+        if (revealBtn) revealBtn.textContent = '表示中...';
+        if (appPinRevealTimer) clearTimeout(appPinRevealTimer);
+        appPinRevealTimer = setTimeout(() => {
+          if (pinDisplay) pinDisplay.textContent = '••••';
+          if (revealBtn) revealBtn.textContent = '3秒だけ表示する';
+        }, 3000);
       });
       document.getElementById('appSettingsClose').addEventListener('click', () => appSettingsModal.classList.remove('show'));
       appSettingsModal.addEventListener('click', e => { if (e.target === appSettingsModal) appSettingsModal.classList.remove('show'); });
@@ -4217,9 +4523,7 @@
         }
         const ok = await customConfirm(
           '退会するとこの端末のログイン情報が削除されます。\n' +
-          '再度参加する場合は、招待リンクまたはグループIDから\n' +
-          '名前とPINを新規登録してください。\n' +
-          '以前使っていたPINも、同一グループ内で未使用なら再利用できます。\n\n退会しますか？'
+          'メンバー情報は退会中として保持され、管理者が復帰できます。\n\n退会しますか？'
         );
         if (!ok) return;
 
@@ -4233,8 +4537,13 @@
 
         const prevMembers = members.slice();
         const prevSessionRaw = localStorage.getItem(STORAGE_LOGIN_SESSION);
-        members.splice(idx, 1);
+        members[idx].state = 'inactive';
+        members[idx].pendingRemovalAt = '';
+        members[idx].pendingRemovalBy = '';
+        members[idx].pendingRemovalReason = '';
+        members[idx].inactivatedAt = new Date().toISOString();
         saveMembers(members);
+        appendSecurityLog('self_inactivate', name, 'leave_group');
         localStorage.removeItem(STORAGE_LOGIN_SESSION);
         const synced = await syncToServer({ ignoreSessionConflict: true });
         if (!synced) {
@@ -4250,7 +4559,7 @@
           const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
           localStorage.setItem('volley-recent-teams', JSON.stringify(rt.filter(t => t.id !== _teamParam)));
         } catch { }
-        alert('退会しました。');
+        alert('退会しました（復帰可能）。');
         location.href = location.pathname;
       });
 
@@ -4642,16 +4951,52 @@
       function renderMemberSettings() {
         const admin = isAdmin();
         const members = loadMembers();
+        const active = activeMembers(members);
+        const inactive = inactiveMembers(members);
         const list = document.getElementById('memberSettingsList');
         const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみ</div>';
         const adminN = getAdminName();
         const currentUser = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
-        list.innerHTML = notice + members.map((m, i) => {
+        const now = Date.now();
+        const activeHtml = active.map((m) => {
+          const isAdminMember = m.name === adminN;
+          const pendingAt = m.pendingRemovalAt ? Date.parse(m.pendingRemovalAt) : NaN;
+          const pending = Number.isFinite(pendingAt) && pendingAt + MEMBER_PENDING_HOURS * 60 * 60 * 1000 > now;
+          const dueText = pending ? new Date(pendingAt + MEMBER_PENDING_HOURS * 60 * 60 * 1000).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + 'まで猶予' : '';
           return '<div class="ms-item">' +
-            '<span class="ms-name' + (m.name === currentUser ? ' current-user' : '') + '">' + escapeHTML(m.name) + (m.name === adminN ? ' <span class="admin-role-badge">管理者</span>' : '') + '</span>' +
-            '' +
+            '<div class="ms-item-row">' +
+            '<span class="ms-name' + (m.name === currentUser ? ' current-user' : '') + '">' + escapeHTML(m.name) + (isAdminMember ? ' <span class="admin-role-badge">管理者</span>' : '') + '</span>' +
+            '</div>' +
+            '<div class="ms-meta">' +
+            (pending ? '<span class="ms-chip ms-chip-pending">退会申請中 ' + escapeHTML(dueText) + '</span>' : '') +
+            (admin && !isAdminMember ? (
+              pending
+                ? '<button type="button" class="ms-action-btn" data-ms-action="cancel-request" data-ms-name="' + escapeHTML(m.name) + '">申請取消</button>'
+                : '<button type="button" class="ms-action-btn warn" data-ms-action="request-remove" data-ms-name="' + escapeHTML(m.name) + '">退会申請</button>'
+            ) : '') +
+            '</div>' +
             '</div>';
         }).join('');
+        const inactiveHtml = inactive.map((m) => {
+          const since = m.inactivatedAt ? new Date(m.inactivatedAt).toLocaleDateString('ja-JP') : '';
+          return '<div class="ms-item">' +
+            '<div class="ms-item-row">' +
+            '<span class="ms-name">' + escapeHTML(m.name) + '</span>' +
+            '</div>' +
+            '<div class="ms-meta">' +
+            '<span class="ms-chip ms-chip-inactive">退会中' + (since ? ' ' + escapeHTML(since) : '') + '</span>' +
+            (admin ? '<button type="button" class="ms-action-btn" data-ms-action="restore" data-ms-name="' + escapeHTML(m.name) + '">復帰</button>' : '') +
+            (admin ? '<button type="button" class="ms-action-btn danger" data-ms-action="purge" data-ms-name="' + escapeHTML(m.name) + '">完全削除</button>' : '') +
+            '</div>' +
+            '</div>';
+        }).join('');
+
+        list.innerHTML =
+          notice +
+          '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:6px 0 4px">アクティブメンバー</div>' +
+          (activeHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">アクティブメンバーはいません</div>') +
+          '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中（復帰可能）</div>' +
+          (inactiveHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">退会中メンバーはいません</div>');
         document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
         document.getElementById('changeAdminPanel').style.display = 'none';
       }
@@ -4666,6 +5011,78 @@
         render();
       });
 
+      document.getElementById('memberSettingsList').addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-ms-action]');
+        if (!btn) return;
+        if (!isAdmin()) return;
+        const action = btn.dataset.msAction;
+        const name = (btn.dataset.msName || '').trim();
+        if (!name) return;
+        const members = loadMembers();
+        const idx = members.findIndex(m => m && m.name === name);
+        if (idx === -1) return;
+        const currentUser = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        const adminName = getAdminName();
+
+        if (action === 'request-remove') {
+          if (name === adminName) { alert('管理者は退会申請できません'); return; }
+          const reason = prompt('退会申請の理由を入力してください（必須）', '未入力');
+          if (reason == null) return;
+          const reasonText = String(reason).trim();
+          if (!reasonText) { alert('理由を入力してください'); return; }
+          const ok = await customConfirm('「' + name + '」を退会申請にしますか？\n24時間後に退会中へ移行します。');
+          if (!ok) return;
+          members[idx].pendingRemovalAt = new Date().toISOString();
+          members[idx].pendingRemovalBy = currentUser || adminName || 'admin';
+          members[idx].pendingRemovalReason = reasonText;
+          saveMembers(members);
+          appendSecurityLog('request_remove', name, reasonText);
+          await syncToServer();
+          renderMemberSettings();
+          render();
+          return;
+        }
+
+        if (action === 'cancel-request') {
+          members[idx].pendingRemovalAt = '';
+          members[idx].pendingRemovalBy = '';
+          members[idx].pendingRemovalReason = '';
+          saveMembers(members);
+          appendSecurityLog('cancel_remove_request', name, '');
+          await syncToServer();
+          renderMemberSettings();
+          render();
+          return;
+        }
+
+        if (action === 'restore') {
+          const ok = await customConfirm('「' + name + '」を復帰しますか？');
+          if (!ok) return;
+          members[idx].state = 'active';
+          members[idx].inactivatedAt = '';
+          members[idx].pendingRemovalAt = '';
+          members[idx].pendingRemovalBy = '';
+          members[idx].pendingRemovalReason = '';
+          saveMembers(members);
+          appendSecurityLog('restore_member', name, '');
+          await syncToServer();
+          renderMemberSettings();
+          render();
+          return;
+        }
+
+        if (action === 'purge') {
+          const ok = await customConfirm('「' + name + '」を完全削除しますか？\nこの操作は元に戻せません。');
+          if (!ok) return;
+          members.splice(idx, 1);
+          saveMembers(members);
+          appendSecurityLog('purge_member', name, '');
+          await syncToServer();
+          renderMemberSettings();
+          render();
+        }
+      });
+
       // --- Change Admin ---
       document.getElementById('changeAdminBtn').addEventListener('click', () => {
         const panel = document.getElementById('changeAdminPanel');
@@ -4675,7 +5092,7 @@
         const listEl = document.getElementById('changeAdminList');
         listEl.innerHTML = members
         .map((m, idx) => ({ m, idx }))
-        .filter(x => x.m && x.m.name !== currentAdmin)
+        .filter(x => x.m && x.m.name !== currentAdmin && x.m.state !== 'inactive')
         .map(x =>
           '<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:14px">' +
           '<input type="radio" name="newAdmin" value="' + x.idx + '" style="width:18px;height:18px;accent-color:var(--late)">' +
@@ -4957,7 +5374,7 @@
             const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE);
             const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
             if (loginType === 'member' && editorName) {
-              const stillExists = next.some(m => m && m.name === editorName);
+              const stillExists = next.some(m => m && m.name === editorName && m.state !== 'inactive');
               if (!stillExists) {
                 clearLoginState();
                 alert('削除されました');
