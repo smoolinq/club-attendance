@@ -2685,8 +2685,6 @@
       actionCard.innerHTML =
         '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
         '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
-        '<button id="openPinHelpBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(59,130,246,0.34);border-radius:12px;background:rgba(59,130,246,0.08);color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer">PINヘルプ（忘れたとき）</button>' +
-        '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れた</button>' +
         '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none" data-mode="join">' +
         '<div id="reloginPanelTitle" class="lobby-panel-title">グループIDからログイン</div>' +
         '<div id="reloginModeSwitch" style="display:flex;gap:6px;margin-bottom:8px">' +
@@ -2742,6 +2740,14 @@
       recentList.style.cssText = 'display:flex;flex-direction:column;gap:6px';
       recentSection.appendChild(recentList);
       joinSection.appendChild(recentSection);
+
+      const recoverShortcutCard = document.createElement('div');
+      recoverShortcutCard.className = 'lobby-card';
+      recoverShortcutCard.style.cssText = 'padding:10px';
+      recoverShortcutCard.innerHTML =
+        '<button id="openPinHelpBtn" type="button" style="width:100%;margin:0 0 6px;padding:8px 10px;border:1px solid rgba(59,130,246,0.34);border-radius:12px;background:rgba(59,130,246,0.08);color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer">メンバーPINを忘れたとき</button>' +
+        '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin:0;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れたとき</button>';
+      joinSection.appendChild(recoverShortcutCard);
 
       lobby.appendChild(joinSection);
 
@@ -2822,27 +2828,26 @@
         '<details>' +
         '<summary>使い方</summary>' +
         '<ol style="margin:8px 0 0 18px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>グループIDからログイン、または新規にグループを作成します。</li>' +
-        '<li>初回参加は名前とPIN（4桁）を登録してログインします。</li>' +
-        '<li>ログイン後に出欠入力や予定確認を行います。</li>' +
+        '<li>「グループIDからログイン」または「新規にグループを作る」を選びます。</li>' +
+        '<li>初回参加は名前とPIN（4桁）を登録、次回以降は同じ名前とPINで再ログインします。</li>' +
+        '<li>ログイン後に出欠入力、予定確認、招待リンク共有を行います。</li>' +
         '</ol>' +
         '</details>' +
         '<details>' +
         '<summary>ログインについて</summary>' +
         '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>グループID・名前・PINで再ログインできます。</li>' +
-        '<li>同じグループ内でPINは重複登録できません。</li>' +
-        '<li>別端末でログインすると、先にログインしていた端末はログアウトされます。</li>' +
+        '<li>ログインはグループID・名前・PIN（4桁）で行います。</li>' +
+        '<li>同じグループ内では、名前・PINともに重複登録できません（退会中メンバー分も含む）。</li>' +
+        '<li>別端末で同じユーザーがログインすると、先にログインしていた端末はログアウトされます。</li>' +
         '</ul>' +
         '</details>' +
         '<details>' +
         '<summary>管理者権限について</summary>' +
         '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>練習予定と試合予定の作成・編集・削除</li>' +
+        '<li>練習・試合予定の作成、編集、削除</li>' +
         '<li>予定ごとの締切設定</li>' +
-        '<li>メンバーの出欠確認・管理</li>' +
-        '<li>グループ名の変更</li>' +
-        '<li>グループの削除</li>' +
+        '<li>メンバー管理（退会申請、申請取消、復帰、完全削除）</li>' +
+        '<li>管理者変更、管理者PIN再設定、グループ名変更、グループ削除</li>' +
         '</ul>' +
         '</details>' +
         '<details>' +
@@ -2854,7 +2859,15 @@
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・メンバーがPINを忘れた</strong>' +
-        '<ul class="faq-sublist"><li>管理者にメンバー設定の更新を依頼してください</li><li>退会後に再参加する場合、以前使っていたPINも再利用できます（同一グループ内で未使用なら可）</li></ul>' +
+        '<ul class="faq-sublist"><li>「メンバーPINを忘れたとき」から、グループID・名前・復旧コードで本人確認してPINを表示できます</li><li>復旧コードがない場合は管理者にPIN再設定を依頼してください</li></ul>' +
+        '</li>' +
+        '<li>' +
+        '<strong class="faq-title">・管理者がPINを忘れた</strong>' +
+        '<ul class="faq-sublist"><li>「管理者PINを忘れたとき」から復旧コードで再設定できます</li></ul>' +
+        '</li>' +
+        '<li>' +
+        '<strong class="faq-title">・退会/復帰について</strong>' +
+        '<ul class="faq-sublist"><li>退会申請後は24時間の猶予があり、その後退会中になります</li><li>退会中メンバーは管理者が復帰できます</li></ul>' +
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・履歴を消した</strong>' +
