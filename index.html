@@ -738,6 +738,27 @@
       white-space: nowrap;
     }
 
+    body.lobby-mode .lobby-version {
+      position: static;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      margin-top: auto;
+      white-space: normal;
+      line-height: 1.45;
+    }
+
+    body.lobby-mode .global-copyright {
+      display: none !important;
+    }
+
+    .lobby-copyright-inline {
+      display: block;
+      font-size: 10px;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
     /* === Schedule Section === */
     .schedule-section {
       width: min(1080px, calc(100% - 28px));
@@ -2433,6 +2454,7 @@
 
     if (!_teamParam) {
       // --- Lobby Screen ---
+      document.body.classList.add('lobby-mode');
       const betaNoticeEl = document.getElementById('betaNotice');
       if (betaNoticeEl) betaNoticeEl.style.display = 'none';
       if (_pendingInviteTeam) {
@@ -2753,12 +2775,12 @@
 
       const version = document.createElement('div');
       version.className = 'lobby-version';
-      version.textContent = 'β版';
+      version.innerHTML = 'β版<br><span class="lobby-copyright-inline">© 2026 smoolinq</span>';
       lobby.appendChild(version);
 
       document.body.appendChild(lobby);
       ensureGlobalCopyrightFooter();
-      setGlobalCopyrightVisible(true);
+      setGlobalCopyrightVisible(false);
 
       // Generate random team ID (8 chars alphanumeric)
       function generateTeamId() {
@@ -3175,6 +3197,7 @@
 
 
     } else {
+      document.body.classList.remove('lobby-mode');
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(true);
       const betaNoticeEl = document.getElementById('betaNotice');
