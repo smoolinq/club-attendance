@@ -2560,7 +2560,7 @@
         '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
         '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れた</button>' +
         '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none" data-mode="join">' +
-        '<div class="lobby-panel-title">グループIDからログイン</div>' +
+        '<div id="reloginPanelTitle" class="lobby-panel-title">グループIDからログイン</div>' +
         '<div id="reloginModeSwitch" style="display:flex;gap:6px;margin-bottom:8px">' +
         '<button id="modeReloginBtn" type="button" class="lobby-create-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">再ログイン</button>' +
         '<button id="modeJoinBtn" type="button" class="lobby-login-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">新規参加</button>' +
@@ -2845,12 +2845,14 @@
         const panel = document.getElementById('reloginPanel');
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
+        const title = document.getElementById('reloginPanelTitle');
         const form = document.getElementById('reloginFormArea');
         if (!panel || !reloginBtn || !joinBtn || !form) return;
         const current = mode === 'relogin' ? 'relogin' : 'join';
         panel.dataset.mode = current;
         const reloginActive = current === 'relogin';
         form.style.display = '';
+        if (title) title.style.display = 'none';
         reloginBtn.style.display = reloginActive ? '' : 'none';
         joinBtn.style.display = reloginActive ? 'none' : '';
         reloginBtn.className = reloginActive ? 'lobby-login-btn' : 'lobby-create-btn';
@@ -2868,8 +2870,10 @@
         const form = document.getElementById('reloginFormArea');
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
+        const title = document.getElementById('reloginPanelTitle');
         if (panel) panel.dataset.mode = '';
         if (form) form.style.display = 'none';
+        if (title) title.style.display = '';
         if (reloginBtn) reloginBtn.style.display = '';
         if (joinBtn) joinBtn.style.display = '';
       }
