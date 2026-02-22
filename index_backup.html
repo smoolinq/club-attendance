@@ -2565,6 +2565,7 @@
         '<button id="modeReloginBtn" type="button" class="lobby-create-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">再ログイン</button>' +
         '<button id="modeJoinBtn" type="button" class="lobby-login-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">新規参加</button>' +
         '</div>' +
+        '<button id="cancelReloginSelectBtn" type="button" class="lobby-create-btn" style="margin-bottom:6px">キャンセル</button>' +
         '' +
         '<div id="reloginFormArea" style="display:none">' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
@@ -2846,6 +2847,7 @@
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
         const title = document.getElementById('reloginPanelTitle');
+        const cancelSelectBtn = document.getElementById('cancelReloginSelectBtn');
         const form = document.getElementById('reloginFormArea');
         if (!panel || !reloginBtn || !joinBtn || !form) return;
         const current = mode === 'relogin' ? 'relogin' : 'join';
@@ -2853,6 +2855,7 @@
         const reloginActive = current === 'relogin';
         form.style.display = '';
         if (title) title.style.display = 'none';
+        if (cancelSelectBtn) cancelSelectBtn.style.display = 'none';
         reloginBtn.style.display = reloginActive ? '' : 'none';
         joinBtn.style.display = reloginActive ? 'none' : '';
         reloginBtn.className = reloginActive ? 'lobby-login-btn' : 'lobby-create-btn';
@@ -2871,9 +2874,11 @@
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
         const title = document.getElementById('reloginPanelTitle');
+        const cancelSelectBtn = document.getElementById('cancelReloginSelectBtn');
         if (panel) panel.dataset.mode = '';
         if (form) form.style.display = 'none';
         if (title) title.style.display = '';
+        if (cancelSelectBtn) cancelSelectBtn.style.display = '';
         if (reloginBtn) reloginBtn.style.display = '';
         if (joinBtn) joinBtn.style.display = '';
       }
@@ -2965,6 +2970,7 @@
       }
 
       document.getElementById('cancelReloginBtn').addEventListener('click', closeReloginPanel);
+      document.getElementById('cancelReloginSelectBtn').addEventListener('click', closeReloginPanel);
 
       document.getElementById('reloginPin').addEventListener('input', e => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
