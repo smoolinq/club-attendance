@@ -4634,6 +4634,21 @@
         };
       }
 
+      function sessionTimeMs(session) {
+        const t = Date.parse(String(session && session.updatedAt ? session.updatedAt : ''));
+        return Number.isFinite(t) ? t : 0;
+      }
+
+      function shouldLogoutBySession(localSession, serverSession) {
+        if (!localSession || !serverSession) return false;
+        const sameIdentity =
+          String(serverSession.editor || '') === String(localSession.editor || '') &&
+          String(serverSession.type || '') === String(localSession.type || '');
+        if (!sameIdentity) return false;
+        // Only log out when server session is newer than local one.
+        return sessionTimeMs(serverSession) > sessionTimeMs(localSession);
+      }
+
   async function syncToServer(options) {
     try {
       const opts = options || {};
@@ -4643,10 +4658,7 @@
         const serverSession = latest && latest.loginSession ? latest.loginSession : null;
         const serverSessionId = serverSession ? serverSession.id : '';
         if (serverSessionId && serverSessionId !== localSession.id) {
-          const sameIdentity =
-            String(serverSession.editor || '') === String(localSession.editor || '') &&
-            String(serverSession.type || '') === String(localSession.type || '');
-          if (sameIdentity) {
+          if (shouldLogoutBySession(localSession, serverSession)) {
             clearLoginState();
             alert('別の端末でログインされたため、この端末はログアウトされました。');
             location.href = location.pathname;
@@ -4724,10 +4736,7 @@
       const localType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
       const localSession = getLoginSession();
       if (localType && localSession && localSession.id && data.loginSession.id !== localSession.id) {
-        const sameIdentity =
-          String(data.loginSession.editor || '') === String(localSession.editor || '') &&
-          String(data.loginSession.type || '') === String(localSession.type || '');
-        if (sameIdentity) {
+        if (shouldLogoutBySession(localSession, data.loginSession)) {
           clearLoginState();
           _skipNextSyncOnce = true;
           alert('別の端末でログインされたため、この端末はログアウトされました。');
