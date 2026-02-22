@@ -630,6 +630,36 @@
       color: var(--text);
       margin-bottom: 8px;
     }
+    .lobby-my-groups {
+      padding-top: 12px;
+    }
+    .lobby-my-groups-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(124, 58, 237, 0.24);
+      background:
+        linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(59, 130, 246, 0.08)),
+        rgba(255, 255, 255, 0.9);
+      box-shadow: 0 8px 20px rgba(76, 29, 149, 0.12);
+    }
+    .lobby-my-groups-title-main {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #4c1d95;
+      text-transform: uppercase;
+    }
+    .lobby-my-groups-title-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(76, 29, 149, 0.74);
+      white-space: nowrap;
+    }
 
     .lobby-panel-title {
       width: 100%;
@@ -2743,8 +2773,12 @@
       joinSection.appendChild(actionCard);
 
       const recentSection = document.createElement('div');
-      recentSection.className = 'lobby-card';
-      recentSection.innerHTML = '<div class="lobby-section-title">マイグループ</div>';
+      recentSection.className = 'lobby-card lobby-my-groups';
+      recentSection.innerHTML =
+        '<div class="lobby-my-groups-title">' +
+        '<span class="lobby-my-groups-title-main">My Groups</span>' +
+        '<span class="lobby-my-groups-title-sub">参加中のグループ</span>' +
+        '</div>';
       const recentList = document.createElement('div');
       recentList.id = 'recentList';
       recentList.style.cssText = 'display:flex;flex-direction:column;gap:6px';
@@ -2762,7 +2796,19 @@
       lobby.appendChild(joinSection);
 
       function renderRecentList() {
-        const recent = getRecent();
+        let recent = getRecent();
+        let changed = false;
+        recent = recent.filter((t) => {
+          const viewerName = String(t && t.user ? t.user : '').trim();
+          if (!viewerName || !t || !t.id) return true;
+          let membersForTeam = [];
+          try { membersForTeam = JSON.parse(localStorage.getItem(t.id + ':volley-members') || '[]'); } catch { membersForTeam = []; }
+          const me = membersForTeam.find(m => m && m.name === viewerName);
+          if (me) return true;
+          changed = true;
+          return false;
+        });
+        if (changed) localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
         recentList.innerHTML = '';
         if (recent.length === 0) {
           const empty = document.createElement('div');
@@ -2772,11 +2818,9 @@
           return;
         }
         recent.forEach(t => {
-          const row = document.createElement('div');
-          row.style.cssText = 'display:flex;align-items:center;gap:6px';
           const item = document.createElement('button');
           item.type = 'button';
-          item.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:space-between;padding:11px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:13px;cursor:pointer;text-align:left';
+          item.style.cssText = 'width:100%;display:flex;align-items:center;justify-content:space-between;padding:11px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:13px;cursor:pointer;text-align:left';
           const left = document.createElement('div');
           left.style.cssText = 'min-width:0';
           const displayName = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || '（グループ名未設定）';
@@ -2819,22 +2863,7 @@
             setReloginMode('relogin');
             nameInput.focus();
           });
-          const delBtn = document.createElement('button');
-          delBtn.type = 'button';
-          delBtn.textContent = '×';
-          delBtn.style.cssText = 'flex-shrink:0;width:24px;height:24px;border:none;border-radius:8px;background:transparent;color:var(--text-light);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center';
-          delBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const name = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || 'このグループ';
-            if (!(await lobbyConfirm('「' + name + '」を一覧から削除しますか？'))) return;
-            const next = getRecent().filter(x => x.id !== t.id);
-            localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-            renderRecentList();
-          });
-          row.appendChild(item);
-          row.appendChild(delBtn);
-          recentList.appendChild(row);
+          recentList.appendChild(item);
         });
       }
       renderRecentList();
@@ -2984,7 +3013,7 @@
         // Record to recent teams with group name
         const RECENT_KEY = 'volley-recent-teams';
         let recent = []; try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { }
-        recent.unshift({ id: teamId, name: groupName, lastVisited: new Date().toISOString() });
+        recent.unshift({ id: teamId, name: groupName, user: adminName, lastVisited: new Date().toISOString() });
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
         setCreatedTeams([teamId, ...createdTeams]);
         await showRecoveryCodeModal(recoveryCode);
@@ -5103,6 +5132,11 @@
           if (!ok) return;
           members.splice(idx, 1);
           saveMembers(members);
+          try {
+            const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+            const nextRecent = recent.filter(t => !(t && t.id === _teamParam && String(t.user || '').trim() === name));
+            localStorage.setItem(RECENT_KEY, JSON.stringify(nextRecent));
+          } catch { }
           appendSecurityLog('purge_member', name, '');
           await syncToServer();
           renderMemberSettings();
