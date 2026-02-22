@@ -4534,10 +4534,13 @@
         const members = loadMembers();
         const currentAdmin = getAdminName();
         const listEl = document.getElementById('changeAdminList');
-        listEl.innerHTML = members.filter(m => m.name !== currentAdmin).map(m =>
+        listEl.innerHTML = members
+        .map((m, idx) => ({ m, idx }))
+        .filter(x => x.m && x.m.name !== currentAdmin)
+        .map(x =>
           '<label style="display:flex;align-items:center;gap:8px;padding:8px 4px;cursor:pointer;font-size:14px">' +
-          '<input type="radio" name="newAdmin" value="' + escapeHTML(m.name) + '" style="width:18px;height:18px;accent-color:var(--late)">' +
-          escapeHTML(m.name) +
+          '<input type="radio" name="newAdmin" value="' + x.idx + '" style="width:18px;height:18px;accent-color:var(--late)">' +
+          escapeHTML(x.m.name) +
           '</label>'
         ).join('');
         panel.style.display = '';
@@ -4548,12 +4551,18 @@
       document.getElementById('changeAdminConfirm').addEventListener('click', async () => {
         const selected = document.querySelector('input[name="newAdmin"]:checked');
         if (!selected) { alert('メンバーを選択してください'); return; }
-        const newAdminName = selected.value;
         const oldAdmin = getAdminName();
         if (!oldAdmin) { alert('現在の管理者情報を取得できません'); return; }
         const ms = loadMembers();
-        const nextAdmin = ms.find(m => m && m.name === newAdminName);
+        const selectedIndex = parseInt(selected.value, 10);
+        if (Number.isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= ms.length) {
+          alert('選択したメンバーが見つかりません');
+          return;
+        }
+        const nextAdmin = ms[selectedIndex];
         if (!nextAdmin) { alert('選択したメンバーが見つかりません'); return; }
+        const newAdminName = String(nextAdmin.name || '').trim();
+        if (!newAdminName) { alert('選択したメンバーが見つかりません'); return; }
         const nextAdminPin = String(nextAdmin.pin || '').trim();
         if (!/^\d{4}$/.test(nextAdminPin)) {
           alert('新しい管理者のPIN（4桁）が未設定です。先にメンバーPINを設定してください。');
