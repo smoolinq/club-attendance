@@ -2988,6 +2988,11 @@
         if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
         if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
         if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
+        if (mode === 'join' && hasLocalLogin(teamId)) {
+          err.textContent = 'この端末は既にこのグループで登録済みです。再ログインを選んでください';
+          err.style.display = '';
+          return;
+        }
         err.style.display = 'none';
         try {
           const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
