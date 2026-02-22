@@ -1275,10 +1275,11 @@
 
   .schedule-edit-btn {
     margin-left: auto;
-    height: 24px;
-    font-size: 11px;
-    padding: 2px 9px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+    padding: 0;
+    border-radius: 12px;
     border: 1px solid var(--primary);
     background: transparent;
     color: var(--primary);
@@ -1286,12 +1287,13 @@
     font-weight: 600;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 3px;
     line-height: 1;
     white-space: nowrap;
   }
   .schedule-edit-btn .schedule-edit-icon {
-    font-size: 14px;
+    font-size: 20px;
     line-height: 1;
   }
   .schedule-edit-btn:active { opacity: 0.6; }
@@ -2160,8 +2162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         left.style.cssText = 'min-width:0';
         const displayName = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || '（グループ名未設定）';
         left.innerHTML =
-          '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>' +
-          '<div style="font-size:11px;color:var(--text-light);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + t.id + '</div>';
+          '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>';
         const time = document.createElement('div');
         time.style.cssText = 'font-size:10px;color:var(--text-light);white-space:nowrap;margin-left:8px;align-self:flex-start';
         if (t.lastVisited) {
@@ -2447,25 +2448,73 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
   if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
   err.style.display = 'none';
   try {
-    const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId));
+    const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+    const res = await fetch(api);
     if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
     const data = await res.json();
     if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
     const adminName = String(data?.adminName || '').trim();
     const adminPw = String(data?.adminPw || '0000');
     const isAdminLogin = name === adminName && pin === adminPw;
-    const member = data.members.find(m => m && m.name === name);
+    const members = (Array.isArray(data.members) ? data.members : []).slice();
+    const member = members.find(m => m && m.name === name);
+    const sessionPayload = {
+      id: createSessionId(),
+      type: isAdminLogin ? 'admin' : 'member',
+      editor: name,
+      updatedAt: new Date().toISOString()
+    };
     if (!isAdminLogin) {
-      if (!member) { err.textContent = 'この名前は登録されていません'; err.style.display = ''; return; }
-      if (String(member.pin || '') !== pin) {
-        err.textContent = name === adminName ? '管理者PINが違います' : 'PINが違います';
+      if (name === adminName) {
+        err.textContent = '管理者PINが違います';
         err.style.display = '';
         return;
+      }
+      if (member) {
+        if (String(member.pin || '') !== pin) {
+          err.textContent = 'PINが違います';
+          err.style.display = '';
+          return;
+        }
+      } else {
+        if (members.some(m => m && String(m.pin || '') === pin)) {
+          err.textContent = 'このPINはすでに使われています';
+          err.style.display = '';
+          return;
+        }
+        if (pin === adminPw) {
+          err.textContent = '管理者PINと同じPINは使えません';
+          err.style.display = '';
+          return;
+        }
+        members.push({ name, role: 'メンバー', pin });
+        const payload = {
+          title: data?.title || '',
+          members,
+          schedule: Array.isArray(data?.schedule) ? data.schedule : [],
+          deadline: data?.deadline || undefined,
+          adminName: data?.adminName || '',
+          adminPw: data?.adminPw || '0000',
+          recoveryCode: data?.recoveryCode || '',
+          loginSession: sessionPayload,
+          attendancePractice: data?.attendancePractice || {},
+          attendanceMatch: data?.attendanceMatch || {}
+        };
+        const saveRes = await fetch(api, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!saveRes.ok) {
+          err.textContent = '新規参加の登録に失敗しました';
+          err.style.display = '';
+          return;
+        }
       }
     }
     const t = teamId + ':';
     if (data.title) localStorage.setItem(t + 'volley-app-title', data.title);
-    if (Array.isArray(data.members)) localStorage.setItem(t + 'volley-members', JSON.stringify(data.members));
+    localStorage.setItem(t + 'volley-members', JSON.stringify(members));
     if (Array.isArray(data.schedule)) localStorage.setItem(t + 'volley-schedule', JSON.stringify(data.schedule));
     if (data.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(data.deadline));
     if (data.adminName) localStorage.setItem(t + 'volley-admin-name', data.adminName);
@@ -2473,12 +2522,7 @@ document.getElementById('reloginBtn').addEventListener('click', async () => {
     if (typeof data.recoveryCode === 'string' && data.recoveryCode) localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
     localStorage.setItem(t + 'volley-editor', name);
     localStorage.setItem(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
-    localStorage.setItem(t + 'volley-login-session', JSON.stringify({
-      id: createSessionId(),
-      type: isAdminLogin ? 'admin' : 'member',
-      editor: name,
-      updatedAt: new Date().toISOString()
-    }));
+    localStorage.setItem(t + 'volley-login-session', JSON.stringify(sessionPayload));
     location.href = '?team=' + encodeURIComponent(teamId);
   } catch {
     err.textContent = '通信エラーが発生しました';
