@@ -4215,6 +4215,7 @@
         if (!confirm('本当にグループを削除しますか？\nこの操作は元に戻せません。')) return;
         const err = document.getElementById('deleteGroupError');
         err.style.display = 'none';
+        let deleteSyncFailed = false;
         try {
           const deleteRes = await fetch(`${API_BASE}/api/team/delete`, {
             method: "POST",
@@ -4223,14 +4224,13 @@
             body: JSON.stringify({ team_id: _teamParam })
           });
           if (!deleteRes.ok) {
-            err.textContent = 'グループ削除に失敗しました';
-            err.style.display = '';
-            return;
+            deleteSyncFailed = true;
           }
         } catch {
-          err.textContent = '通信エラーが発生しました';
-          err.style.display = '';
-          return;
+          deleteSyncFailed = true;
+        }
+        if (deleteSyncFailed) {
+          alert('サーバー側の削除同期に失敗しました。この端末では削除を続行します。');
         }
         // Mark team as deleted
         let deleted = [];
