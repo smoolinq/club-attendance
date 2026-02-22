@@ -3241,6 +3241,25 @@
         return localStorage.getItem(STORAGE_LOGIN_TYPE) === 'admin';
       }
 
+      function reconcileLoginTypeWithAdminName() {
+        const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+        const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        const adminName = getAdminName();
+        if (!loginType || !editorName || !adminName) return false;
+        let nextType = loginType;
+        if (editorName === adminName && loginType !== 'admin') nextType = 'admin';
+        if (editorName !== adminName && loginType === 'admin') nextType = 'member';
+        if (nextType === loginType) return false;
+        localStorage.setItem(STORAGE_LOGIN_TYPE, nextType);
+        const sess = getLoginSession();
+        if (sess && sess.id) {
+          sess.type = nextType;
+          sess.updatedAt = new Date().toISOString();
+          localStorage.setItem(STORAGE_LOGIN_SESSION, JSON.stringify(sess));
+        }
+        return true;
+      }
+
       function ensureAdminMemberRecord() {
         const adminName = getAdminName();
         if (!adminName) return false;
@@ -3859,6 +3878,7 @@
       const adminModal = document.getElementById('adminModal');
 
       function updateLoginStatus() {
+        reconcileLoginTypeWithAdminName();
         const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
         const el = document.getElementById('loginStatus');
         const editTitleBtn = document.getElementById('editGroupNameBtn');
@@ -4856,6 +4876,7 @@
           const local = localStorage.getItem(STORAGE_ADMIN_NAME) || '';
           if (data.adminName !== local) { localStorage.setItem(STORAGE_ADMIN_NAME, data.adminName); changed = true; }
         }
+        if (reconcileLoginTypeWithAdminName()) changed = true;
         // Admin password: always sync from server
         if (data.adminPw) {
           const local = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
