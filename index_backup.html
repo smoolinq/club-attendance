@@ -2766,7 +2766,7 @@
           adminName,
           adminPw,
           recoveryCode,
-          members: [{ name: adminName }],
+          members: [{ name: adminName, pin: adminPw }],
           schedule: []
         };
         try {
@@ -2803,7 +2803,7 @@
           editor: adminName,
           updatedAt: new Date().toISOString()
         }));
-        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName }]));
+        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName, pin: adminPw }]));
         localStorage.setItem(t + 'volley-schedule', '[]');
         // Record to recent teams with group name
         const RECENT_KEY = 'volley-recent-teams';
@@ -3262,16 +3262,25 @@
 
       function ensureAdminMemberRecord() {
         const adminName = getAdminName();
+        const adminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
         if (!adminName) return false;
         const members = loadMembers();
         const idx = members.findIndex(m => m && m.name === adminName);
         if (idx === -1) {
-          members.unshift({ name: adminName });
+          members.unshift({ name: adminName, pin: adminPw });
           saveMembers(members);
           return true;
         }
+        let changed = false;
+        if (!/^\d{4}$/.test(String(members[idx].pin || ''))) {
+          members[idx].pin = adminPw;
+          changed = true;
+        }
         if (members[idx] && members[idx].role != null) {
           delete members[idx].role;
+          changed = true;
+        }
+        if (changed) {
           saveMembers(members);
           return true;
         }
@@ -4574,6 +4583,7 @@
         const oldAdmin = getAdminName();
         if (!oldAdmin) { alert('現在の管理者情報を取得できません'); return; }
         const ms = loadMembers();
+        const oldAdminMember = ms.find(m => m && m.name === oldAdmin);
         const selectedIndex = parseInt(selected.value, 10);
         if (Number.isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= ms.length) {
           alert('選択したメンバーが見つかりません');
@@ -4588,6 +4598,7 @@
           alert('新しい管理者のPIN（4桁）が未設定です。先にメンバーPINを設定してください。');
           return;
         }
+        const oldAdminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
         const ok = await customConfirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は失われます。\n管理者PINは「' + newAdminName + '」さんのPIN（4桁）に切り替わります。\n復旧コードは再発行されます。\n\nよろしいですか？');
         if (!ok) return;
 
@@ -4602,6 +4613,9 @@
         ms.forEach(m => {
           if (m && m.role != null) delete m.role;
         });
+        if (oldAdminMember && !/^\d{4}$/.test(String(oldAdminMember.pin || ''))) {
+          oldAdminMember.pin = oldAdminPw;
+        }
         saveMembers(ms);
         localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
         localStorage.setItem(STORAGE_ADMIN_PW, nextAdminPin);
