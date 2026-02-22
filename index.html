@@ -2994,6 +2994,7 @@
           const res = await fetch(api);
           if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
           const data = await res.json();
+          if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
           if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
           const adminName = String(data?.adminName || '').trim();
           const adminPw = String(data?.adminPw || '0000');
@@ -3098,6 +3099,7 @@
           const res = await fetch(api);
           if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
           const data = await res.json();
+          if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
           const serverCode = normalizeRecoveryCode(data?.recoveryCode);
           if (!serverCode || serverCode !== recoveryCode) {
             err.textContent = '復旧コードが一致しません';
@@ -3149,9 +3151,21 @@
 
       // Check if team was deleted
       const DELETED_TEAMS_KEY = 'volley-deleted-teams';
+      function getDeletedTeams() {
+        try { return JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { return []; }
+      }
+      function markTeamDeletedLocally(teamId) {
+        const deleted = getDeletedTeams();
+        if (!deleted.includes(teamId)) {
+          deleted.push(teamId);
+          localStorage.setItem(DELETED_TEAMS_KEY, JSON.stringify(deleted));
+        }
+      }
+      function isDeletedPayload(data) {
+        return !!(data && (data.deleted === true || data.deletedAt));
+      }
       (function checkDeleted() {
-        let deleted = [];
-        try { deleted = JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { }
+        const deleted = getDeletedTeams();
         if (deleted.includes(_teamParam)) {
           document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;gap:12px;padding:24px;background:var(--bg)">' +
             '<div style="font-size:16px;font-weight:600;color:var(--text)">このリンクは無効です（削除済み）</div>' +
@@ -4230,13 +4244,35 @@
           deleteSyncFailed = true;
         }
         if (deleteSyncFailed) {
-          alert('サーバー側の削除同期に失敗しました。この端末では削除を続行します。');
+          const proceed = await customConfirm('削除連携APIに失敗しました。\n本体サーバーで削除同期を続行しますか？');
+          if (!proceed) return;
+        }
+        const serverDeletePayload = {
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+          title: '',
+          members: [],
+          schedule: [],
+          deadline: getDeadlineRules(),
+          adminName: '',
+          adminPw: '0000',
+          recoveryCode: '',
+          loginSession: null,
+          attendancePractice: {},
+          attendanceMatch: {}
+        };
+        const serverDeleteRes = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(serverDeletePayload)
+        });
+        if (!serverDeleteRes.ok) {
+          err.textContent = 'サーバー削除に失敗しました。通信状態を確認して再度お試しください';
+          err.style.display = '';
+          return;
         }
         // Mark team as deleted
-        let deleted = [];
-        try { deleted = JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { }
-        if (!deleted.includes(_teamParam)) { deleted.push(_teamParam); }
-        localStorage.setItem(DELETED_TEAMS_KEY, JSON.stringify(deleted));
+        markTeamDeletedLocally(_teamParam);
         // Remove from recent teams
         try {
           const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
@@ -4826,6 +4862,13 @@
       function applyServerData(data) {
         console.log('[applyServerData] members=', Array.isArray(data?.members) ? data.members.length : 'no-members', 'loginType=', localStorage.getItem(STORAGE_LOGIN_TYPE), 'editor=', localStorage.getItem(STORAGE_EDITOR));
         if (!data) return false;
+        if (isDeletedPayload(data)) {
+          markTeamDeletedLocally(_teamParam);
+          clearLoginState();
+          alert('このグループは削除されました');
+          location.href = location.pathname;
+          return true;
+        }
         let changed = false;
         // Title: always sync from server
         if (data.title) {
