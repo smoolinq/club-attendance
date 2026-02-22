@@ -285,8 +285,23 @@
       cursor: not-allowed;
       opacity: 0.85;
     }
+    .group-title-edit-btn.admin-only-locked {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.65);
+      cursor: not-allowed;
+      opacity: 0.9;
+    }
+    .group-title-edit-btn.admin-only-locked:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .group-title-edit-btn.admin-only-locked::before {
+      content: "🔒 ";
+      font-size: 9px;
+    }
 
     .settings-btn {
+      position: relative;
       background: rgba(255, 255, 255, 0.16);
       border: none;
       color: #fff;
@@ -309,6 +324,33 @@
 
     .settings-btn:active {
       background: rgba(255, 255, 255, 0.3);
+    }
+    .settings-btn.admin-only-locked {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.75);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .settings-btn.admin-only-locked:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+    }
+    .settings-btn.admin-only-locked::after {
+      content: "🔒";
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      line-height: 1;
+      background: rgba(15, 23, 42, 0.75);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
     }
 
     .date-row {
@@ -1202,32 +1244,6 @@
     .member-card.locked {
       opacity: 0.45;
       pointer-events: none;
-    }
-
-    .reorder-btns {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      margin-right: 8px;
-    }
-
-    .reorder-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text-light);
-      font-size: 9px;
-      width: 20px;
-      height: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-
-    .reorder-btn:active {
-      background: var(--bg);
     }
 
     .member-name {
@@ -2352,29 +2368,10 @@
 
 
           <button class="btn-confirm" id="newMemberJoinBtn"
-            style="width:100%;padding:10px 16px;background:var(--present)">参加する</button>
+            style="width:100%;padding:10px 16px;">参加する</button>
         </div>
-        <details id="loginAdminDetails">
-          <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-light);margin-bottom:8px">
-            管理者用パスワード</summary>
-          <div style="display:flex;gap:6px">
-            <input type="password" id="adminPwInput" placeholder="パスワード"
-              style="flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">
-            <button class="btn-confirm" id="adminLoginBtn"
-              style="padding:8px 16px;font-size:14px;white-space:nowrap">ログイン</button>
-          </div>
-        </details>
         <div id="loginError" style="color:var(--absent);font-size:13px;margin-top:6px;display:none"></div>
         <div class="modal-actions"><button class="btn-cancel" id="loginCancel">キャンセル</button></div>
-      </div>
-      <div id="loginStep2" style="display:none">
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">名前を選択してください</label>
-        <select id="adminNameSelect"
-          style="width:100%;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none"></select>
-        <div class="modal-actions">
-          <button class="btn-cancel" id="memberSelectBack">戻る</button>
-          <button class="btn-confirm" id="memberSelectOk">確定</button>
-        </div>
       </div>
     </div>
   </div>
@@ -2605,6 +2602,30 @@
     function getRecentTeams() {
       try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
     }
+    function getInviteData() {
+      try {
+        const data = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null');
+        if (!data || !data.id) return null;
+        return data;
+      } catch {
+        return null;
+      }
+    }
+    function setInviteData(data) {
+      if (!data || !data.id) return;
+      localStorage.setItem(INVITE_KEY, JSON.stringify({
+        id: String(data.id || '').trim().toLowerCase(),
+        name: data.name || null,
+        pending: data.pending !== false
+      }));
+    }
+    function clearInviteForTeam(teamId) {
+      const invite = getInviteData();
+      if (!invite || !invite.id) return;
+      if (!teamId || invite.id === String(teamId || '').trim().toLowerCase()) {
+        localStorage.removeItem(INVITE_KEY);
+      }
+    }
 
     function getCreatedTeams() {
       try {
@@ -2677,7 +2698,7 @@
     if (_teamParam && !_isKnownTeam && !_fromInviteCard) {
       const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
       const inviteName = _inviteNameParam || savedTitle || '';
-      localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _teamParam, name: inviteName || null }));
+      setInviteData({ id: _teamParam, name: inviteName || null, pending: true });
       location.href = location.pathname + '?inviteTeam=' + encodeURIComponent(_teamParam) + '&inviteName=' + encodeURIComponent(inviteName);
       throw new Error('redirect to lobby');
     }
@@ -2688,7 +2709,7 @@
       const betaNoticeEl = document.getElementById('betaNotice');
       if (betaNoticeEl) betaNoticeEl.style.display = 'none';
       if (_pendingInviteTeam) {
-        localStorage.setItem(INVITE_KEY, JSON.stringify({ id: _pendingInviteTeam, name: _pendingInviteName || null }));
+        setInviteData({ id: _pendingInviteTeam, name: _pendingInviteName || null, pending: true });
         history.replaceState(null, '', location.pathname);
       }
       document.body.innerHTML = '';
@@ -2797,8 +2818,7 @@
 
 
       joinSection.appendChild(hero);
-      let inviteData = null;
-      try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch { }
+      let inviteData = getInviteData();
       if (inviteData && inviteData.id) {
         const inviteCard = document.createElement('div');
         inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
@@ -2823,7 +2843,7 @@
               try { latest = JSON.parse(latestRaw); } catch { }
               if (!latest || latest.id !== inviteData.id) return;
               latest.name = fetchedName;
-              localStorage.setItem(INVITE_KEY, JSON.stringify(latest));
+              setInviteData(latest);
               if (inviteCardTitle) inviteCardTitle.textContent = '「' + fetchedName + '」に招待されています';
             } catch { }
           })();
@@ -3005,15 +3025,24 @@
           const enterBtn = document.createElement('button');
           enterBtn.type = 'button';
           enterBtn.className = 'recent-enter-btn';
+          const pendingInvite = getInviteData();
+          const canResumeInvite = !viewerName && pendingInvite && pendingInvite.id === t.id;
           if (me && me.state === 'inactive') {
             enterBtn.textContent = '復帰待ち';
             enterBtn.disabled = true;
+          } else if (canResumeInvite) {
+            enterBtn.textContent = '招待再開';
           } else if (!viewerName || !hasLocalLogin(t.id)) {
             enterBtn.textContent = 'ログイン';
           } else {
             enterBtn.textContent = '入室';
           }
           enterBtn.addEventListener('click', () => {
+            if (canResumeInvite) {
+              sessionStorage.setItem('inviteFromCard', '1');
+              location.href = '?team=' + encodeURIComponent(t.id);
+              return;
+            }
             if (hasLocalLogin(t.id)) {
               location.href = '?team=' + encodeURIComponent(t.id);
               return;
@@ -3351,9 +3380,9 @@
       document.addEventListener('click', (e) => {
         const inviteJoinBtn = e.target.closest('#inviteJoinBtn');
         if (!inviteJoinBtn) return;
-        let inviteData = null;
-        try { inviteData = JSON.parse(localStorage.getItem(INVITE_KEY)); } catch { }
+        let inviteData = getInviteData();
         if (!inviteData || !inviteData.id) { alert('招待データがありません'); return; }
+        setInviteData({ ...inviteData, pending: true });
         sessionStorage.setItem('inviteFromCard', '1');
         location.href = '?team=' + encodeURIComponent(inviteData.id);
       });
@@ -3507,6 +3536,8 @@
           localStorage.setItem(t + 'volley-editor', name);
           localStorage.setItem(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
           localStorage.setItem(t + 'volley-login-session', JSON.stringify(sessionPayload));
+          clearInviteForTeam(teamId);
+          sessionStorage.removeItem('inviteFromCard');
           location.href = '?team=' + encodeURIComponent(teamId);
         } catch {
           err.textContent = '通信エラーが発生しました';
@@ -3683,7 +3714,6 @@
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
       })();
 
-      localStorage.removeItem(INVITE_KEY);
       sessionStorage.removeItem('inviteFromCard');
 
       // Guard: if logged in but not a member of this team, clear login
@@ -3751,6 +3781,8 @@
           editor: editorName,
           updatedAt: new Date().toISOString()
         }));
+        clearInviteForTeam(_teamParam);
+        sessionStorage.removeItem('inviteFromCard');
       }
 
       function clearLoginState() {
@@ -4150,6 +4182,9 @@
         if (practiceItems.length === 0 && matchItems.length === 0) {
           html += '<div class="schedule-empty">今月の予定はありません</div>';
         }
+        if (!isAdmin()) {
+          html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text-light);text-align:center">※予定の変更は管理者のみできます</div>';
+        }
 
         section.innerHTML = html;
 
@@ -4263,6 +4298,15 @@
 
         // --- Members ---
         const members = activeMembers(loadMembers());
+        const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        const viewMembers = (() => {
+          const sorted = members.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'ja'));
+          if (!editorName) return sorted;
+          const selfIndex = sorted.findIndex(m => m && m.name === editorName);
+          if (selfIndex < 0) return sorted;
+          const self = sorted[selfIndex];
+          return [self, ...sorted.slice(0, selfIndex), ...sorted.slice(selfIndex + 1)];
+        })();
         const dayData = getDayAttendance();
 
         if (members.length === 0) {
@@ -4273,7 +4317,7 @@
         }
 
         let counts = { present: 0, absent: 0, late: 0, early: 0, none: 0 };
-        members.forEach(m => { const s = dayData[m.name] || 'none'; if (s === 'late_early') { counts.late++; counts.early++; } else { counts[s]++; } });
+        viewMembers.forEach(m => { const s = dayData[m.name] || 'none'; if (s === 'late_early') { counts.late++; counts.early++; } else { counts[s]++; } });
 
         const headerNone = document.getElementById('headerNoneCount');
         if (counts.none > 0) {
@@ -4311,7 +4355,7 @@
 
         // --- None list ---
         const noneList = document.getElementById('noneList');
-        const noneNames = members.map(m => m.name).filter(name => { const s = dayData[name]; return !s || s === 'none'; });
+        const noneNames = viewMembers.map(m => m.name).filter(name => { const s = dayData[name]; return !s || s === 'none'; });
         if (noneNames.length > 0) {
           noneList.style.display = '';
           noneList.innerHTML = `<strong>未入力:</strong><span>${noneNames.map(escapeHTML).join(', ')}</span><button class="copy-btn" id="copyNoneBtn">コピー</button>`;
@@ -4326,7 +4370,7 @@
 
         // --- Present list ---
         const presentList = document.getElementById('presentList');
-        const presentNames = members.map(m => m.name).filter(name => dayData[name] === 'present');
+        const presentNames = viewMembers.map(m => m.name).filter(name => dayData[name] === 'present');
         if (presentNames.length > 0) {
           presentList.style.display = '';
           presentList.innerHTML = `<strong>出席:</strong><span>${presentNames.map(escapeHTML).join(', ')}</span><button class="copy-btn" id="copyPresentBtn">コピー</button>`;
@@ -4343,30 +4387,28 @@
         const monthPrefix = dateInput.value.substring(0, 7);
         const allData = loadAttendance();
         const monthlyPresent = {};
-        members.forEach(m => { monthlyPresent[m.name] = 0; });
+        viewMembers.forEach(m => { monthlyPresent[m.name] = 0; });
         Object.keys(allData).forEach(dateKey => {
           if (dateKey.startsWith(monthPrefix)) {
             const day = allData[dateKey];
-            members.forEach(m => { if (day[m.name] === 'present') monthlyPresent[m.name]++; });
+            viewMembers.forEach(m => { if (day[m.name] === 'present') monthlyPresent[m.name]++; });
           }
         });
 
         // --- Cards ---
-        const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
         const readOnlyMsg = isPastEvent ? 'このイベントは終了しています' : 'このイベントの締切は過ぎています';
         let cardsHTML = readOnly ? `<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">${readOnlyMsg}</div></div>` : '';
         const noneOnly = localStorage.getItem(STORAGE_MEMBER_FILTER) === 'none-only';
         const displayMembers = noneOnly
-          ? members.filter(m => {
+          ? viewMembers.filter(m => {
             const s = dayData[m.name] || 'none';
             return !s || s === 'none';
           })
-          : members;
+          : viewMembers;
         if (displayMembers.length === 0) {
           cardsHTML += '<div style="padding:12px 20px"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 16px;font-size:12px;color:#1e3a8a;text-align:center;font-weight:700">未入力メンバーはいません</div></div>';
         }
         cardsHTML += displayMembers.map((m) => {
-          const idx = members.findIndex(x => x && x.name === m.name);
           const name = m.name;
           const isSelf = !!editorName && name === editorName;
           const isLocked = readOnly || (editorName && !isAdmin() && name !== editorName);
@@ -4384,13 +4426,8 @@
             const savedTime = dayData[name + '_time'] || '';
             if (savedTime) nameBadge = `<span class="badge-time badge-time-${current}">${STATUS_NAMES[current]} ${escapeHTML(savedTime)}</span>`;
           }
-          const canReorder = !noneOnly;
           return `
         <div class="member-card${isLocked ? ' locked' : ''}" data-locked="${isLocked ? '1' : ''}">
-          <div class="reorder-btns">
-            <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${!canReorder || idx === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="reorder-btn" data-move="${idx}" data-dir="1" ${!canReorder || idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
-          </div>
           <span class="member-name${isSelf ? ' self-highlight' : ''}">${escapeHTML(name)}${isSelf ? '<span class="self-pill">あなた</span>' : ''}${nameBadge}</span>
           <div class="status-buttons">
             ${['present', 'absent', 'late', 'early'].map(s =>
@@ -4474,17 +4511,6 @@
           });
         });
 
-        list.querySelectorAll('.reorder-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const i = parseInt(btn.dataset.move);
-            const dir = parseInt(btn.dataset.dir);
-            const m = loadMembers();
-            [m[i], m[i + dir]] = [m[i + dir], m[i]];
-            saveMembers(m);
-            render();
-          });
-        });
-
 
         if (render._highlightName) {
           const target = list.querySelector(`[data-name="${CSS.escape(render._highlightName)}"]`);
@@ -4514,12 +4540,18 @@
 
       const loginModal = document.getElementById('loginModal');
       const adminModal = document.getElementById('adminModal');
+      const gearBtn = document.getElementById('gearBtn');
+
+      function showAdminOnlyFeatureNotice() {
+        alert('この機能は管理者のみ変更できます');
+      }
 
       function updateLoginStatus() {
         reconcileLoginTypeWithAdminName();
         const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
         const el = document.getElementById('loginStatus');
         const editTitleBtn = document.getElementById('editGroupNameBtn');
+        const admin = isAdmin();
         el.style.cursor = 'default';
         el.classList.remove('status-admin', 'status-member', 'status-none');
         if (type === 'admin') {
@@ -4537,7 +4569,16 @@
           el.style.opacity = '0.5';
           el.classList.add('status-none');
         }
-        if (editTitleBtn) editTitleBtn.disabled = !isAdmin();
+        if (editTitleBtn) {
+          editTitleBtn.classList.toggle('admin-only-locked', !admin);
+          editTitleBtn.setAttribute('aria-disabled', admin ? 'false' : 'true');
+          editTitleBtn.title = admin ? 'グループ名を変更' : 'この機能は管理者のみ変更できます';
+        }
+        if (gearBtn) {
+          gearBtn.classList.toggle('admin-only-locked', !admin);
+          gearBtn.setAttribute('aria-disabled', admin ? 'false' : 'true');
+          gearBtn.title = admin ? '締切設定' : 'この機能は管理者のみ変更できます';
+        }
       }
       updateLoginStatus();
 
@@ -4545,10 +4586,8 @@
         const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
         if (!type) {
           // Not logged in → open login modal
-          document.getElementById('adminPwInput').value = '';
           document.getElementById('loginError').style.display = 'none';
           document.getElementById('loginStep1').style.display = '';
-          document.getElementById('loginStep2').style.display = 'none';
           document.getElementById('newMemberSection').style.display = '';
           loginModal.classList.add('show');
           return;
@@ -4565,12 +4604,8 @@
         loginModal.classList.remove('show');
         document.getElementById('newMemberSection').style.display = '';
         document.getElementById('newMemberNameInput').value = '';
-        document.getElementById('adminPwInput').value = '';
         document.getElementById('loginError').style.display = 'none';
-        const details2 = document.getElementById('loginAdminDetails');
-        if (details2) details2.removeAttribute('open');
         document.getElementById('loginStep1').style.display = '';
-        document.getElementById('loginStep2').style.display = 'none';
       }
       function backToLobbyFromLogin() { closeLoginModal(); location.href = location.pathname; }
       document.getElementById('loginCancel').addEventListener('click', backToLobbyFromLogin);
@@ -4619,42 +4654,6 @@
         render();
         syncToServer();
       });
-
-      document.getElementById('memberSelectBack').addEventListener('click', () => {
-        document.getElementById('loginStep1').style.display = '';
-        document.getElementById('loginStep2').style.display = 'none';
-      });
-
-      document.getElementById('memberSelectOk').addEventListener('click', () => {
-        const name = document.getElementById('adminNameSelect').value;
-        setLoginState('admin', name);
-        closeLoginModal();
-        updateLoginStatus();
-        render();
-        syncToServer();
-      });
-
-      // Admin login
-      document.getElementById('adminLoginBtn').addEventListener('click', () => {
-        const pw = document.getElementById('adminPwInput').value;
-        if (pw !== (localStorage.getItem(STORAGE_ADMIN_PW) || '0000')) { showLoginError('パスワードが違います'); return; }
-        const adminN = getAdminName();
-        if (adminN) {
-          setLoginState('admin', adminN);
-          closeLoginModal();
-          updateLoginStatus();
-          render();
-          syncToServer();
-        } else {
-          // Fallback: no admin name stored, show member select
-          const members = loadMembers();
-          const sel = document.getElementById('adminNameSelect');
-          sel.innerHTML = members.map(m => '<option value="' + escapeHTML(m.name) + '">' + escapeHTML(m.name) + '</option>').join('');
-          document.getElementById('loginStep1').style.display = 'none';
-          document.getElementById('loginStep2').style.display = '';
-        }
-      });
-      document.getElementById('adminPwInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('adminLoginBtn').click(); });
 
       // Admin settings modal
       function openAdminModal() {
@@ -4977,7 +4976,7 @@
 
       // --- Deadline Button ---
       document.getElementById('gearBtn').addEventListener('click', () => {
-        if (!isAdmin()) { alert('管理者のみ変更できます'); return; }
+        if (!isAdmin()) { showAdminOnlyFeatureNotice(); return; }
         loadSettingsToModal();
         settingsModal.classList.add('show');
       });
@@ -5238,7 +5237,7 @@
         const active = activeMembers(members);
         const inactive = inactiveMembers(members);
         const list = document.getElementById('memberSettingsList');
-        const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみ</div>';
+        const notice = admin ? '' : '<div style="padding:8px 0;font-size:12px;color:var(--text-light);text-align:center">※メンバー変更は管理者のみできます</div>';
         const adminN = getAdminName();
         const currentUser = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
         const now = Date.now();
@@ -5277,10 +5276,10 @@
 
         list.innerHTML =
           notice +
-          '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:6px 0 4px">アクティブメンバー</div>' +
-          (activeHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">アクティブメンバーはいません</div>') +
+          '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:6px 0 4px">参加中メンバー</div>' +
+          (activeHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">参加中メンバーはいません</div>') +
           '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中（復帰可能）</div>' +
-          (inactiveHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">退会中メンバーはいません</div>');
+          (inactiveHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">現在、復帰待ちメンバーはいません</div>');
         document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
         document.getElementById('changeAdminPanel').style.display = 'none';
       }
@@ -5503,7 +5502,7 @@
       appTitleEl.textContent = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
 
       function openTitleEditorModal() {
-        if (!isAdmin()) { alert('管理者のみ編集できます'); return; }
+        if (!isAdmin()) { showAdminOnlyFeatureNotice(); return; }
         const current = localStorage.getItem(STORAGE_TITLE) || DEFAULT_TITLE;
         groupNameInput.value = current;
         groupNameError.style.display = 'none';
@@ -5774,11 +5773,9 @@
         else syncToServer();
         // Force login if not logged in
         if (!localStorage.getItem(STORAGE_LOGIN_TYPE)) {
-          document.getElementById('adminPwInput').value = '';
           document.getElementById('newMemberNameInput').value = '';
           document.getElementById('loginError').style.display = 'none';
           document.getElementById('loginStep1').style.display = '';
-          document.getElementById('loginStep2').style.display = 'none';
           document.getElementById('newMemberSection').style.display = '';
           loginModal.classList.add('show');
         }
