@@ -1718,14 +1718,6 @@
       color: #7c3aed;
     }
 
-    .ms-role {
-      padding: 4px 8px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px;
-      background: #fff;
-    }
-
     .ms-delete {
       background: transparent;
       border: none;
@@ -2700,7 +2692,6 @@
         '<details>' +
         '<summary>管理者権限について</summary>' +
         '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>メンバーの役職変更</li>' +
         '<li>練習予定と試合予定の作成・編集・削除</li>' +
         '<li>予定ごとの締切設定</li>' +
         '<li>メンバーの出欠確認・管理</li>' +
@@ -2775,7 +2766,7 @@
           adminName,
           adminPw,
           recoveryCode,
-          members: [{ name: adminName, role: '管理者' }],
+          members: [{ name: adminName }],
           schedule: []
         };
         try {
@@ -2812,7 +2803,7 @@
           editor: adminName,
           updatedAt: new Date().toISOString()
         }));
-        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName, role: '管理者' }]));
+        localStorage.setItem(t + 'volley-members', JSON.stringify([{ name: adminName }]));
         localStorage.setItem(t + 'volley-schedule', '[]');
         // Record to recent teams with group name
         const RECENT_KEY = 'volley-recent-teams';
@@ -3045,7 +3036,7 @@
                 err.style.display = '';
                 return;
               }
-              members.push({ name, role: 'メンバー', pin });
+              members.push({ name, pin });
               const payload = {
                 title: data?.title || '',
                 members,
@@ -3256,12 +3247,12 @@
         const members = loadMembers();
         const idx = members.findIndex(m => m && m.name === adminName);
         if (idx === -1) {
-          members.unshift({ name: adminName, role: '管理者' });
+          members.unshift({ name: adminName });
           saveMembers(members);
           return true;
         }
-        if ((members[idx].role || '') !== '管理者') {
-          members[idx].role = '管理者';
+        if (members[idx] && members[idx].role != null) {
+          delete members[idx].role;
           saveMembers(members);
           return true;
         }
@@ -3345,7 +3336,7 @@
         const raw = localStorage.getItem(STORAGE_MEMBERS);
         let arr = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
         if (arr.length > 0 && typeof arr[0] === 'string') {
-          arr = arr.map(n => ({ name: n, role: '一般' }));
+          arr = arr.map(n => ({ name: n }));
           saveMembers(arr);
         }
         return arr;
@@ -3944,7 +3935,7 @@
 
         if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
 
-        members.push({ name: name, role: 'メンバー', pin });
+        members.push({ name: name, pin });
         saveMembers(members);
 
         setLoginState('member', name);
@@ -4509,8 +4500,6 @@
       });
 
       // --- Member Settings ---
-      const ROLES = ['メンバー', '副部長', '部長'];
-
       function renderMemberSettings() {
         const admin = isAdmin();
         const members = loadMembers();
@@ -4519,47 +4508,13 @@
         const adminN = getAdminName();
         const currentUser = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
         list.innerHTML = notice + members.map((m, i) => {
-          const roleValue = ROLES.includes(m.role) ? m.role : 'メンバー';
           return '<div class="ms-item">' +
             '<span class="ms-name' + (m.name === currentUser ? ' current-user' : '') + '">' + escapeHTML(m.name) + (m.name === adminN ? ' <span class="admin-role-badge">管理者</span>' : '') + '</span>' +
-            (admin
-              ? '<select class="ms-role" data-ms-idx="' + i + '">' +
-              ROLES.map(r => '<option value="' + r + '"' + (roleValue === r ? ' selected' : '') + '>' + r + '</option>').join('') +
-              '</select>'
-              : '<span class="ms-role">' + escapeHTML(roleValue) + '</span>') +
             '' +
             '</div>';
         }).join('');
         document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
         document.getElementById('changeAdminPanel').style.display = 'none';
-        if (admin) {
-          list.querySelectorAll('.ms-role[data-ms-idx]').forEach(sel => {
-            const ms = loadMembers();
-            const idx = parseInt(sel.dataset.msIdx, 10);
-            const current = (ms[idx] && ms[idx].role) || 'メンバー';
-            sel.dataset.prevRole = current;
-            sel.addEventListener('focus', () => {
-              sel.dataset.prevRole = sel.value;
-            });
-            sel.addEventListener('change', async () => {
-              const next = sel.value;
-              const prev = sel.dataset.prevRole || current;
-              if (next === prev) return;
-              const name = (ms[idx] && ms[idx].name) || '';
-              const ok = await customConfirm('「' + name + '」の役職を「' + next + '」に変更しますか？');
-              if (!ok) {
-                sel.value = prev;
-                return;
-              }
-              ms[idx].role = next;
-              saveMembers(ms);
-              syncToServer();
-              renderMemberSettings();
-            });
-          });
-
-
-        }
       }
 
       document.getElementById('memberSettingsBtn').addEventListener('click', () => {
@@ -4609,8 +4564,7 @@
 
         const rotatedRecoveryCode = generateRecoveryCode();
         ms.forEach(m => {
-          if (m.name === oldAdmin) m.role = 'メンバー';
-          if (m.name === newAdminName) m.role = '管理者';
+          if (m && m.role != null) delete m.role;
         });
         saveMembers(ms);
         localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
@@ -4808,7 +4762,7 @@
             const next = data.members.map(sm => {
               const lm = localMap.get(sm.name) || {};
               const out = { ...lm, ...sm };
-              if (sm.role) out.role = sm.role; // server role wins
+              if (out.role != null) delete out.role;
               // Keep local pin if server omitted
               if (sm.pin == null && lm.pin != null) out.pin = lm.pin;
               return out;
