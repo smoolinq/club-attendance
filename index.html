@@ -669,6 +669,44 @@
       color: rgba(76, 29, 149, 0.6);
       white-space: nowrap;
     }
+    .recent-item-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .recent-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .recent-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.6;
+      white-space: nowrap;
+    }
+    .recent-badge-active {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+    .recent-badge-inactive {
+      background: #fff7ed;
+      color: #b45309;
+      border: 1px solid #fed7aa;
+    }
+    .recent-badge-pending {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
 
     .lobby-panel-title {
       width: 100%;
@@ -965,6 +1003,20 @@
       color: var(--absent);
       font-weight: 600;
     }
+    .context-deadline-meta {
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(124, 58, 237, 0.1);
+      color: #5b21b6;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .context-deadline-meta.warn {
+      background: rgba(220, 38, 38, 0.12);
+      color: #b91c1c;
+    }
 
     /* === Summary === */
     .summary {
@@ -991,6 +1043,27 @@
       display: flex;
       align-items: center;
       gap: 4px;
+    }
+    .summary-filter-btn {
+      margin-left: auto;
+      border: 1px solid rgba(124, 58, 237, 0.26);
+      background: #fff;
+      color: #5b21b6;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .14s ease, box-shadow .18s ease;
+    }
+    .summary-filter-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(76, 29, 149, 0.14);
+    }
+    .summary-filter-btn.active {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: #fff;
+      border-color: transparent;
     }
 
     .summary .dot {
@@ -2838,10 +2911,68 @@
           try { membersForTeam = JSON.parse(membersRaw || '[]'); } catch { membersForTeam = []; }
           const viewerName = String(t.user || '').trim();
           const me = viewerName ? membersForTeam.find(m => m && m.name === viewerName) : null;
-          const inactiveLabel = me && me.state === 'inactive' ? getInactiveCountdownLabel(me.inactivatedAt) : '';
-          left.innerHTML =
-            '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>' +
-            (inactiveLabel ? '<div style="margin-top:3px;font-size:10px;color:#b45309;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + inactiveLabel.replace(/</g, '&lt;') + '</div>' : '');
+          const activeMembersForTeam = membersForTeam.filter(m => m && m.state !== 'inactive');
+          const scheduleRaw = localStorage.getItem(t.id + ':volley-schedule');
+          const attendancePracticeRaw = localStorage.getItem(t.id + ':volley-attendance-practice');
+          const attendanceMatchRaw = localStorage.getItem(t.id + ':volley-attendance-match');
+          let schedule = [];
+          let attendancePractice = {};
+          let attendanceMatch = {};
+          try { schedule = JSON.parse(scheduleRaw || '[]'); } catch { schedule = []; }
+          try { attendancePractice = JSON.parse(attendancePracticeRaw || '{}'); } catch { attendancePractice = {}; }
+          try { attendanceMatch = JSON.parse(attendanceMatchRaw || '{}'); } catch { attendanceMatch = {}; }
+
+          const activeStatusBadge = document.createElement('span');
+          activeStatusBadge.className = 'recent-badge';
+          if (!viewerName) {
+            activeStatusBadge.classList.add('recent-badge-pending');
+            activeStatusBadge.textContent = 'ログイン情報なし';
+          } else if (me && me.state === 'inactive') {
+            activeStatusBadge.classList.add('recent-badge-inactive');
+            activeStatusBadge.textContent = getInactiveCountdownLabel(me.inactivatedAt) || '退会中';
+          } else {
+            activeStatusBadge.classList.add('recent-badge-active');
+            activeStatusBadge.textContent = '参加中';
+          }
+
+          let pendingCount = 0;
+          if (viewerName && me && me.state !== 'inactive') {
+            const today = new Date();
+            const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+            const upcoming = Array.isArray(schedule) ? schedule.filter(s => s && s.date >= todayKey) : [];
+            pendingCount = upcoming.reduce((sum, s) => {
+              const mode = s.mode === 'match' ? 'match' : 'practice';
+              const day = mode === 'match' ? attendanceMatch[s.date] : attendancePractice[s.date];
+              const status = day && viewerName ? day[viewerName] : '';
+              return (!status || status === 'none') ? sum + 1 : sum;
+            }, 0);
+          }
+
+          const titleEl = document.createElement('div');
+          titleEl.className = 'recent-item-main';
+          titleEl.innerHTML = '<span style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</span>';
+
+          const metaRow = document.createElement('div');
+          metaRow.className = 'recent-meta-row';
+          metaRow.appendChild(activeStatusBadge);
+
+          if (pendingCount > 0) {
+            const pendingBadge = document.createElement('span');
+            pendingBadge.className = 'recent-badge recent-badge-pending';
+            pendingBadge.textContent = '未回答 ' + pendingCount;
+            metaRow.appendChild(pendingBadge);
+          }
+
+          if (activeMembersForTeam.length > 0) {
+            const countBadge = document.createElement('span');
+            countBadge.className = 'recent-badge';
+            countBadge.style.cssText = 'background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe';
+            countBadge.textContent = 'メンバー ' + activeMembersForTeam.length;
+            metaRow.appendChild(countBadge);
+          }
+
+          left.appendChild(titleEl);
+          left.appendChild(metaRow);
           const time = document.createElement('div');
           time.style.cssText = 'font-size:10px;color:var(--text-light);white-space:nowrap;margin-left:8px;align-self:flex-start';
           if (t.lastVisited) {
@@ -2931,6 +3062,20 @@
         '</ul>' +
         '</details>';
       lobby.appendChild(help);
+
+      function closeLobbyHelpDetails() {
+        help.querySelectorAll('details[open]').forEach((el) => {
+          el.removeAttribute('open');
+        });
+      }
+
+      document.addEventListener('pointerdown', (e) => {
+        if (!help.isConnected) return;
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        if (help.contains(target) && target.closest('details')) return;
+        closeLobbyHelpDetails();
+      });
 
       const version = document.createElement('div');
       version.className = 'lobby-version';
@@ -3536,6 +3681,7 @@
       const STORAGE_ADMIN_NAME = _T + 'volley-admin-name';
       const STORAGE_ADMIN_RECOVERY = _T + ADMIN_RECOVERY_SUFFIX;
       const STORAGE_LOGIN_SESSION = _T + 'volley-login-session';
+      const STORAGE_MEMBER_FILTER = _T + 'volley-member-filter';
 
       function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
 
@@ -4037,22 +4183,37 @@
         const selected = new Date(dateInput.value + 'T00:00:00');
         const now = new Date();
         let dlUrgent = false;
+        let deadlineAt = null;
         if (dlEnabled) {
-          const deadlineDate = new Date(selected);
-          deadlineDate.setDate(deadlineDate.getDate() - rule.daysBefore);
-          var dlMonth = deadlineDate.getMonth() + 1;
-          var dlDay = deadlineDate.getDate();
-          render._isPastDeadline = dateInput.value < todayStr();
-          const isDeadlineToday = deadlineDate.toDateString() === now.toDateString();
-          dlUrgent = isDeadlineToday || render._isPastDeadline;
+          deadlineAt = new Date(selected);
+          deadlineAt.setDate(deadlineAt.getDate() - rule.daysBefore);
+          deadlineAt.setHours(rule.hour, 0, 0, 0);
+          var dlMonth = deadlineAt.getMonth() + 1;
+          var dlDay = deadlineAt.getDate();
+          render._isPastDeadline = now.getTime() > deadlineAt.getTime();
+          const remainMs = deadlineAt.getTime() - now.getTime();
+          dlUrgent = remainMs <= 24 * 60 * 60 * 1000 || render._isPastDeadline;
         } else {
           render._isPastDeadline = false;
         }
 
         {
           const selDate = new Date(dateInput.value + 'T00:00:00');
+          let dlMeta = '';
+          if (dlEnabled && deadlineAt) {
+            const remainMs = deadlineAt.getTime() - now.getTime();
+            if (remainMs > 0) {
+              const remainHours = Math.floor(remainMs / (60 * 60 * 1000));
+              const remainMinutes = Math.floor((remainMs % (60 * 60 * 1000)) / (60 * 1000));
+              dlMeta = remainHours >= 24
+                ? `<span class="context-deadline-meta${dlUrgent ? ' warn' : ''}">あと${Math.ceil(remainHours / 24)}日</span>`
+                : `<span class="context-deadline-meta${dlUrgent ? ' warn' : ''}">あと${remainHours}時間${remainMinutes}分</span>`;
+            } else {
+              dlMeta = '<span class="context-deadline-meta warn">締切超過</span>';
+            }
+          }
           const dlText = dlEnabled
-            ? `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>`
+            ? `<span class="context-deadline${dlUrgent ? ' urgent' : ''}">締切 ${dlMonth}/${dlDay} ${rule.hour}:00</span>${dlMeta}`
             : '<span class="context-deadline" style="opacity:0.4">締切 OFF</span>';
           contextBar.innerHTML =
             `<span class="context-date">${selDate.getMonth() + 1}/${selDate.getDate()}(${DAYS[selDate.getDay()]})</span>` +
@@ -4093,7 +4254,18 @@
           `<span><span class="dot dot-absent"></span>欠席 ${counts.absent}</span>` +
           `<span><span class="dot dot-late"></span>遅刻 ${counts.late}</span>` +
           `<span><span class="dot dot-early"></span>早退 ${counts.early}</span>` +
-          `<span><span class="dot dot-none"></span>未入力 ${counts.none}</span>`;
+          `<span><span class="dot dot-none"></span>未入力 ${counts.none}</span>` +
+          `<button type="button" class="summary-filter-btn${localStorage.getItem(STORAGE_MEMBER_FILTER) === 'none-only' ? ' active' : ''}" id="toggleNoneOnlyBtn">${localStorage.getItem(STORAGE_MEMBER_FILTER) === 'none-only' ? '全員表示' : '未入力のみ'}</button>`;
+
+        const toggleNoneOnlyBtn = document.getElementById('toggleNoneOnlyBtn');
+        if (toggleNoneOnlyBtn) {
+          toggleNoneOnlyBtn.addEventListener('click', () => {
+            const current = localStorage.getItem(STORAGE_MEMBER_FILTER) || '';
+            if (current === 'none-only') localStorage.removeItem(STORAGE_MEMBER_FILTER);
+            else localStorage.setItem(STORAGE_MEMBER_FILTER, 'none-only');
+            render();
+          });
+        }
 
         const countKey = `${counts.present},${counts.absent},${counts.late},${counts.early}`;
         if (render._prevCounts !== undefined && render._prevCounts !== countKey) {
@@ -4148,7 +4320,18 @@
         const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
         const readOnlyMsg = isPastEvent ? 'このイベントは終了しています' : 'このイベントの締切は過ぎています';
         let cardsHTML = readOnly ? `<div style="padding:10px 20px"><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:10px 16px;font-size:13px;color:#991b1b;text-align:center;font-weight:600">${readOnlyMsg}</div></div>` : '';
-        cardsHTML += members.map((m, idx) => {
+        const noneOnly = localStorage.getItem(STORAGE_MEMBER_FILTER) === 'none-only';
+        const displayMembers = noneOnly
+          ? members.filter(m => {
+            const s = dayData[m.name] || 'none';
+            return !s || s === 'none';
+          })
+          : members;
+        if (displayMembers.length === 0) {
+          cardsHTML += '<div style="padding:12px 20px"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 16px;font-size:12px;color:#1e3a8a;text-align:center;font-weight:700">未入力メンバーはいません</div></div>';
+        }
+        cardsHTML += displayMembers.map((m) => {
+          const idx = members.findIndex(x => x && x.name === m.name);
           const name = m.name;
           const isSelf = !!editorName && name === editorName;
           const isLocked = readOnly || (editorName && !isAdmin() && name !== editorName);
@@ -4166,11 +4349,12 @@
             const savedTime = dayData[name + '_time'] || '';
             if (savedTime) nameBadge = `<span class="badge-time badge-time-${current}">${STATUS_NAMES[current]} ${escapeHTML(savedTime)}</span>`;
           }
+          const canReorder = !noneOnly;
           return `
         <div class="member-card${isLocked ? ' locked' : ''}" data-locked="${isLocked ? '1' : ''}">
           <div class="reorder-btns">
-            <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="reorder-btn" data-move="${idx}" data-dir="1" ${idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="reorder-btn" data-move="${idx}" data-dir="-1" ${!canReorder || idx === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="reorder-btn" data-move="${idx}" data-dir="1" ${!canReorder || idx === members.length - 1 ? 'disabled' : ''}>&#9660;</button>
           </div>
           <span class="member-name${isSelf ? ' self-highlight' : ''}">${escapeHTML(name)}${isSelf ? '<span class="self-pill">あなた</span>' : ''}${nameBadge}</span>
           <div class="status-buttons">
