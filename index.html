@@ -2565,13 +2565,15 @@
         '<button id="modeReloginBtn" type="button" class="lobby-create-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">再ログイン</button>' +
         '<button id="modeJoinBtn" type="button" class="lobby-login-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">新規参加</button>' +
         '</div>' +
-        '<div id="reloginModeHint" style="font-size:11px;color:var(--text-light);text-align:center;margin:-2px 0 8px">未登録の名前は新規参加として登録されます</div>' +
+        '<div id="reloginModeHint" style="font-size:11px;color:var(--text-light);text-align:center;margin:-2px 0 8px">まず「再ログイン」または「新規参加」を選んでください</div>' +
+        '<div id="reloginFormArea" style="display:none">' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
         '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:6px">ログインする</button>' +
         '<button id="cancelReloginBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
+        '</div>' +
         '</div>' +
         '<div id="createTeamPanel" class="lobby-relogin-panel" style="display:none">' +
         '<div class="lobby-panel-title">新規にグループを作る</div>' +
@@ -2844,10 +2846,12 @@
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
         const hint = document.getElementById('reloginModeHint');
-        if (!panel || !reloginBtn || !joinBtn || !hint) return;
+        const form = document.getElementById('reloginFormArea');
+        if (!panel || !reloginBtn || !joinBtn || !hint || !form) return;
         const current = mode === 'relogin' ? 'relogin' : 'join';
         panel.dataset.mode = current;
         const reloginActive = current === 'relogin';
+        form.style.display = '';
         reloginBtn.className = reloginActive ? 'lobby-login-btn' : 'lobby-create-btn';
         joinBtn.className = reloginActive ? 'lobby-create-btn' : 'lobby-login-btn';
         reloginBtn.style.margin = '0';
@@ -2859,6 +2863,15 @@
         hint.textContent = reloginActive
           ? '登録済みメンバーは名前とPINで再ログインできます'
           : '未登録の名前は新規参加として登録されます';
+      }
+
+      function resetReloginSelection() {
+        const panel = document.getElementById('reloginPanel');
+        const form = document.getElementById('reloginFormArea');
+        const hint = document.getElementById('reloginModeHint');
+        if (panel) panel.dataset.mode = '';
+        if (form) form.style.display = 'none';
+        if (hint) hint.textContent = 'まず「再ログイン」または「新規参加」を選んでください';
       }
 
       document.addEventListener('click', (e) => {
@@ -2929,10 +2942,7 @@
         setLobbyActionButtons(false, false, false);
         if (createPanel) createPanel.style.display = 'none';
         if (recoverPanel) recoverPanel.style.display = 'none';
-        setReloginMode('join');
-        const idInput = document.getElementById('reloginGroupId');
-        if (!idInput.value) idInput.focus();
-        else document.getElementById('reloginName').focus();
+        resetReloginSelection();
       });
 
       document.getElementById('modeReloginBtn').addEventListener('click', () => setReloginMode('relogin'));
@@ -2943,6 +2953,7 @@
         const err = document.getElementById('reloginError');
         panel.style.display = 'none';
         setLobbyActionButtons(true, true, true);
+        resetReloginSelection();
         if (err) {
           err.textContent = '';
           err.style.display = 'none';
@@ -2962,6 +2973,8 @@
         const teamId = document.getElementById('reloginGroupId').value.trim().toLowerCase();
         const name = document.getElementById('reloginName').value.trim();
         const pin = document.getElementById('reloginPin').value.trim();
+        const mode = document.getElementById('reloginPanel')?.dataset.mode || '';
+        if (!mode) { err.textContent = '先に「再ログイン」または「新規参加」を選んでください'; err.style.display = ''; return; }
         if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
         if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
         if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
