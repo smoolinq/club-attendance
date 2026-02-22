@@ -635,17 +635,14 @@
     }
     .lobby-my-groups-title {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      align-items: baseline;
+      justify-content: flex-start;
+      gap: 10px;
       margin: 0 0 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(124, 58, 237, 0.24);
-      background:
-        linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(59, 130, 246, 0.08)),
-        rgba(255, 255, 255, 0.9);
-      box-shadow: 0 8px 20px rgba(76, 29, 149, 0.12);
+      padding: 2px 0 8px;
+      border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+      cursor: default;
+      user-select: none;
     }
     .lobby-my-groups-title-main {
       font-size: 13px;
@@ -653,11 +650,23 @@
       letter-spacing: 0.04em;
       color: #4c1d95;
       text-transform: uppercase;
+      position: relative;
+      padding-left: 10px;
+    }
+    .lobby-my-groups-title-main::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 4px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #7c3aed, #6366f1);
     }
     .lobby-my-groups-title-sub {
       font-size: 10px;
       font-weight: 700;
-      color: rgba(76, 29, 149, 0.74);
+      color: rgba(76, 29, 149, 0.6);
       white-space: nowrap;
     }
 
