@@ -1,0 +1,8 @@
+name = "team-limit-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "app_db"
+database_id = "b38cb72c-9056-43dc-9ce4-d07d7c8afa59"
