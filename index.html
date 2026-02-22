@@ -2694,8 +2694,9 @@
     const _fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
     const _isKnownTeam = isKnownTeam(_teamParam);
 
-    // Invite URL from a new device: store pending invite then return to lobby.
-    if (_teamParam && !_isKnownTeam && !_fromInviteCard) {
+    // Invite URL: always land on lobby invite card first (unless coming from the invite card itself).
+    const _isInviteLink = !!_inviteNameParam || !_isKnownTeam;
+    if (_teamParam && _isInviteLink && !_fromInviteCard) {
       const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
       const inviteName = _inviteNameParam || savedTitle || '';
       setInviteData({ id: _teamParam, name: inviteName || null, pending: true });
