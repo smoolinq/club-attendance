@@ -2499,10 +2499,20 @@
       return next;
     }
 
-    function isKnownTeam(teamId) {
-      if (!teamId) return false;
-      return getRecentTeams().some(t => t.id === teamId);
-    }
+      function isKnownTeam(teamId) {
+        if (!teamId) return false;
+        return getRecentTeams().some(t => t.id === teamId);
+      }
+
+      function getInactiveCountdownLabel(inactivatedAt) {
+        const base = Date.parse(String(inactivatedAt || ''));
+        if (!Number.isFinite(base)) return '';
+        const limit = base + 30 * 24 * 60 * 60 * 1000;
+        const remainMs = limit - Date.now();
+        if (remainMs <= 0) return '退会中（復帰期限切れ）';
+        const days = Math.ceil(remainMs / (24 * 60 * 60 * 1000));
+        return days <= 1 ? '退会中（復帰期限: 本日まで）' : `退会中（復帰期限まで あと${days}日）`;
+      }
 
     function ensureGlobalCopyrightFooter() {
       let footer = document.getElementById('globalCopyright');
@@ -2734,7 +2744,7 @@
 
       const recentSection = document.createElement('div');
       recentSection.className = 'lobby-card';
-      recentSection.innerHTML = '<div class="lobby-section-title">最近のグループ</div>';
+      recentSection.innerHTML = '<div class="lobby-section-title">マイグループ</div>';
       const recentList = document.createElement('div');
       recentList.id = 'recentList';
       recentList.style.cssText = 'display:flex;flex-direction:column;gap:6px';
@@ -2770,8 +2780,15 @@
           const left = document.createElement('div');
           left.style.cssText = 'min-width:0';
           const displayName = (t.name || localStorage.getItem(t.id + ':volley-app-title') || '').trim() || '（グループ名未設定）';
+          const membersRaw = localStorage.getItem(t.id + ':volley-members');
+          let membersForTeam = [];
+          try { membersForTeam = JSON.parse(membersRaw || '[]'); } catch { membersForTeam = []; }
+          const viewerName = String(t.user || '').trim();
+          const me = viewerName ? membersForTeam.find(m => m && m.name === viewerName) : null;
+          const inactiveLabel = me && me.state === 'inactive' ? getInactiveCountdownLabel(me.inactivatedAt) : '';
           left.innerHTML =
-            '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>';
+            '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + displayName.replace(/</g, '&lt;') + '</div>' +
+            (inactiveLabel ? '<div style="margin-top:3px;font-size:10px;color:#b45309;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + inactiveLabel.replace(/</g, '&lt;') + '</div>' : '');
           const time = document.createElement('div');
           time.style.cssText = 'font-size:10px;color:var(--text-light);white-space:nowrap;margin-left:8px;align-self:flex-start';
           if (t.lastVisited) {
@@ -3442,7 +3459,8 @@
         const prevName = existing ? existing.name : undefined;
         recent = recent.filter(t => t.id !== _teamParam);
         const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
-        recent.unshift({ id: _teamParam, name: savedTitle || prevName || undefined, lastVisited: new Date().toISOString() });
+        const currentUser = (localStorage.getItem(_teamParam + ':volley-editor') || '').trim();
+        recent.unshift({ id: _teamParam, name: savedTitle || prevName || undefined, user: currentUser || undefined, lastVisited: new Date().toISOString() });
         if (recent.length > MAX_RECENT) recent = recent.slice(0, MAX_RECENT);
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
       })();
@@ -4568,10 +4586,6 @@
         }
 
         clearLoginState();
-        try {
-          const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
-          localStorage.setItem('volley-recent-teams', JSON.stringify(rt.filter(t => t.id !== _teamParam)));
-        } catch { }
         alert('退会しました（復帰可能）。');
         location.href = location.pathname;
       });
