@@ -2583,6 +2583,7 @@
     const ADMIN_RECOVERY_SUFFIX = 'volley-admin-recovery-code';
     const API_BASE = "https://team-limit-worker.smoolinq.workers.dev";
     const CREATED_TEAMS_KEY = 'volley-created-teams';
+    const DELETED_TEAMS_KEY = 'volley-deleted-teams';
     const MAX_CREATED_TEAMS_PER_DEVICE = 5;
 
     function createSessionId() {
@@ -2601,6 +2602,9 @@
 
     function getRecentTeams() {
       try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+    }
+    function getDeletedTeams() {
+      try { return JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { return []; }
     }
     function getInviteData() {
       try {
@@ -2929,7 +2933,12 @@
       function renderRecentList() {
         let recent = getRecent();
         let changed = false;
+        const deletedTeams = new Set(getDeletedTeams());
         recent = recent.filter((t) => {
+          if (deletedTeams.has(t.id)) {
+            changed = true;
+            return false;
+          }
           const viewerName = String(t && t.user ? t.user : '').trim();
           if (!viewerName || !t || !t.id) return true;
           let membersForTeam = [];
@@ -3675,10 +3684,6 @@
       if (betaNoticeEl) betaNoticeEl.style.display = 'block';
 
       // Check if team was deleted
-      const DELETED_TEAMS_KEY = 'volley-deleted-teams';
-      function getDeletedTeams() {
-        try { return JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { return []; }
-      }
       function markTeamDeletedLocally(teamId) {
         const deleted = getDeletedTeams();
         if (!deleted.includes(teamId)) {
