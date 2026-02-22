@@ -2778,15 +2778,16 @@
               team_data: JSON.stringify(team_data)
             })
           });
-          if (!createRes.ok) {
-            errEl.textContent = 'グループ作成に失敗しました';
+          if (createRes.status === 409) {
+            errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
             errEl.style.display = '';
             return;
           }
-        } catch {
-          errEl.textContent = '通信エラーが発生しました';
-          errEl.style.display = '';
-          return;
+          if (!createRes.ok) {
+            console.warn('[createTeam] worker API returned non-OK:', createRes.status);
+          }
+        } catch (e) {
+          console.warn('[createTeam] worker API unavailable, fallback to local create', e);
         }
         // Set up localStorage for the new team
         localStorage.setItem(t + 'volley-app-title', groupName);
