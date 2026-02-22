@@ -2030,7 +2030,7 @@
     </div>
     <div class="header-none-count" id="headerNoneCount"></div>
   </header>
-  <div id="betaNotice" class="beta-notice" role="status" aria-live="polite">現在β版です。正式版では一部機能が有料になります。</div>
+  <div id="betaNotice" class="beta-notice" role="status" aria-live="polite">現在はβ版として無料公開中です。今後の仕様変更はアプリ内でご案内します。</div>
 
   <div class="picker-overlay" id="datePickerOverlay">
     <div class="picker-modal">
@@ -2753,7 +2753,7 @@
 
       const version = document.createElement('div');
       version.className = 'lobby-version';
-      version.textContent = 'Version 1.0.0';
+      version.textContent = 'β版';
       lobby.appendChild(version);
 
       document.body.appendChild(lobby);
@@ -4135,11 +4135,11 @@
       }
 
       // --- App Settings ---
-      const APP_VERSION = '1.0.0';
+      const APP_VERSION = 'β版';
       const appSettingsModal = document.getElementById('appSettingsModal');
       const deleteGroupModal = document.getElementById('deleteGroupModal');
 
-      document.getElementById('appVersionDisplay').textContent = 'Version ' + APP_VERSION;
+      document.getElementById('appVersionDisplay').textContent = APP_VERSION;
       const appCopyrightDisplay = document.getElementById('appCopyrightDisplay');
       if (appCopyrightDisplay) appCopyrightDisplay.textContent = '© 2026 smoolinq';
 

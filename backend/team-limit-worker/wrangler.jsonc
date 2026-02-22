@@ -18,13 +18,28 @@
 	"observability": {
 		"enabled": true
 	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "app_db",
-			"database_id": "b38cb72c-9056-43dc-9ce4-d07d7c8afa59"
+	"env": {
+		"dev": {
+			"name": "team-limit-worker-dev",
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "app_db_dev",
+					"database_id": "16465f10-0ac7-4956-986e-9ccd2c0521ee"
+				}
+			]
+		},
+		"prod": {
+			"name": "team-limit-worker",
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "app_db",
+					"database_id": "b38cb72c-9056-43dc-9ce4-d07d7c8afa59"
+				}
+			]
 		}
-	]
+	},
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

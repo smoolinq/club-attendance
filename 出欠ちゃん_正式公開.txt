@@ -1,0 +1,82 @@
+
+
+🌟【スキーマ変更確認】
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+git diff --name-only | grep "^db/schema.sql$" || echo "schema変更なし"
+git diff -- db/schema.sql
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+💫【スキーマ変更なし】
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git status --short
+git add -A
+git commit -m "update"
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npm test
+npx wrangler deploy --env dev
+curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+
+💫【スキーマ変更あり】
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git status --short
+git add -A
+git commit -m "update with schema"
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npm test
+npx wrangler d1 execute app_db_dev --remote --file ./db/schema.sql
+npx wrangler deploy --env dev
+curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+
+＝＝＝＝＝＝＝＝＝＝＝＝
+⚠️ここから本番への反映になるので注意！⚠️
+＝＝＝＝＝＝＝＝＝＝＝＝
+
+💫本番反映【スキーマ変更なし】
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npx wrangler deploy --env prod
+curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
+
+💫本番反映【スキーマ変更あり】
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npx wrangler d1 execute app_db --remote --file ./db/schema.sql
+npx wrangler deploy --env prod
+curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
+
+＝＝＝＝＝＝＝＝＝＝＝
+🔸説明
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+
+# 1) 変更確認
+git status
+npm test
+
+# 1.5) schema変更の有無を確認（変更がある時だけ 2) を実行）
+git diff --name-only | grep "^db/schema.sql$" || echo "schema変更なし"
+
+# 2) （DBスキーマ変更がある場合のみ）devへ適用
+npx wrangler d1 execute app_db_dev --remote --file ./db/schema.sql
+
+# 3) devへデプロイ
+npx wrangler deploy --env dev
+
+# 4) dev動作確認（例）
+curl -i https://team-limit-worker-dev.<あなたのサブドメイン>.workers.dev/api/me
+
+🔸本番反映
+# 5) 問題なければ（DBスキーマ変更がある場合のみ）prodへ適用
+npx wrangler d1 execute app_db --remote --file ./db/schema.sql
+
+# 6) prodへデプロイ
+npx wrangler deploy --env prod
+
+# 7) prod動作確認（例）
+curl -i https://team-limit-worker.<あなたのサブドメイン>.workers.dev/api/me
+
+
