@@ -37,16 +37,53 @@ curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
 
 💫本番反映【スキーマ変更なし】
 
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git status --short
+git add -A
+git commit -m "update"
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npm test
+npx wrangler deploy --env dev
+curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy
+curl -I https://club-attendance.smoolinq.workers.dev/
+
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 npx wrangler deploy --env prod
 curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
 
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git push origin main
+
+
 💫本番反映【スキーマ変更あり】
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git status --short
+git add -A
+git commit -m "update with schema"
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npm test
+npx wrangler d1 execute app_db_dev --remote --file ./db/schema.sql
+npx wrangler deploy --env dev
+curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy
+curl -I https://club-attendance.smoolinq.workers.dev/
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 npx wrangler d1 execute app_db --remote --file ./db/schema.sql
 npx wrangler deploy --env prod
 curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git push origin main
+
 
 ＝＝＝＝＝＝＝＝＝＝＝
 🔸説明
