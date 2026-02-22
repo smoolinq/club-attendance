@@ -4134,12 +4134,18 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
       const localSession = getLoginSession();
       if (!opts.ignoreSessionConflict && localSession && localSession.id) {
         const latest = await syncFromServer();
-        const serverSessionId = latest && latest.loginSession ? latest.loginSession.id : '';
+        const serverSession = latest && latest.loginSession ? latest.loginSession : null;
+        const serverSessionId = serverSession ? serverSession.id : '';
         if (serverSessionId && serverSessionId !== localSession.id) {
-          clearLoginState();
-          alert('別の端末でログインされたため、この端末はログアウトされました。');
-          location.href = location.pathname;
-          return false;
+          const sameIdentity =
+            String(serverSession.editor || '') === String(localSession.editor || '') &&
+            String(serverSession.type || '') === String(localSession.type || '');
+          if (sameIdentity) {
+            clearLoginState();
+            alert('別の端末でログインされたため、この端末はログアウトされました。');
+            location.href = location.pathname;
+            return false;
+          }
         }
       }
       const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
@@ -4212,11 +4218,16 @@ document.getElementById('recoverSubmitBtn').addEventListener('click', async () =
       const localType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
       const localSession = getLoginSession();
       if (localType && localSession && localSession.id && data.loginSession.id !== localSession.id) {
-        clearLoginState();
-        _skipNextSyncOnce = true;
-        alert('別の端末でログインされたため、この端末はログアウトされました。');
-        location.href = location.pathname;
-        return true;
+        const sameIdentity =
+          String(data.loginSession.editor || '') === String(localSession.editor || '') &&
+          String(data.loginSession.type || '') === String(localSession.type || '');
+        if (sameIdentity) {
+          clearLoginState();
+          _skipNextSyncOnce = true;
+          alert('別の端末でログインされたため、この端末はログアウトされました。');
+          location.href = location.pathname;
+          return true;
+        }
       }
     }
     // Schedule: merge, server wins for same date
