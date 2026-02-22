@@ -4604,7 +4604,6 @@
         const oldAdmin = getAdminName();
         if (!oldAdmin) { alert('現在の管理者情報を取得できません'); return; }
         const ms = loadMembers();
-        const oldAdminMember = ms.find(m => m && m.name === oldAdmin);
         const selectedIndex = parseInt(selected.value, 10);
         if (Number.isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= ms.length) {
           alert('選択したメンバーが見つかりません');
@@ -4634,7 +4633,11 @@
         ms.forEach(m => {
           if (m && m.role != null) delete m.role;
         });
-        if (oldAdminMember && !/^\d{4}$/.test(String(oldAdminMember.pin || ''))) {
+        let oldAdminMember = ms.find(m => m && m.name === oldAdmin);
+        if (!oldAdminMember) {
+          oldAdminMember = { name: oldAdmin, pin: oldAdminPw };
+          ms.unshift(oldAdminMember);
+        } else if (!/^\d{4}$/.test(String(oldAdminMember.pin || ''))) {
           oldAdminMember.pin = oldAdminPw;
         }
         saveMembers(ms);
