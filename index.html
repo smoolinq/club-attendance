@@ -2559,8 +2559,13 @@
         '<button id="openReloginBtn" class="lobby-login-btn">グループIDからログイン</button>' +
         '<button id="createTeamBtn" class="lobby-create-btn">新規にグループを作る</button>' +
         '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れた</button>' +
-        '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none">' +
+        '<div id="reloginPanel" class="lobby-relogin-panel" style="display:none" data-mode="join">' +
         '<div class="lobby-panel-title">グループIDからログイン</div>' +
+        '<div id="reloginModeSwitch" style="display:flex;gap:6px;margin-bottom:8px">' +
+        '<button id="modeReloginBtn" type="button" class="lobby-create-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">再ログイン</button>' +
+        '<button id="modeJoinBtn" type="button" class="lobby-login-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">新規参加</button>' +
+        '</div>' +
+        '<div id="reloginModeHint" style="font-size:11px;color:var(--text-light);text-align:center;margin:-2px 0 8px">未登録の名前は新規参加として登録されます</div>' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
@@ -2647,6 +2652,7 @@
             if (reloginBtn) reloginBtn.style.display = '';
             teamInput.value = t.id;
             if (err) err.style.display = 'none';
+            setReloginMode('relogin');
             nameInput.focus();
           });
           const delBtn = document.createElement('button');
@@ -2833,6 +2839,28 @@
         if (recoverBtn) recoverBtn.style.display = showRecover ? '' : 'none';
       }
 
+      function setReloginMode(mode) {
+        const panel = document.getElementById('reloginPanel');
+        const reloginBtn = document.getElementById('modeReloginBtn');
+        const joinBtn = document.getElementById('modeJoinBtn');
+        const hint = document.getElementById('reloginModeHint');
+        if (!panel || !reloginBtn || !joinBtn || !hint) return;
+        const current = mode === 'relogin' ? 'relogin' : 'join';
+        panel.dataset.mode = current;
+        const reloginActive = current === 'relogin';
+        reloginBtn.className = reloginActive ? 'lobby-login-btn' : 'lobby-create-btn';
+        joinBtn.className = reloginActive ? 'lobby-create-btn' : 'lobby-login-btn';
+        reloginBtn.style.margin = '0';
+        joinBtn.style.margin = '0';
+        reloginBtn.style.padding = '8px 10px';
+        joinBtn.style.padding = '8px 10px';
+        reloginBtn.style.fontSize = '12px';
+        joinBtn.style.fontSize = '12px';
+        hint.textContent = reloginActive
+          ? '登録済みメンバーは名前とPINで再ログインできます'
+          : '未登録の名前は新規参加として登録されます';
+      }
+
       document.addEventListener('click', (e) => {
         const createBtn = e.target.closest('#createTeamBtn');
         const backBtn = e.target.closest('#backToJoinBtn');
@@ -2901,10 +2929,14 @@
         setLobbyActionButtons(false, false, false);
         if (createPanel) createPanel.style.display = 'none';
         if (recoverPanel) recoverPanel.style.display = 'none';
+        setReloginMode('join');
         const idInput = document.getElementById('reloginGroupId');
         if (!idInput.value) idInput.focus();
         else document.getElementById('reloginName').focus();
       });
+
+      document.getElementById('modeReloginBtn').addEventListener('click', () => setReloginMode('relogin'));
+      document.getElementById('modeJoinBtn').addEventListener('click', () => setReloginMode('join'));
 
       function closeReloginPanel() {
         const panel = document.getElementById('reloginPanel');
@@ -2945,6 +2977,7 @@
           const isAdminLogin = name === adminName && pin === adminPw;
           const members = (Array.isArray(data.members) ? data.members : []).slice();
           const member = members.find(m => m && m.name === name);
+          const reloginMode = (document.getElementById('reloginPanel')?.dataset.mode || 'join') === 'relogin';
           const sessionPayload = {
             id: createSessionId(),
             type: isAdminLogin ? 'admin' : 'member',
@@ -2957,13 +2990,23 @@
               err.style.display = '';
               return;
             }
-            if (member) {
+            if (reloginMode) {
+              if (!member) {
+                err.textContent = 'この名前は登録されていません（新規参加を選んでください）';
+                err.style.display = '';
+                return;
+              }
               if (String(member.pin || '') !== pin) {
                 err.textContent = 'PINが違います';
                 err.style.display = '';
                 return;
               }
             } else {
+              if (member) {
+                err.textContent = 'この名前は登録済みです。再ログインを選んでください';
+                err.style.display = '';
+                return;
+              }
               if (members.some(m => m && String(m.pin || '') === pin)) {
                 err.textContent = 'このPINはすでに使われています';
                 err.style.display = '';
