@@ -2565,7 +2565,7 @@
         '<button id="modeReloginBtn" type="button" class="lobby-create-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">再ログイン</button>' +
         '<button id="modeJoinBtn" type="button" class="lobby-login-btn" style="flex:1;margin:0;padding:8px 10px;font-size:12px">新規参加</button>' +
         '</div>' +
-        '<div id="reloginModeHint" style="font-size:11px;color:var(--text-light);text-align:center;margin:-2px 0 8px">まず「再ログイン」または「新規参加」を選んでください</div>' +
+        '' +
         '<div id="reloginFormArea" style="display:none">' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
         '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
@@ -2845,13 +2845,14 @@
         const panel = document.getElementById('reloginPanel');
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
-        const hint = document.getElementById('reloginModeHint');
         const form = document.getElementById('reloginFormArea');
-        if (!panel || !reloginBtn || !joinBtn || !hint || !form) return;
+        if (!panel || !reloginBtn || !joinBtn || !form) return;
         const current = mode === 'relogin' ? 'relogin' : 'join';
         panel.dataset.mode = current;
         const reloginActive = current === 'relogin';
         form.style.display = '';
+        reloginBtn.style.display = reloginActive ? '' : 'none';
+        joinBtn.style.display = reloginActive ? 'none' : '';
         reloginBtn.className = reloginActive ? 'lobby-login-btn' : 'lobby-create-btn';
         joinBtn.className = reloginActive ? 'lobby-create-btn' : 'lobby-login-btn';
         reloginBtn.style.margin = '0';
@@ -2860,18 +2861,17 @@
         joinBtn.style.padding = '8px 10px';
         reloginBtn.style.fontSize = '12px';
         joinBtn.style.fontSize = '12px';
-        hint.textContent = reloginActive
-          ? '登録済みメンバーは名前とPINで再ログインできます'
-          : '未登録の名前は新規参加として登録されます';
       }
 
       function resetReloginSelection() {
         const panel = document.getElementById('reloginPanel');
         const form = document.getElementById('reloginFormArea');
-        const hint = document.getElementById('reloginModeHint');
+        const reloginBtn = document.getElementById('modeReloginBtn');
+        const joinBtn = document.getElementById('modeJoinBtn');
         if (panel) panel.dataset.mode = '';
         if (form) form.style.display = 'none';
-        if (hint) hint.textContent = 'まず「再ログイン」または「新規参加」を選んでください';
+        if (reloginBtn) reloginBtn.style.display = '';
+        if (joinBtn) joinBtn.style.display = '';
       }
 
       document.addEventListener('click', (e) => {
