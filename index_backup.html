@@ -4244,8 +4244,7 @@
           deleteSyncFailed = true;
         }
         if (deleteSyncFailed) {
-          const proceed = await customConfirm('削除連携APIに失敗しました。\n本体サーバーで削除同期を続行しますか？');
-          if (!proceed) return;
+          console.warn('[deleteGroup] helper delete API failed. fallback to SYNC_API delete tombstone');
         }
         const serverDeletePayload = {
           deleted: true,
