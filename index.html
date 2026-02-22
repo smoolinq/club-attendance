@@ -4562,6 +4562,13 @@
         const ok = await customConfirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は失われます。\n管理者PINは「' + newAdminName + '」さんのPIN（4桁）に切り替わります。\n復旧コードは再発行されます。\n\nよろしいですか？');
         if (!ok) return;
 
+        const prevMembers = ms.map(m => ({ ...m }));
+        const prevAdminName = localStorage.getItem(STORAGE_ADMIN_NAME) || '';
+        const prevAdminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '';
+        const prevRecovery = localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '';
+        const prevLoginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+        const prevEditor = localStorage.getItem(STORAGE_EDITOR) || '';
+        const prevSession = localStorage.getItem(STORAGE_LOGIN_SESSION) || '';
         const rotatedRecoveryCode = generateRecoveryCode();
         ms.forEach(m => {
           if (m && m.role != null) delete m.role;
@@ -4577,7 +4584,16 @@
         render();
         const synced = await syncToServer();
         if (!synced) {
-          alert('管理者変更はローカルに保存しましたが、サーバー同期に失敗しました。通信状態を確認して再読み込みしてください。');
+          saveMembers(prevMembers);
+          localStorage.setItem(STORAGE_ADMIN_NAME, prevAdminName);
+          localStorage.setItem(STORAGE_ADMIN_PW, prevAdminPw);
+          localStorage.setItem(STORAGE_ADMIN_RECOVERY, prevRecovery);
+          if (prevLoginType) localStorage.setItem(STORAGE_LOGIN_TYPE, prevLoginType); else localStorage.removeItem(STORAGE_LOGIN_TYPE);
+          if (prevEditor) localStorage.setItem(STORAGE_EDITOR, prevEditor); else localStorage.removeItem(STORAGE_EDITOR);
+          if (prevSession) localStorage.setItem(STORAGE_LOGIN_SESSION, prevSession); else localStorage.removeItem(STORAGE_LOGIN_SESSION);
+          updateLoginStatus();
+          render();
+          alert('管理者変更の同期に失敗したため、変更を元に戻しました。通信状態を確認して再度お試しください。');
           return;
         }
         await showTransferRecoveryCodeModal(rotatedRecoveryCode, newAdminName);
