@@ -2690,7 +2690,7 @@
         '<details>' +
         '<summary>管理者権限について</summary>' +
         '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>メンバーの役職変更・削除</li>' +
+        '<li>メンバーの役職変更</li>' +
         '<li>練習予定と試合予定の作成・編集・削除</li>' +
         '<li>予定ごとの締切設定</li>' +
         '<li>メンバーの出欠確認・管理</li>' +
@@ -3415,7 +3415,7 @@
         }
 
         const monthNum = parseInt(monthPrefix.split('-')[1]);
-        let html = `<div class="schedule-title">${monthNum}月の予定<button class="schedule-edit-btn" id="scheduleEditBtn"><span class="schedule-edit-icon">📅</span><span>編集</span></button></div>`;
+        let html = `<div class="schedule-title">${monthNum}月の予定<button class="schedule-edit-btn" id="scheduleEditBtn"><span class="schedule-edit-icon">📅</span></button></div>`;
 
         if (practiceItems.length > 0) {
           html += `<div class="schedule-row"><span class="schedule-label schedule-label-practice">練習</span>${practiceItems.map(chipHTML).join('')}</div>`;
@@ -3474,7 +3474,7 @@
               '<div class="empty-state-card">' +
               '<div class="empty-state-icon">📅</div>' +
               '<div class="empty-state-title">予定はまだありません</div>' +
-              '<button type="button" id="emptyStateAddBtn" class="empty-state-hint">予定を編集</button>' +
+              '<button type="button" id="emptyStateAddBtn" class="empty-state-hint">予定を確認する</button>' +
               '</div>' +
               '</div>';
             const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
@@ -4412,7 +4412,7 @@
               ROLES.map(r => '<option value="' + r + '"' + (roleValue === r ? ' selected' : '') + '>' + r + '</option>').join('') +
               '</select>'
               : '<span class="ms-role">' + escapeHTML(roleValue) + '</span>') +
-            (admin && m.name !== adminN ? '<button class="ms-delete" data-ms-delete="' + i + '" title="削除">×</button>' : '') +
+            '' +
             '</div>';
         }).join('');
         document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
@@ -4444,18 +4444,6 @@
           });
 
 
-          list.querySelectorAll('.ms-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const ms = loadMembers();
-              const idx = parseInt(btn.dataset.msDelete);
-              if (confirm(`「${ms[idx].name}」を削除しますか？`)) {
-                ms.splice(idx, 1);
-                saveMembers(ms);
-                syncToServer();
-                renderMemberSettings();
-              }
-            });
-          });
         }
       }
 
