@@ -2418,10 +2418,10 @@
   <div class="modal-overlay" id="appSettingsModal">
     <div class="modal" style="max-width:340px">
       <h2 style="margin-bottom:12px">設定</h2>
-      <div style="text-align:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:12px">
-        <div style="font-size:13px;color:var(--text-light)">バージョン</div>
+      <div id="appSettingsVersionBlock" style="text-align:center;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:12px">
         <div id="appVersionDisplay" style="font-size:15px;font-weight:700;color:var(--text);margin-top:2px"></div>
         <div id="appCopyrightDisplay" style="font-size:11px;color:var(--text-light);margin-top:6px"></div>
+        <div id="appSettingsUpdatesWrap" style="margin-top:6px"></div>
       </div>
       <div style="text-align:center;margin-bottom:16px;padding:12px;background:#f8f7ff;border:1px solid rgba(124,58,237,0.2);border-radius:12px">
         <div style="font-size:12px;color:var(--text-light)">あなたのPIN</div>
@@ -2584,7 +2584,7 @@
     const API_BASE = "https://team-limit-worker.smoolinq.workers.dev";
     const CREATED_TEAMS_KEY = 'volley-created-teams';
     const DELETED_TEAMS_KEY = 'volley-deleted-teams';
-    const MAX_CREATED_TEAMS_PER_DEVICE = 5;
+    const MAX_CREATED_TEAMS_PER_DEVICE = 3;
 
     function createSessionId() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -2715,34 +2715,35 @@
       }
       modal.style.display = 'flex';
     }
-    function ensureUpdatesLinkFooter() {
-      const linkId = "updatesHistoryLink";
-      if (document.getElementById(linkId)) return;
+    function ensureUpdatesLinks() {
+      const makeLink = (id, style) => {
+        const link = document.createElement("a");
+        link.id = id;
+        link.href = "#updates";
+        link.textContent = "更新履歴";
+        link.style.cssText = style;
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          openUpdatesModal();
+        });
+        return link;
+      };
 
-      const existingFooter = document.querySelector("footer");
-      const link = document.createElement("a");
-      link.id = linkId;
-      link.href = "#updates";
-      link.textContent = "更新履歴";
-      link.style.cssText = "font-size:12px;color:var(--text-light);text-decoration:underline;opacity:0.86;";
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        openUpdatesModal();
-      });
+      const oldFooter = document.getElementById('updatesFooter');
+      if (oldFooter) oldFooter.remove();
 
-      if (existingFooter) {
-        const wrap = document.createElement("div");
-        wrap.style.cssText = "text-align:center;margin-top:6px;";
-        wrap.appendChild(link);
-        existingFooter.appendChild(wrap);
-        return;
+      const lobbyVersion = document.querySelector('.lobby-version');
+      if (lobbyVersion && !document.getElementById('updatesHistoryLinkLobby')) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'margin-top:4px';
+        wrap.appendChild(makeLink('updatesHistoryLinkLobby', 'font-size:11px;color:var(--text-light);text-decoration:underline;opacity:0.88;pointer-events:auto;'));
+        lobbyVersion.appendChild(wrap);
       }
 
-      const minimal = document.createElement("div");
-      minimal.id = "updatesFooter";
-      minimal.style.cssText = "text-align:center;font-size:12px;margin:8px auto 10px;opacity:0.86;";
-      minimal.appendChild(link);
-      document.body.appendChild(minimal);
+      const settingsWrap = document.getElementById('appSettingsUpdatesWrap');
+      if (settingsWrap && !document.getElementById('updatesHistoryLinkSettings')) {
+        settingsWrap.appendChild(makeLink('updatesHistoryLinkSettings', 'font-size:12px;color:var(--text-light);text-decoration:underline;opacity:0.9;'));
+      }
     }
 
     const _fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
@@ -2932,6 +2933,7 @@
         '<input id="lobbyGroupName" type="text" maxlength="18" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
         '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
         '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理者PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
+        '<div id="lobbyCreateLimitHint" style="font-size:12px;color:var(--text-light);padding:4px 4px 0;text-align:center"></div>' +
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
         '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px">作成する</button>' +
         '<button id="backToJoinBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
@@ -3202,7 +3204,7 @@
       lobby.appendChild(version);
 
       document.body.appendChild(lobby);
-      ensureUpdatesLinkFooter();
+      ensureUpdatesLinks();
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(false);
 
@@ -3213,6 +3215,17 @@
         for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
         return id;
       }
+
+      function renderCreateLimitHint() {
+        const hint = document.getElementById('lobbyCreateLimitHint');
+        if (!hint) return;
+        const createdTeams = pruneCreatedTeams();
+        const remain = Math.max(0, MAX_CREATED_TEAMS_PER_DEVICE - createdTeams.length);
+        hint.textContent = remain > 0
+          ? 'あと' + remain + 'つ作成できます'
+          : 'この端末の作成上限に達しています';
+      }
+      renderCreateLimitHint();
 
 
 
@@ -3232,6 +3245,7 @@
         if (createdTeams.length >= MAX_CREATED_TEAMS_PER_DEVICE) {
           errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
           errEl.style.display = '';
+          renderCreateLimitHint();
           return;
         }
         if (!(await lobbyConfirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\nパスワード: ' + adminPw + '\n\nよろしいですか？'))) return;
@@ -3261,6 +3275,7 @@
           if (createRes.status === 409) {
             errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
             errEl.style.display = '';
+            renderCreateLimitHint();
             return;
           }
           if (!createRes.ok) {
@@ -3290,6 +3305,7 @@
         recent.unshift({ id: teamId, name: groupName, user: adminName, lastVisited: new Date().toISOString() });
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
         setCreatedTeams([teamId, ...createdTeams]);
+        renderCreateLimitHint();
         await showRecoveryCodeModal(recoveryCode);
         location.href = '?team=' + encodeURIComponent(teamId);
       });
@@ -3726,7 +3742,7 @@
       document.body.classList.remove('lobby-mode');
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(true);
-      ensureUpdatesLinkFooter();
+      ensureUpdatesLinks();
       const betaNoticeEl = document.getElementById('betaNotice');
       if (betaNoticeEl) betaNoticeEl.style.display = 'block';
 
@@ -4783,13 +4799,14 @@
       }
 
       // --- App Settings ---
-      const APP_VERSION = 'β版';
+      const APP_VERSION = 'Ver.β版';
       const appSettingsModal = document.getElementById('appSettingsModal');
       const deleteGroupModal = document.getElementById('deleteGroupModal');
 
       document.getElementById('appVersionDisplay').textContent = APP_VERSION;
       const appCopyrightDisplay = document.getElementById('appCopyrightDisplay');
       if (appCopyrightDisplay) appCopyrightDisplay.textContent = '© 2026 smoolinq';
+      ensureUpdatesLinks();
 
       function getCurrentUserPinForSettings() {
         const type = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
