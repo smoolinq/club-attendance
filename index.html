@@ -869,7 +869,14 @@
       letter-spacing: 0.02em;
       pointer-events: none;
       z-index: 30;
-      white-space: nowrap;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.35;
+    }
+    .global-copyright-sub {
+      display: block;
+      font-size: 10px;
+      opacity: 0.92;
     }
 
     .overlay-copyright {
@@ -882,7 +889,14 @@
       opacity: 0.7;
       letter-spacing: 0.02em;
       pointer-events: none;
-      white-space: nowrap;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.35;
+    }
+    .overlay-copyright-sub {
+      display: block;
+      font-size: 10px;
+      opacity: 0.92;
     }
 
     body.lobby-mode .lobby-version {
@@ -2488,7 +2502,7 @@
         </div>
       </div>
     </div>
-    <div class="overlay-copyright">© 2026 smoolinq</div>
+    <div class="overlay-copyright">β版<br><span class="overlay-copyright-sub">© 2026 smoolinq</span></div>
   </div>
 
   <div class="modal-overlay" id="customConfirmOverlay" style="z-index:3000">
@@ -2569,7 +2583,7 @@
         style="display:block;width:100%;padding:10px 14px;border:none;background:none;text-align:left;font-size:14px;border-radius:10px;cursor:pointer;color:var(--absent)">🗑
         削除</button>
     </div>
-    <div class="overlay-copyright">© 2026 smoolinq</div>
+    <div class="overlay-copyright">β版<br><span class="overlay-copyright-sub">© 2026 smoolinq</span></div>
   </div>
 
   <script>
@@ -2679,8 +2693,21 @@
         return days <= 1 ? '退会中（復帰期限: 本日まで）' : `退会中（復帰期限まで あと${days}日）`;
       }
 
-    function ensureGlobalCopyrightFooter() {}
-    function setGlobalCopyrightVisible() {}
+    function ensureGlobalCopyrightFooter() {
+      let footer = document.getElementById('globalCopyright');
+      if (!footer) {
+        footer = document.createElement('div');
+        footer.id = 'globalCopyright';
+        footer.className = 'global-copyright';
+        document.body.appendChild(footer);
+      }
+      footer.innerHTML = 'β版<br><span class="global-copyright-sub">© 2026 smoolinq</span>';
+    }
+    function setGlobalCopyrightVisible(visible) {
+      const footer = document.getElementById('globalCopyright');
+      if (!footer) return;
+      footer.style.display = visible ? '' : 'none';
+    }
     function openUpdatesModal() {
       let modal = document.getElementById('updatesModal');
       if (!modal) {
@@ -5344,12 +5371,15 @@
             '</div>';
         }).join('');
 
+        const inactiveSection = inactive.length > 0
+          ? '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中（復帰可能）</div>' + inactiveHtml
+          : '';
+
         list.innerHTML =
           notice +
           '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:6px 0 4px">参加中メンバー</div>' +
           (activeHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">参加中メンバーはいません</div>') +
-          '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中（復帰可能）</div>' +
-          (inactiveHtml || '<div style="padding:6px 0;font-size:12px;color:var(--text-light)">現在、復帰待ちメンバーはいません</div>');
+          inactiveSection;
         document.getElementById('changeAdminBtn').style.display = admin ? 'block' : 'none';
         document.getElementById('changeAdminPanel').style.display = 'none';
       }
