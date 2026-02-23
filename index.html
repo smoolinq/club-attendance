@@ -2693,7 +2693,17 @@
           '<strong style="font-size:14px;color:#1f2937;">更新履歴</strong>' +
           '<button id="updatesModalClose" type="button" style="border:none;background:#eef2ff;color:#4338ca;font-weight:700;border-radius:10px;padding:5px 10px;cursor:pointer;">閉じる</button>' +
           '</div>' +
-          '<iframe src="/updates.html" title="更新履歴" style="width:100%;height:min(76dvh,760px);border:0;background:#fff;"></iframe>' +
+          '<div style="padding:14px 16px 16px;overflow:auto;line-height:1.7;color:#111;">' +
+          '<h2 style="margin:0 0 8px;font-size:20px;line-height:1.4;">2026-02-23 🔐 セキュリティアップデート（β）</h2>' +
+          '<ul style="margin:0 0 10px 18px;padding:0;font-size:14px;">' +
+          '<li>保存APIの直接アクセスを無効化</li>' +
+          '<li>フロント経由の代理保存方式へ変更</li>' +
+          '<li>書き込みAPIに認証トークンを導入</li>' +
+          '<li>機密情報（adminPw / recoveryCode / pin）をGETレスポンスから除外</li>' +
+          '<li>外部サイトからの不正アクセスを防止（CORS制限）</li>' +
+          '</ul>' +
+          '<p style="margin:0;font-size:13px;color:#4b5563;">※ユーザー操作への影響はありません。</p>' +
+          '</div>' +
           '</div>';
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => {
@@ -2719,15 +2729,6 @@
         e.preventDefault();
         openUpdatesModal();
       });
-
-      const lobbyVersion = document.querySelector('.lobby-version');
-      if (lobbyVersion) {
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'margin-top:4px;';
-        wrap.appendChild(link);
-        lobbyVersion.appendChild(wrap);
-        return;
-      }
 
       if (existingFooter) {
         const wrap = document.createElement("div");
