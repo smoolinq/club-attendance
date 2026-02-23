@@ -2596,6 +2596,7 @@
     const INVITE_KEY = 'volley-invite-link';
     const ADMIN_RECOVERY_SUFFIX = 'volley-admin-recovery-code';
     const API_BASE = "https://team-limit-worker.smoolinq.workers.dev";
+    const SYNC_API = '/api/sync';
     const CREATED_TEAMS_KEY = 'volley-created-teams';
     const DELETED_TEAMS_KEY = 'volley-deleted-teams';
     const MAX_CREATED_TEAMS_PER_DEVICE = 3;
@@ -2916,7 +2917,7 @@
         if (!inviteData.name) {
           (async () => {
             try {
-              const res = await fetch('https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(inviteData.id));
+              const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(inviteData.id));
               if (!res.ok) return;
               const data = await res.json();
               const fetchedName = typeof data?.title === 'string' ? data.title.trim() : '';
@@ -3538,7 +3539,7 @@
         }
         err.style.display = 'none';
         try {
-          const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+          const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
           const res = await fetch(api);
           if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
           const data = await res.json();
@@ -3655,7 +3656,7 @@
         if (!/^\d{4}$/.test(newPin)) { err.textContent = '新しい管理者PINは4桁の数字で入力してください'; err.style.display = ''; return; }
         err.style.display = 'none';
         try {
-          const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+          const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
           const res = await fetch(api);
           if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
           const data = await res.json();
@@ -3723,7 +3724,7 @@
         err.style.display = 'none';
         if (resEl) resEl.style.display = 'none';
         try {
-          const api = 'https://club-attendance-api.smoolinq.workers.dev/?team=' + encodeURIComponent(teamId);
+          const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
           const r = await fetch(api);
           if (!r.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
           const data = await r.json();
@@ -5651,7 +5652,6 @@
       });
 
       // --- Server Sync ---
-      const SYNC_API = 'https://club-attendance-api.smoolinq.workers.dev/';
 
       function buildSyncData() {
         return {
