@@ -1,5 +1,7 @@
 {
   "name": "club-attendance",
   "compatibility_date": "2026-02-17",
+  "main": "worker.js",
+  // WRITE_TOKEN is a secret (set with: wrangler secret put WRITE_TOKEN)
   "assets": { "directory": "." }
 }
