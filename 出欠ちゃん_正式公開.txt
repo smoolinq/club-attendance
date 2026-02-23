@@ -87,7 +87,7 @@ https://club-attendance-test.smoolinq.workers.dev
 
 💫本番反映【スキーマ変更なし】
 
-ccd /Volumes/CrucialX9/projects/mama-volley-attendance
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
 git add -A
 git diff --cached --name-only
@@ -116,9 +116,9 @@ git push origin main
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
-git add index.html index_backup.html backend/team-limit-worker/src/index.ts backend/team-limit-worker/test/index.spec.ts backend/team-limit-worker/wrangler.jsonc backend/team-limit-worker/db/schema.sql
+git add -A
 git diff --cached --name-only
-git commit -m "update with schema"
+git commit -m "update"
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 npm test
@@ -137,6 +137,7 @@ curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git push origin main
+
 
 
 
