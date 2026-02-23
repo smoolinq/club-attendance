@@ -1,21 +1,21 @@
 export interface Env {
 	DB: D1Database;
+	COOKIE_HMAC_SECRET?: string;
+	WRITE_TOKEN?: string;
 }
 
 const COOKIE_NAME = "creator_id";
 const LIMIT = 5;
 
-const ALLOWED_ORIGINS = new Set([
-	"http://localhost:5500",
-]);
+const ALLOWED_ORIGIN = "https://club-attendance.smoolinq.workers.dev";
 
 function corsHeaders(req: Request): HeadersInit {
 	const origin = req.headers.get("Origin") || "";
-	if (ALLOWED_ORIGINS.has(origin)) {
+	if (origin === ALLOWED_ORIGIN) {
 		return {
 			"Access-Control-Allow-Origin": origin,
 			"Access-Control-Allow-Credentials": "true",
-			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Headers": "Content-Type, Authorization",
 			"Access-Control-Allow-Methods": "GET,POST,OPTIONS",
 			"Vary": "Origin",
 		};
@@ -43,10 +43,49 @@ function parseCookie(req: Request, name: string): string | null {
 	return null;
 }
 
-function setCookieHeaders(creatorId: string): HeadersInit {
+function toBase64Url(buf: ArrayBuffer): string {
+	const bytes = new Uint8Array(buf);
+	let str = "";
+	for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+	return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) return false;
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) {
+		diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return diff === 0;
+}
+
+async function signCreatorId(creatorId: string, secret: string): Promise<string> {
+	const key = await crypto.subtle.importKey(
+		"raw",
+		new TextEncoder().encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"]
+	);
+	const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(creatorId));
+	return toBase64Url(sig);
+}
+
+async function verifySignedCreatorId(raw: string, secret: string): Promise<string | null> {
+	const dot = raw.lastIndexOf(".");
+	if (dot <= 0 || dot === raw.length - 1) return null;
+	const creatorId = raw.slice(0, dot);
+	const sig = raw.slice(dot + 1);
+	if (!/^[0-9a-fA-F-]{36}$/.test(creatorId)) return null;
+	const expected = await signCreatorId(creatorId, secret);
+	if (!timingSafeEqual(sig, expected)) return null;
+	return creatorId;
+}
+
+function setCookieHeaders(signedCreatorId: string): HeadersInit {
 	const maxAge = 60 * 60 * 24 * 365;
 	const v = [
-		`${COOKIE_NAME}=${encodeURIComponent(creatorId)}`,
+		`${COOKIE_NAME}=${encodeURIComponent(signedCreatorId)}`,
 		`Max-Age=${maxAge}`,
 		"Path=/",
 		"HttpOnly",
@@ -56,11 +95,19 @@ function setCookieHeaders(creatorId: string): HeadersInit {
 	return { "Set-Cookie": v };
 }
 
-async function getOrIssueCreatorId(req: Request): Promise<{ creatorId: string; setCookie?: HeadersInit }> {
+async function getOrIssueCreatorId(req: Request, env: Env): Promise<{ creatorId: string; setCookie?: HeadersInit }> {
+	const secret = (env.COOKIE_HMAC_SECRET || "").trim();
+	if (!secret) {
+		throw new Error("COOKIE_HMAC_SECRET is required");
+	}
 	const existing = parseCookie(req, COOKIE_NAME);
-	if (existing) return { creatorId: existing };
+	if (existing && secret) {
+		const verified = await verifySignedCreatorId(existing, secret);
+		if (verified) return { creatorId: verified };
+	}
 	const creatorId = crypto.randomUUID();
-	return { creatorId, setCookie: setCookieHeaders(creatorId) };
+	const signed = `${creatorId}.${await signCreatorId(creatorId, secret)}`;
+	return { creatorId, setCookie: setCookieHeaders(signed) };
 }
 
 async function readJson(req: Request) {
@@ -73,22 +120,42 @@ async function readJson(req: Request) {
 	}
 }
 
+function hasValidWriteToken(req: Request, env: Env): boolean {
+	const expected = (env.WRITE_TOKEN || "").trim();
+	if (!expected) return false;
+	const auth = req.headers.get("Authorization") || "";
+	if (!auth.startsWith("Bearer ")) return false;
+	const token = auth.slice("Bearer ".length).trim();
+	return timingSafeEqual(token, expected);
+}
+
 export default {
 	async fetch(req: Request, env: Env): Promise<Response> {
 		const url = new URL(req.url);
+		const origin = req.headers.get("Origin");
+		const hasOrigin = typeof origin === "string" && origin.length > 0;
+		const originAllowed = !hasOrigin || origin === ALLOWED_ORIGIN;
+
+		if (!originAllowed) {
+			return json(req, { error: "CORS_FORBIDDEN" }, 403);
+		}
 
 		// CORS preflight
 		if (req.method === "OPTIONS") {
 			return new Response(null, { status: 204, headers: corsHeaders(req) });
 		}
 
+		if (req.method === "POST" && !hasValidWriteToken(req, env)) {
+			return json(req, { error: "UNAUTHORIZED" }, 401);
+		}
+
 		if (url.pathname === "/api/me" && req.method === "GET") {
-			const { creatorId, setCookie } = await getOrIssueCreatorId(req);
+			const { creatorId, setCookie } = await getOrIssueCreatorId(req, env);
 			return json(req, { creator_id: creatorId }, 200, setCookie || {});
 		}
 
 		if (url.pathname === "/api/team/create" && req.method === "POST") {
-			const { creatorId, setCookie } = await getOrIssueCreatorId(req);
+			const { creatorId, setCookie } = await getOrIssueCreatorId(req, env);
 
 			const body = await readJson(req);
 			const teamData = body?.team_data;
@@ -137,7 +204,7 @@ export default {
 		}
 
 		if (url.pathname === "/api/team/delete" && req.method === "POST") {
-			const { creatorId, setCookie } = await getOrIssueCreatorId(req);
+			const { creatorId, setCookie } = await getOrIssueCreatorId(req, env);
 
 			const body = await readJson(req);
 			const teamId = body?.team_id;

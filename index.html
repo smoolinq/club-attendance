@@ -2694,6 +2694,31 @@
       if (!footer) return;
       footer.style.display = visible ? '' : 'none';
     }
+    function ensureUpdatesLinkFooter() {
+      const linkId = "updatesHistoryLink";
+      if (document.getElementById(linkId)) return;
+
+      const existingFooter = document.querySelector("footer");
+      const link = document.createElement("a");
+      link.id = linkId;
+      link.href = "/updates.html";
+      link.textContent = "更新履歴";
+      link.style.cssText = "font-size:12px;color:var(--text-light);text-decoration:underline;opacity:0.86;";
+
+      if (existingFooter) {
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "text-align:center;margin-top:6px;";
+        wrap.appendChild(link);
+        existingFooter.appendChild(wrap);
+        return;
+      }
+
+      const minimal = document.createElement("div");
+      minimal.id = "updatesFooter";
+      minimal.style.cssText = "text-align:center;font-size:12px;padding:8px 0 12px;opacity:0.86;";
+      minimal.appendChild(link);
+      document.body.appendChild(minimal);
+    }
 
     const _fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
     const _isKnownTeam = isKnownTeam(_teamParam);
@@ -3152,6 +3177,7 @@
       lobby.appendChild(version);
 
       document.body.appendChild(lobby);
+      ensureUpdatesLinkFooter();
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(false);
 
@@ -3675,6 +3701,7 @@
       document.body.classList.remove('lobby-mode');
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(true);
+      ensureUpdatesLinkFooter();
       const betaNoticeEl = document.getElementById('betaNotice');
       if (betaNoticeEl) betaNoticeEl.style.display = 'block';
 
