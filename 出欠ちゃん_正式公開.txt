@@ -1,34 +1,84 @@
+⭐️1 開発環境（dev）デプロイ
 
-
-🌟【スキーマ変更確認】
+🔸【スキーマ変更確認】
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 git diff --name-only | grep "^db/schema.sql$" || echo "schema変更なし"
 git diff -- db/schema.sql
 
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+CMJOQY62DxihHIWZE9PCBLJ5KSxpnDyMHHhC0WkthkcCGM4w2Dh+MH+SkckQQuJn
+
 
 💫【スキーマ変更なし】
+
 cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
-git add -A
+git add index.html index_backup.html updates.html worker.js wrangler.jsonc backend/team-limit-worker/src/index.ts backend/team-limit-worker/test/index.spec.ts backend/team-limit-worker/vitest.config.mts backend/team-limit-worker/wrangler.jsonc
+git diff --cached --name-only
 git commit -m "update"
+
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 npm test
 npx wrangler deploy --env dev
 curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy --name club-attendance-test --compatibility-date 2026-02-17 --assets .
+curl -I https://club-attendance-test.smoolinq.workers.dev/
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy
+curl -I https://club-attendance.smoolinq.workers.dev/
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npx wrangler deploy --env prod
+curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git push origin main
+
 
 
 💫【スキーマ変更あり】
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
-git add -A
-git commit -m "update with schema"
+git add index.html index_backup.html updates.html worker.js wrangler.jsonc backend/team-limit-worker/src/index.ts backend/team-limit-worker/test/index.spec.ts backend/team-limit-worker/vitest.config.mts backend/team-limit-worker/wrangler.jsonc backend/team-limit-worker/db/schema.sql
+git diff --cached --name-only
+git commit -m "update"
+
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
 npm test
 npx wrangler d1 execute app_db_dev --remote --file ./db/schema.sql
 npx wrangler deploy --env dev
 curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy --name club-attendance-test --compatibility-date 2026-02-17 --assets .
+curl -I https://club-attendance-test.smoolinq.workers.dev/
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy
+curl -I https://club-attendance.smoolinq.workers.dev/
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
+npx wrangler d1 execute app_db --remote --file ./db/schema.sql
+npx wrangler deploy --env prod
+curl -i https://team-limit-worker.smoolinq.workers.dev/api/me
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+git push origin main
+
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝
+⭐️2 画面 testデプロイ
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+npx wrangler deploy --name club-attendance-test --compatibility-date 2026-02-17 --assets .
+
+
+🔸【テストURLで確認】
+https://club-attendance-test.smoolinq.workers.dev
 
 
 ＝＝＝＝＝＝＝＝＝＝＝＝
@@ -37,9 +87,10 @@ curl -i https://team-limit-worker-dev.smoolinq.workers.dev/api/me
 
 💫本番反映【スキーマ変更なし】
 
-cd /Volumes/CrucialX9/projects/mama-volley-attendance
+ccd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
 git add -A
+git diff --cached --name-only
 git commit -m "update"
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
@@ -59,11 +110,14 @@ cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git push origin main
 
 
+＝＝＝＝＝＝＝＝＝＝
+
 💫本番反映【スキーマ変更あり】
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git status --short
-git add -A
+git add index.html index_backup.html backend/team-limit-worker/src/index.ts backend/team-limit-worker/test/index.spec.ts backend/team-limit-worker/wrangler.jsonc backend/team-limit-worker/db/schema.sql
+git diff --cached --name-only
 git commit -m "update with schema"
 
 cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
@@ -85,35 +139,5 @@ cd /Volumes/CrucialX9/projects/mama-volley-attendance
 git push origin main
 
 
+
 ＝＝＝＝＝＝＝＝＝＝＝
-🔸説明
-
-cd /Volumes/CrucialX9/projects/mama-volley-attendance/backend/team-limit-worker
-
-# 1) 変更確認
-git status
-npm test
-
-# 1.5) schema変更の有無を確認（変更がある時だけ 2) を実行）
-git diff --name-only | grep "^db/schema.sql$" || echo "schema変更なし"
-
-# 2) （DBスキーマ変更がある場合のみ）devへ適用
-npx wrangler d1 execute app_db_dev --remote --file ./db/schema.sql
-
-# 3) devへデプロイ
-npx wrangler deploy --env dev
-
-# 4) dev動作確認（例）
-curl -i https://team-limit-worker-dev.<あなたのサブドメイン>.workers.dev/api/me
-
-🔸本番反映
-# 5) 問題なければ（DBスキーマ変更がある場合のみ）prodへ適用
-npx wrangler d1 execute app_db --remote --file ./db/schema.sql
-
-# 6) prodへデプロイ
-npx wrangler deploy --env prod
-
-# 7) prod動作確認（例）
-curl -i https://team-limit-worker.<あなたのサブドメイン>.workers.dev/api/me
-
-

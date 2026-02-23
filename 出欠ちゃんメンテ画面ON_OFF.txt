@@ -1,0 +1,53 @@
+# メンテON（公開停止）
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+./maintenance-on.sh
+
+
+# メンテOFF（公開再開）
+
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+./maintenance-off.sh
+
+
+
+────────────────────
+🔴 ③ 本番メンテON（公開停止）
+────────────────────
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+sed -i '' 's/const MAINTENANCE_MODE = false;/const MAINTENANCE_MODE = true;/' index.html
+grep -n "MAINTENANCE_MODE" index.html
+git add index.html
+git commit -m "Maintenance ON"
+git push origin main
+npx wrangler deploy
+
+
+
+────────────────────
+🟢 ④ 本番メンテOFF（公開再開）
+────────────────────
+cd /Volumes/CrucialX9/projects/mama-volley-attendance
+sed -i '' 's/const MAINTENANCE_MODE = true;/const MAINTENANCE_MODE = false;/' index.html
+grep -n "MAINTENANCE_MODE" index.html
+git add index.html
+git commit -m "Maintenance OFF"
+git push origin main
+npx wrangler deploy
+
+
+
+
+
+> SELECT name FROM sqlite_master WHERE type='table';
+name
+_cf_KV
+creators
+teams
+Response time 720ms, query time 0.14ms
+
+
+
+
+SELECT COUNT(*) FROM creators;
+SELECT COUNT(*) FROM teams;
