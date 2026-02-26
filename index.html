@@ -5,8 +5,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta property="og:title" content="出欠ちゃん">
-  <meta property="og:description" content="部活などの練習、試合の出欠をかんたん共有。招待リンクですぐ使えます。">
+  <meta property="og:description" content="出欠連絡をかんたん共有。招待リンクですぐ使えます。">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://club-attendance.smoolinq.workers.dev/">
+  <meta property="og:image" content="https://club-attendance.smoolinq.workers.dev/ogp-1024x1024.png?v=20260225">
+  <meta property="og:image:secure_url" content="https://club-attendance.smoolinq.workers.dev/ogp-1024x1024.png?v=20260225">
+  <meta property="og:image:width" content="1024">
+  <meta property="og:image:height" content="1024">
+  <meta property="og:image:alt" content="出欠ちゃん 招待プレビュー画像">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="出欠ちゃん">
+  <meta name="twitter:description" content="出欠連絡をかんたん共有。招待リンクですぐ使えます。">
+  <meta name="twitter:image" content="https://club-attendance.smoolinq.workers.dev/ogp-1024x1024.png?v=20260225">
+  <meta name="twitter:image:alt" content="出欠ちゃん 招待プレビュー画像">
   <title>出欠ちゃん</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
@@ -2237,6 +2248,16 @@
         font-size: 11px;
         padding: 5px 10px;
       }
+
+      .title-block {
+        gap: 4px;
+      }
+
+      .group-title-edit-btn {
+        font-size: 9px;
+        padding: 2px 6px;
+        line-height: 1.1;
+      }
     }
   </style>
 </head>
@@ -2592,14 +2613,190 @@
     const _inviteNameParam = (_urlParams.get("name") || '').trim();
     const _pendingInviteTeam = (_urlParams.get("inviteTeam") || '').trim();
     const _pendingInviteName = (_urlParams.get("inviteName") || '').trim();
+    const _pendingAdminTeamParam = (_urlParams.get("pendingAdminTeam") || '').trim().toLowerCase();
+    const _pendingAdminNameParam = (_urlParams.get("pendingAdminName") || '').trim();
+    const _pendingAdminGroupParam = (_urlParams.get("pendingAdminGroup") || '').trim();
     const RECENT_KEY = 'volley-recent-teams';
     const INVITE_KEY = 'volley-invite-link';
     const ADMIN_RECOVERY_SUFFIX = 'volley-admin-recovery-code';
-    const API_BASE = "https://team-limit-worker.smoolinq.workers.dev";
+    const OWNER_ID_SUFFIX = 'volley-owner-id';
+    const SELF_PIN_SUFFIX = 'volley-self-pin';
+    const PENDING_ADMIN_NAME_SUFFIX = 'volley-pending-admin-name';
+    const PENDING_ADMIN_SET_AT_SUFFIX = 'volley-pending-admin-set-at';
+    const PENDING_ADMIN_ACCEPTED_KEY_PREFIX = 'volley-pending-admin-accepted:';
+    const PENDING_ADMIN_REQUESTS_KEY = 'volley-pending-admin-requests';
     const SYNC_API = '/api/sync';
     const CREATED_TEAMS_KEY = 'volley-created-teams';
     const DELETED_TEAMS_KEY = 'volley-deleted-teams';
     const MAX_CREATED_TEAMS_PER_DEVICE = 3;
+    const RECOVERY_GUARD_KEY = 'volley-recovery-guard';
+    const RECOVERY_MAX_ATTEMPTS = 5;
+    const RECOVERY_WINDOW_MS = 15 * 60 * 1000;
+    const RECOVERY_LOCK_MS = 15 * 60 * 1000;
+    const SHOW_DETAILED_ERRORS = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const CANONICAL_ORIGIN = 'https://club-attendance.smoolinq.workers.dev';
+    const IS_LINE_INAPP_BROWSER = /Line\//i.test(navigator.userAgent || '');
+
+    if (location.hostname !== 'club-attendance.smoolinq.workers.dev') {
+      location.replace(CANONICAL_ORIGIN + location.pathname + location.search + location.hash);
+      throw new Error('redirect-to-canonical');
+    }
+
+    function safeSessionGet(key) {
+      try { return sessionStorage.getItem(key); } catch { return null; }
+    }
+    function safeSessionSet(key, value) {
+      try { sessionStorage.setItem(key, value); } catch { }
+    }
+    function safeSessionRemove(key) {
+      try { sessionStorage.removeItem(key); } catch { }
+    }
+    function readPendingAdminRequests() {
+      try {
+        const raw = safeSessionGet(PENDING_ADMIN_REQUESTS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
+    }
+    function writePendingAdminRequests(list) {
+      try {
+        const next = Array.isArray(list) ? list : [];
+        safeSessionSet(PENDING_ADMIN_REQUESTS_KEY, JSON.stringify(next.slice(0, 20)));
+      } catch { }
+    }
+    function upsertPendingAdminRequest(req) {
+      const teamId = String(req?.teamId || '').trim().toLowerCase();
+      const memberName = String(req?.memberName || '').trim();
+      if (!teamId || !memberName) return;
+      const next = readPendingAdminRequests().filter(x => !(x && x.teamId === teamId && x.memberName === memberName));
+      next.unshift({
+        teamId,
+        memberName,
+        teamName: String(req?.teamName || '').trim() || teamId,
+        setAt: String(req?.setAt || '').trim() || new Date().toISOString()
+      });
+      writePendingAdminRequests(next);
+    }
+    function removePendingAdminRequest(teamId, memberName) {
+      const t = String(teamId || '').trim().toLowerCase();
+      const n = String(memberName || '').trim();
+      if (!t || !n) return;
+      const next = readPendingAdminRequests().filter(x => !(x && x.teamId === t && x.memberName === n));
+      writePendingAdminRequests(next);
+    }
+    function removePendingAdminRequestsByTeam(teamId) {
+      const t = String(teamId || '').trim().toLowerCase();
+      if (!t) return;
+      const next = readPendingAdminRequests().filter(x => !(x && x.teamId === t));
+      writePendingAdminRequests(next);
+    }
+    function listPendingAdminTeamsFromLocal() {
+      const out = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = String(localStorage.key(i) || '');
+          const suffix = ':' + PENDING_ADMIN_NAME_SUFFIX;
+          if (!key.endsWith(suffix)) continue;
+          const teamId = key.slice(0, -suffix.length).trim().toLowerCase();
+          if (!teamId) continue;
+          const memberName = String(localStorage.getItem(key) || '').trim();
+          if (!memberName) continue;
+          const teamName = String(localStorage.getItem(teamId + ':volley-app-title') || '').trim() || teamId;
+          out.push({ teamId, pendingAdminName: memberName, teamName });
+        }
+      } catch { }
+      return out;
+    }
+    function safeLocalSet(key, value) {
+      try { localStorage.setItem(key, value); return true; } catch { return false; }
+    }
+    function safeLocalRemove(key) {
+      try { localStorage.removeItem(key); } catch { }
+    }
+    function getOwnerIdKey(teamId) {
+      return String(teamId || '').trim().toLowerCase() + ':' + OWNER_ID_SUFFIX;
+    }
+    function ensureOwnerId(teamId, candidate) {
+      const key = getOwnerIdKey(teamId);
+      const incoming = String(candidate || '').trim();
+      if (incoming) {
+        safeLocalSet(key, incoming);
+        return incoming;
+      }
+      const existing = String(localStorage.getItem(key) || '').trim();
+      if (existing) return existing;
+      const next = crypto.randomUUID();
+      safeLocalSet(key, next);
+      return next;
+    }
+    function readRecoveryGuard() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(RECOVERY_GUARD_KEY) || '{}');
+        return raw && typeof raw === 'object' ? raw : {};
+      } catch {
+        return {};
+      }
+    }
+    function writeRecoveryGuard(next) {
+      safeLocalSet(RECOVERY_GUARD_KEY, JSON.stringify(next || {}));
+    }
+    function getRecoveryState(teamId) {
+      const id = String(teamId || '').trim().toLowerCase();
+      const guard = readRecoveryGuard();
+      const row = guard[id] || {};
+      const now = Date.now();
+      const lockUntil = Number(row.lockUntil || 0);
+      const locked = lockUntil > now;
+      const remainingMs = locked ? lockUntil - now : 0;
+      const count = Number(row.count || 0);
+      return { guard, id, row, locked, remainingMs, count, now };
+    }
+    function noteRecoveryFailure(teamId) {
+      const st = getRecoveryState(teamId);
+      if (!st.id) return { remaining: 0, locked: false, remainingMs: 0 };
+      const prevTs = Number(st.row.firstTs || 0);
+      const inWindow = prevTs && (st.now - prevTs) < RECOVERY_WINDOW_MS;
+      const count = inWindow ? st.count + 1 : 1;
+      const firstTs = inWindow ? prevTs : st.now;
+      const locked = count >= RECOVERY_MAX_ATTEMPTS;
+      st.guard[st.id] = {
+        firstTs,
+        count: locked ? 0 : count,
+        lockUntil: locked ? st.now + RECOVERY_LOCK_MS : 0
+      };
+      writeRecoveryGuard(st.guard);
+      return { remaining: Math.max(0, RECOVERY_MAX_ATTEMPTS - count), locked, remainingMs: locked ? RECOVERY_LOCK_MS : 0 };
+    }
+    function clearRecoveryFailures(teamId) {
+      const st = getRecoveryState(teamId);
+      if (!st.id) return;
+      if (st.guard[st.id]) {
+        delete st.guard[st.id];
+        writeRecoveryGuard(st.guard);
+      }
+    }
+    function appendRecoveryAudit(teamId, action, detail) {
+      const id = String(teamId || '').trim().toLowerCase();
+      if (!id) return;
+      const key = id + ':volley-security-log';
+      try {
+        const logs = JSON.parse(localStorage.getItem(key) || '[]');
+        logs.unshift({
+          at: new Date().toISOString(),
+          by: 'recovery-flow',
+          action: String(action || ''),
+          target: id,
+          detail: String(detail || '')
+        });
+        safeLocalSet(key, JSON.stringify(logs.slice(0, 200)));
+      } catch { }
+    }
+
+    // Legacy groups may have non-8-char IDs; accept 4-16 alnum for backward compatibility.
+    if (_teamParam && !/^[a-z0-9]{4,16}$/i.test(String(_teamParam).trim())) {
+      location.href = location.pathname;
+      throw new Error('invalid team param');
+    }
 
     function createSessionId() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -2615,11 +2812,79 @@
       return out;
     }
 
+    function getShareableAppUrl() {
+      const base = CANONICAL_ORIGIN + location.pathname;
+      const pendingTeam = (_pendingInviteTeam || '').trim().toLowerCase();
+      const pendingName = (_pendingInviteName || '').trim();
+      const invite = getInviteData();
+      const teamId = pendingTeam || String(invite?.id || '').trim().toLowerCase();
+      const teamName = pendingName || String(invite?.name || '').trim();
+      if (!teamId) return base;
+      const qs = '?inviteTeam=' + encodeURIComponent(teamId) +
+        (teamName ? '&inviteName=' + encodeURIComponent(teamName) : '');
+      return base + qs;
+    }
+
+    function openInExternalBrowser(url) {
+      const safeUrl = String(url || '').trim();
+      if (!safeUrl) return;
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isAndroid = /Android/i.test(ua);
+
+      if (IS_LINE_INAPP_BROWSER) {
+        if (isIOS) {
+          // iOS Safari deep link
+          const safariUrl = 'x-safari-https://' + safeUrl.replace(/^https?:\/\//i, '');
+          location.href = safariUrl;
+          setTimeout(() => { location.href = safeUrl; }, 1000);
+          return;
+        }
+        if (isAndroid) {
+          // Android Chrome intent deep link
+          try {
+            const u = new URL(safeUrl);
+            const intentUrl =
+              'intent://' + u.host + u.pathname + u.search + u.hash +
+              '#Intent;scheme=' + u.protocol.replace(':', '') + ';package=com.android.chrome;end';
+            location.href = intentUrl;
+            setTimeout(() => { location.href = safeUrl; }, 1000);
+            return;
+          } catch { }
+        }
+        // Fallback: open inside current webview
+        location.href = safeUrl;
+        return;
+      }
+      location.href = safeUrl;
+    }
+
     function getRecentTeams() {
       try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
     }
     function getDeletedTeams() {
       try { return JSON.parse(localStorage.getItem(DELETED_TEAMS_KEY)) || []; } catch { return []; }
+    }
+    function isDeletedPayload(data) {
+      return !!(data && (data.deleted === true || data.deletedAt));
+    }
+    function normalizeMemberRecord(member) {
+      if (!member) return null;
+      if (typeof member === 'string') return { name: member, state: 'active' };
+      const out = { ...member };
+      if (out.role != null) delete out.role;
+      out.name = String(out.name || '').trim();
+      out.pin = String(out.pin || '').trim();
+      if (out.state !== 'inactive') out.state = 'active';
+      if (out.pendingRemovalAt && typeof out.pendingRemovalAt !== 'string') out.pendingRemovalAt = '';
+      if (out.pendingRemovalReason && typeof out.pendingRemovalReason !== 'string') out.pendingRemovalReason = '';
+      if (out.pendingRemovalBy && typeof out.pendingRemovalBy !== 'string') out.pendingRemovalBy = '';
+      if (out.inactivatedAt && typeof out.inactivatedAt !== 'string') out.inactivatedAt = '';
+      return out;
+    }
+    function findMemberByName(members, name) {
+      const key = String(name || '').trim();
+      return (members || []).find(m => m && String(m.name || '').trim() === key) || null;
     }
     function getInviteData() {
       try {
@@ -2642,8 +2907,20 @@
       const invite = getInviteData();
       if (!invite || !invite.id) return;
       if (!teamId || invite.id === String(teamId || '').trim().toLowerCase()) {
-        localStorage.removeItem(INVITE_KEY);
+        safeLocalRemove(INVITE_KEY);
       }
+    }
+    function hasTeamLocalState(teamId) {
+      const id = String(teamId || '').trim().toLowerCase();
+      if (!id) return false;
+      const p = id + ':';
+      const loginType = (localStorage.getItem(p + 'volley-login-type') || '').trim();
+      const adminName = (localStorage.getItem(p + 'volley-admin-name') || '').trim();
+      const membersRaw = (localStorage.getItem(p + 'volley-members') || '').trim();
+      if (loginType) return true;
+      if (adminName) return true;
+      if (membersRaw) return true;
+      return false;
     }
 
     function getCreatedTeams() {
@@ -2685,13 +2962,18 @@
       }
 
       function getInactiveCountdownLabel(inactivatedAt) {
-        const base = Date.parse(String(inactivatedAt || ''));
+        return '退会中';
+      }
+
+      function getPendingRemovalLabel(pendingRemovalAt) {
+        const base = Date.parse(String(pendingRemovalAt || ''));
         if (!Number.isFinite(base)) return '';
-        const limit = base + 30 * 24 * 60 * 60 * 1000;
+        const limit = base + 24 * 60 * 60 * 1000;
         const remainMs = limit - Date.now();
-        if (remainMs <= 0) return '退会中（復帰期限切れ）';
-        const days = Math.ceil(remainMs / (24 * 60 * 60 * 1000));
-        return days <= 1 ? '退会中（復帰期限: 本日まで）' : `退会中（復帰期限まで あと${days}日）`;
+        if (remainMs <= 0) return '';
+        const hours = Math.ceil(remainMs / (60 * 60 * 1000));
+        if (hours <= 1) return '退会予定（管理者申請・まもなく退会）';
+        return `退会予定（管理者申請・あと${hours}時間）`;
       }
 
     function ensureGlobalCopyrightFooter() {
@@ -2721,16 +3003,24 @@
           '<strong style="font-size:14px;color:#1f2937;">更新履歴</strong>' +
           '<button id="updatesModalClose" type="button" style="border:none;background:#eef2ff;color:#4338ca;font-weight:700;border-radius:10px;padding:5px 10px;cursor:pointer;">閉じる</button>' +
           '</div>' +
-          '<div style="padding:14px 16px 16px;overflow:auto;line-height:1.7;color:#111;">' +
-          '<h2 style="margin:0 0 8px;font-size:20px;line-height:1.4;">2026-02-23 🔐 セキュリティアップデート（β）</h2>' +
-          '<ul style="margin:0 0 10px 18px;padding:0;font-size:14px;">' +
+          '<div style="padding:14px 16px 16px;overflow:auto;line-height:1.7;color:#111;font-size:13px;">' +
+          '<h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;">2026-02-24 🔧 UX・導線アップデート（β）</h2>' +
+          '<ul style="margin:0 0 10px 18px;padding:0;font-size:13px;">' +
+          '<li>ロビー表示が崩れる不具合を修正</li>' +
+          '<li>LINE内ブラウザでは案内専用ロビーを表示</li>' +
+          '<li>「ブラウザで開く」ボタンの動作を改善（iPhone/Android対応）</li>' +
+          '<li>外部ブラウザ遷移時に招待カード情報を引き継ぐよう修正</li>' +
+          '</ul>' +
+          '<h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;">2026-02-23 🔐 セキュリティアップデート（β）</h2>' +
+          '<ul style="margin:0 0 10px 18px;padding:0;font-size:13px;">' +
           '<li>保存APIの直接アクセスを無効化</li>' +
           '<li>フロント経由の代理保存方式へ変更</li>' +
           '<li>書き込みAPIに認証トークンを導入</li>' +
           '<li>機密情報（adminPw / recoveryCode / pin）をGETレスポンスから除外</li>' +
           '<li>外部サイトからの不正アクセスを防止（CORS制限）</li>' +
           '</ul>' +
-          '<p style="margin:0;font-size:13px;color:#4b5563;">※ユーザー操作への影響はありません。</p>' +
+          '<p style="margin:0 0 14px;font-size:12px;color:#4b5563;">※ユーザー操作への影響はありません。</p>' +
+          '<p style="margin:0;font-size:12px;color:#4b5563;">※既存の更新履歴は保持しています。</p>' +
           '</div>' +
           '</div>';
         document.body.appendChild(modal);
@@ -2774,11 +3064,13 @@
       }
     }
 
-    const _fromInviteCard = sessionStorage.getItem('inviteFromCard') === '1';
-    const _isKnownTeam = isKnownTeam(_teamParam);
+    let _fromInviteCard = safeSessionGet('inviteFromCard') === '1';
 
     // Invite URL: always land on lobby invite card first (unless coming from the invite card itself).
-    const _isInviteLink = !!_inviteNameParam || !_isKnownTeam;
+    let _isKnownTeam = false;
+    if (_teamParam) _isKnownTeam = isKnownTeam(_teamParam);
+    const _hasLocalTeamState = _teamParam ? hasTeamLocalState(_teamParam) : false;
+    const _isInviteLink = _teamParam ? (!_hasLocalTeamState && (!!_inviteNameParam || !_isKnownTeam)) : false;
     if (_teamParam && _isInviteLink && !_fromInviteCard) {
       const savedTitle = localStorage.getItem(_teamParam + ':volley-app-title');
       const inviteName = _inviteNameParam || savedTitle || '';
@@ -2801,19 +3093,103 @@
       document.body.style.overflowX = 'hidden';
       document.body.style.height = 'auto';
       document.body.style.display = 'block';
+      let serverRecentTeams = null;
+      function normalizeRecentEntries(entries) {
+        return (entries || [])
+          .filter(t => t && typeof t.id === 'string' && t.id.trim())
+          .map(t => {
+            const id = String(t.id || '').trim().toLowerCase();
+            const localName = (localStorage.getItem(id + ':volley-app-title') || '').trim();
+            return {
+              id,
+              name: String(t.name || '').trim() || localName || '',
+              user: String(t.user || '').trim(),
+              lastVisited: t.lastVisited || new Date().toISOString(),
+              status: String(t.status || '').trim() || 'active'
+            };
+          });
+      }
+      function getLocalRecent() {
+        return normalizeRecentEntries(getRecentTeams());
+      }
       function getRecent() {
-        const recent = getRecentTeams();
-        let changed = false;
-        const normalized = recent.map(t => {
-          const localName = (localStorage.getItem(t.id + ':volley-app-title') || '').trim();
-          if (!t.name && localName) {
-            changed = true;
-            return { ...t, name: localName };
-          }
-          return t;
-        });
-        if (changed) localStorage.setItem(RECENT_KEY, JSON.stringify(normalized));
-        return normalized;
+        return Array.isArray(serverRecentTeams) ? serverRecentTeams : getLocalRecent();
+      }
+      async function upsertMyGroupRecord(teamId, options = {}) {
+        const payload = {
+          action: 'upsert',
+          team_id: String(teamId || '').trim().toLowerCase(),
+          group_name: String(options.groupName || '').trim(),
+          alias_name: String(options.aliasName || '').trim(),
+          role: String(options.role || 'member').trim().toLowerCase() === 'admin' ? 'admin' : 'member',
+          status: String(options.status || 'active').trim().toLowerCase() === 'inactive' ? 'inactive' : 'active'
+        };
+        if (!payload.team_id) return false;
+        try {
+          const res = await fetch('/api/sync/my-groups', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          });
+          return res.ok;
+        } catch {
+          return false;
+        }
+      }
+      async function removeMyGroupRecord(teamId) {
+        const payload = {
+          action: 'remove',
+          team_id: String(teamId || '').trim().toLowerCase()
+        };
+        if (!payload.team_id) return false;
+        try {
+          const res = await fetch('/api/sync/my-groups', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+          });
+          return res.ok;
+        } catch {
+          return false;
+        }
+      }
+      async function syncLocalRecentToServer() {
+        const localRecent = getLocalRecent();
+        if (!localRecent.length) return;
+        for (const t of localRecent) {
+          const roleRaw = String(localStorage.getItem(t.id + ':volley-login-type') || '').trim();
+          const role = roleRaw === 'admin' ? 'admin' : 'member';
+          const status = String(t.status || '').trim() === 'inactive' ? 'inactive' : 'active';
+          await upsertMyGroupRecord(t.id, {
+            groupName: t.name,
+            aliasName: t.user,
+            role,
+            status
+          });
+        }
+      }
+      async function loadServerRecent() {
+        try {
+          const res = await fetch('/api/sync/my-groups', { credentials: 'include' });
+          if (!res.ok) return false;
+          const data = await res.json();
+          const groups = Array.isArray(data?.groups) ? data.groups : [];
+          const mapped = groups.map(g => ({
+            id: String(g.team_id || '').trim().toLowerCase(),
+            name: String(g.group_name || '').trim(),
+            user: String(g.alias_name || '').trim(),
+            lastVisited: g.last_used_at ? new Date(g.last_used_at).toISOString() : new Date().toISOString(),
+            status: String(g.status || 'active').trim()
+          })).filter(t => t.id);
+          // Server is truth: always overwrite localStorage (even if empty)
+          localStorage.setItem(RECENT_KEY, JSON.stringify(mapped.map(({ id, name, user, lastVisited }) => ({ id, name, user, lastVisited }))));
+          serverRecentTeams = mapped;
+          return true;
+        } catch {
+          return false;
+        }
       }
 
       function hasLocalLogin(teamId) {
@@ -2845,7 +3221,7 @@
       function showRecoveryCodeModal(recoveryCode) {
         return new Promise(resolve => {
           const ov = document.createElement('div');
-          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:13000;padding:20px';
           ov.innerHTML =
             '<div style="max-width:380px;width:100%;background:#fff;border-radius:18px;padding:20px 18px 16px;box-shadow:0 18px 44px rgba(15,23,42,0.28)">' +
             '<div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px;text-align:center">復旧コードを保存してください</div>' +
@@ -2854,18 +3230,26 @@
             'スクリーンショットまたはメモで必ず保存してください。<br>' +
             'この画面を閉じると再表示できません。' +
             '</div>' +
+            '<div style="font-size:12px;line-height:1.6;margin-bottom:10px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;text-align:left">' +
+            '重要: この復旧コードを知っている人は、未ログインでも管理者PINを再設定できます。' +
+            '<br>絶対に他人へ共有しないでください。' +
+            '</div>' +
             '<div style="padding:12px;border:1px dashed rgba(124,58,237,0.45);border-radius:12px;background:#faf5ff;font-size:18px;font-weight:800;letter-spacing:1.2px;color:var(--primary);text-align:center;user-select:all;margin-bottom:10px" id="recoveryCodeText"></div>' +
             '<button id="copyRecoveryCodeBtn" style="width:100%;padding:10px;border:1px solid rgba(124,58,237,0.3);border-radius:12px;background:#fff;color:var(--primary);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">復旧コードをコピー</button>' +
             '<label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text);line-height:1.5;margin-bottom:12px;cursor:pointer">' +
             '<input id="confirmRecoverySaved" type="checkbox" style="margin-top:2px">' +
             '<span>復旧コードをスクリーンショットまたはメモで保存しました</span>' +
             '</label>' +
-            '<button id="closeRecoveryModalBtn" disabled style="width:100%;padding:11px;border:none;border-radius:12px;background:#d1d5db;color:#fff;font-size:14px;font-weight:800;cursor:not-allowed">OK</button>' +
+            '<div style="display:flex;gap:8px">' +
+            '<button id="cancelRecoveryModalBtn" type="button" style="flex:1;padding:11px;border:1px solid #d1d5db;border-radius:12px;background:#fff;color:#374151;font-size:14px;font-weight:700;cursor:pointer">作成をやめる</button>' +
+            '<button id="closeRecoveryModalBtn" disabled style="flex:1;padding:11px;border:none;border-radius:12px;background:#d1d5db;color:#fff;font-size:14px;font-weight:800;cursor:not-allowed">OK</button>' +
+            '</div>' +
             '</div>';
           document.body.appendChild(ov);
           const codeEl = ov.querySelector('#recoveryCodeText');
           const copyBtn = ov.querySelector('#copyRecoveryCodeBtn');
           const check = ov.querySelector('#confirmRecoverySaved');
+          const cancelBtn = ov.querySelector('#cancelRecoveryModalBtn');
           const okBtn = ov.querySelector('#closeRecoveryModalBtn');
           codeEl.textContent = recoveryCode;
           copyBtn.addEventListener('click', () => {
@@ -2883,6 +3267,11 @@
             if (!check.checked) return;
             ov.remove();
             resolve(true);
+          });
+          cancelBtn.addEventListener('click', () => {
+            if (!confirm('グループ作成を取りやめます。よろしいですか？')) return;
+            ov.remove();
+            resolve(false);
           });
         });
       }
@@ -2902,8 +3291,47 @@
 
 
       joinSection.appendChild(hero);
+
+      if (IS_LINE_INAPP_BROWSER) {
+        const lineBrowserNotice = document.createElement('div');
+        lineBrowserNotice.style.cssText = 'width:100%;max-width:360px;margin:0 0 14px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:14px;color:#854d0e;font-size:12px;line-height:1.65;text-align:left';
+        lineBrowserNotice.innerHTML =
+          '<div style="font-weight:800;margin-bottom:4px">LINE内ブラウザで開いています</div>' +
+          '<div style="margin-bottom:8px">この画面は案内専用です。参加・ログイン・作成はSafari/Chromeで行ってください。</div>' +
+          '<div style="display:flex;gap:6px">' +
+          '<button id="openExternalBrowserBtn" type="button" style="flex:1;padding:8px 10px;border:none;border-radius:10px;background:#7c3aed;color:#fff;font-size:12px;font-weight:700;cursor:pointer">ブラウザで開く</button>' +
+          '<button id="copyExternalUrlBtn" type="button" style="flex:1;padding:8px 10px;border:1px solid #d6bcfa;border-radius:10px;background:#fff;color:#6d28d9;font-size:12px;font-weight:700;cursor:pointer">URLコピー</button>' +
+          '</div>';
+        joinSection.appendChild(lineBrowserNotice);
+        const openBtn = lineBrowserNotice.querySelector('#openExternalBrowserBtn');
+        const copyBtn = lineBrowserNotice.querySelector('#copyExternalUrlBtn');
+        if (openBtn) {
+          openBtn.addEventListener('click', () => {
+            const url = getShareableAppUrl();
+            openInExternalBrowser(url);
+          });
+        }
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            const url = getShareableAppUrl();
+            try {
+              await navigator.clipboard.writeText(url);
+              copyBtn.textContent = 'コピーしました';
+              setTimeout(() => { copyBtn.textContent = 'URLコピー'; }, 1500);
+            } catch {
+              copyBtn.textContent = 'コピー失敗';
+              setTimeout(() => { copyBtn.textContent = 'URLコピー'; }, 1500);
+            }
+          });
+        }
+      }
+
       let inviteData = getInviteData();
-      if (inviteData && inviteData.id) {
+      if (inviteData && inviteData.id && hasTeamLocalState(inviteData.id)) {
+        clearInviteForTeam(inviteData.id);
+        inviteData = null;
+      }
+      if (!IS_LINE_INAPP_BROWSER && inviteData && inviteData.id) {
         const inviteCard = document.createElement('div');
         inviteCard.style.cssText = 'width:100%;max-width:360px;margin-bottom:20px;padding:18px 20px;background:var(--card);border:2px solid var(--primary);border-radius:16px;text-align:center';
         const displayName = inviteData.name || inviteData.id || 'グループ名を取得中';
@@ -2933,6 +3361,10 @@
           })();
         }
       }
+      const pendingAdminCardArea = document.createElement('div');
+      pendingAdminCardArea.id = 'pendingAdminCardArea';
+      pendingAdminCardArea.style.cssText = 'width:100%;max-width:360px';
+      joinSection.appendChild(pendingAdminCardArea);
 
       const actionCard = document.createElement('div');
       actionCard.className = 'lobby-card';
@@ -2949,8 +3381,12 @@
         '' +
         '<div id="reloginFormArea" style="display:none">' +
         '<input id="reloginGroupId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
-        '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
-        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
+        '<input id="reloginName" type="text" placeholder="あなたの名前" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="join_name" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;text-align:center">' +
+        '<input id="reloginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="join_pin" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-bottom:6px;box-sizing:border-box;letter-spacing:4px;text-align:center">' +
+        '<label id="reloginJoinAgreeWrap" for="reloginJoinAgreeTermsPrivacy" style="display:none;align-items:flex-start;gap:6px;margin:2px 2px 8px;font-size:11px;line-height:1.5;color:var(--text)">' +
+        '<input id="reloginJoinAgreeTermsPrivacy" type="checkbox" style="margin-top:2px">' +
+        '<span><a href="/terms" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">利用規約</a>・<a href="/privacy" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">プライバシーポリシー</a>に同意して参加</span>' +
+        '</label>' +
         '<div id="reloginError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 8px;text-align:center"></div>' +
         '<button id="reloginBtn" class="lobby-login-btn" style="margin-bottom:6px">ログインする</button>' +
         '<button id="cancelReloginBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
@@ -2959,15 +3395,20 @@
         '<div id="createTeamPanel" class="lobby-relogin-panel" style="display:none">' +
         '<div class="lobby-panel-title">新規にグループを作る</div>' +
         '<input id="lobbyGroupName" type="text" maxlength="18" placeholder="グループ名" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none">' +
-        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
-        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理者PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
+        '<input id="lobbyAdminName" type="text" placeholder="管理者名（あなたの名前）" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="admin_name" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-top:6px">' +
+        '<input id="lobbyAdminPw" type="tel" inputmode="numeric" maxlength="4" placeholder="管理者PIN（4桁数字）" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="admin_pin" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-top:6px">' +
+        '<label for="createAgreeTermsPrivacy" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:0 2px;font-size:12px;line-height:1.6;color:var(--text)">' +
+        '<input id="createAgreeTermsPrivacy" type="checkbox" style="margin-top:2px">' +
+        '<span><a href="/terms" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">利用規約</a>・<a href="/privacy" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">プライバシーポリシー</a>に同意して作成</span>' +
+        '</label>' +
         '<div id="lobbyCreateLimitHint" style="font-size:12px;color:var(--text-light);padding:4px 4px 0;text-align:center"></div>' +
         '<div id="lobbyCreateError" style="display:none;font-size:12px;color:var(--absent);padding:0 4px"></div>' +
-        '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px">作成する</button>' +
+        '<button id="lobbyCreateBtn" class="lobby-login-btn" style="margin:8px 0 6px" disabled>作成する</button>' +
         '<button id="backToJoinBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
         '</div>' +
         '<div id="recoverAdminPanel" class="lobby-relogin-panel" style="display:none">' +
         '<div class="lobby-panel-title">管理者PINを再設定する</div>' +
+        '<div style="margin-bottom:6px;padding:8px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;font-size:11px;line-height:1.6">復旧コードを知っている人は管理者PINを再設定できます。本人のみ実行してください。</div>' +
         '<input id="recoverTeamId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">' +
         '<input id="recoverCode" type="text" placeholder="復旧コード" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:1px">' +
         '<input id="recoverNewPin" type="tel" inputmode="numeric" maxlength="4" placeholder="新しい管理者PIN（4桁数字）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;letter-spacing:4px;margin-top:6px">' +
@@ -2976,39 +3417,189 @@
         '<button id="cancelRecoverBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
         '</div>' +
         '<div id="pinHelpPanel" class="lobby-relogin-panel" style="display:none">' +
-        '<div class="lobby-panel-title">自分のPINを確認</div>' +
+        '<div class="lobby-panel-title">メンバーPINを変更する</div>' +
         '<input id="pinHelpTeamId" type="text" placeholder="グループID" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none">' +
         '<input id="pinHelpName" type="text" placeholder="あなたの名前" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px">' +
-        '<input id="pinHelpCode" type="text" placeholder="復旧コード（あれば）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:1px">' +
-        '<div id="pinHelpResult" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;font-weight:700;text-align:center">PIN: ••••</div>' +
+        '<input id="pinHelpCode" type="tel" inputmode="numeric" maxlength="4" placeholder="現在のPIN（4桁）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:4px">' +
+        '<input id="pinHelpNewPin" type="tel" inputmode="numeric" maxlength="4" placeholder="新しいPIN（4桁）" autocomplete="off" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;margin-top:6px;letter-spacing:4px">' +
+        '<div id="pinHelpResult" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;font-weight:700;text-align:center">変更完了</div>' +
         '<div id="pinHelpError" style="display:none;font-size:12px;color:var(--absent);margin:4px 2px 8px;text-align:center"></div>' +
-        '<button id="pinHelpSubmitBtn" class="lobby-login-btn" style="margin-bottom:6px">本人確認して表示</button>' +
+        '<button id="pinHelpSubmitBtn" class="lobby-login-btn" style="margin-bottom:6px">PINを変更する</button>' +
         '<button id="cancelPinHelpBtn" type="button" class="lobby-create-btn">キャンセル</button>' +
         '</div>';
-      joinSection.appendChild(actionCard);
-
       const recentSection = document.createElement('div');
       recentSection.className = 'lobby-card lobby-my-groups';
       recentSection.innerHTML =
         '<div class="lobby-my-groups-title">' +
         '<span class="lobby-my-groups-title-main">My Groups</span>' +
         '<span class="lobby-my-groups-title-sub">参加中のグループ</span>' +
-        '</div>';
+        '</div>' +
+        (IS_LINE_INAPP_BROWSER
+          ? '<div style="margin-top:6px;font-size:11px;color:#7c2d12;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:5px 8px">※表示に差がある場合はSafari/Chromeで開いて同期してください</div>'
+          : '');
       const recentList = document.createElement('div');
       recentList.id = 'recentList';
       recentList.style.cssText = 'display:flex;flex-direction:column;gap:6px';
       recentSection.appendChild(recentList);
+      if (IS_LINE_INAPP_BROWSER) {
+        recentSection.style.display = 'none';
+      }
       joinSection.appendChild(recentSection);
+      joinSection.appendChild(actionCard);
+      if (IS_LINE_INAPP_BROWSER) {
+        actionCard.style.display = 'none';
+        const reloginBtn = actionCard.querySelector('#openReloginBtn');
+        const createBtn = actionCard.querySelector('#createTeamBtn');
+        if (reloginBtn) reloginBtn.style.display = 'none';
+        if (createBtn) createBtn.style.display = 'none';
+      }
 
       const recoverShortcutCard = document.createElement('div');
       recoverShortcutCard.className = 'lobby-card';
       recoverShortcutCard.style.cssText = 'padding:10px';
       recoverShortcutCard.innerHTML =
-        '<button id="openPinHelpBtn" type="button" style="width:100%;margin:0 0 6px;padding:8px 10px;border:1px solid rgba(59,130,246,0.34);border-radius:12px;background:rgba(59,130,246,0.08);color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer">メンバーPINを忘れたとき</button>' +
+        '<button id="openPinHelpBtn" type="button" style="width:100%;margin:0 0 6px;padding:8px 10px;border:1px solid rgba(59,130,246,0.34);border-radius:12px;background:rgba(59,130,246,0.08);color:#1d4ed8;font-size:12px;font-weight:700;cursor:pointer">メンバーPINを変更する</button>' +
         '<button id="openRecoverPanelBtn" type="button" style="width:100%;margin:0;padding:8px 10px;border:1px solid rgba(124,58,237,0.28);border-radius:12px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:12px;font-weight:700;cursor:pointer">管理者PINを忘れたとき</button>';
+      if (IS_LINE_INAPP_BROWSER) {
+        recoverShortcutCard.style.display = 'none';
+      }
       joinSection.appendChild(recoverShortcutCard);
 
       lobby.appendChild(joinSection);
+
+      function collectPendingAdminRequests() {
+        const fromLocal = listPendingAdminTeamsFromLocal();
+        const recent = getRecent();
+        const fromRecent = (Array.isArray(recent) ? recent : [])
+          .map((t) => {
+            const teamId = String(t?.id || '').trim().toLowerCase();
+            if (!teamId) return null;
+            const pendingAdminName = String(localStorage.getItem(teamId + ':' + PENDING_ADMIN_NAME_SUFFIX) || '').trim();
+            if (!pendingAdminName) return null;
+            const teamName = String((t && t.name) || localStorage.getItem(teamId + ':volley-app-title') || '').trim() || teamId;
+            return { teamId, teamName, pendingAdminName };
+          })
+          .filter(Boolean);
+        const fromSession = readPendingAdminRequests()
+          .map((r) => {
+            const teamId = String(r?.teamId || '').trim().toLowerCase();
+            const pendingAdminName = String(r?.memberName || '').trim();
+            if (!teamId || !pendingAdminName) return null;
+            const teamName = String(r?.teamName || localStorage.getItem(teamId + ':volley-app-title') || '').trim() || teamId;
+            const currentPending = String(localStorage.getItem(teamId + ':' + PENDING_ADMIN_NAME_SUFFIX) || '').trim();
+            if (currentPending && currentPending !== pendingAdminName) return null;
+            return { teamId, teamName, pendingAdminName };
+          })
+          .filter(Boolean);
+        const merged = [...fromLocal, ...fromSession, ...fromRecent];
+        const map = new Map();
+        merged.forEach((r) => {
+          const key = r.teamId + '::' + r.pendingAdminName;
+          if (!map.has(key)) map.set(key, r);
+        });
+        return Array.from(map.values());
+      }
+      function escapePendingText(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderPendingAdminCards() {
+        if (!pendingAdminCardArea) return;
+        pendingAdminCardArea.innerHTML = '';
+        if (IS_LINE_INAPP_BROWSER) return;
+        const requests = collectPendingAdminRequests();
+        if (!requests.length) return;
+        requests.forEach((req) => {
+          const card = document.createElement('div');
+          card.style.cssText = 'width:100%;margin-bottom:14px;padding:14px 16px;background:var(--card);border:2px solid #f59e0b;border-radius:16px;text-align:center';
+          card.innerHTML =
+            '<div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.6;margin-bottom:10px">「' + escapePendingText(req.teamName) + '」の管理者から、管理者変更の申請が届いています</div>' +
+            '<button type="button" class="pending-admin-accept-btn" data-team="' + escapePendingText(req.teamId) + '" data-member="' + escapePendingText(req.pendingAdminName) + '" data-group="' + escapePendingText(req.teamName) + '" style="padding:10px 18px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:14px;font-weight:700;cursor:pointer">申請を受諾して再ログイン</button>';
+          pendingAdminCardArea.appendChild(card);
+        });
+      }
+      let _pendingAutoOpenedThisLoad = false;
+      function autoOpenPendingAdminQuickFlowIfNeeded() {
+        if (_pendingAutoOpenedThisLoad) return;
+        const requests = collectPendingAdminRequests();
+        if (!requests.length) return;
+        const target = requests.find(r => r && r.teamId && r.pendingAdminName);
+        if (!target) return;
+        _pendingAutoOpenedThisLoad = true;
+        setTimeout(() => {
+          openPendingAdminQuickFlow(target.teamId, target.pendingAdminName, target.teamName || target.teamId);
+        }, 50);
+      }
+      async function refreshPendingAdminRequestsFromServer() {
+        const recent = getRecent();
+        let recentChanged = false;
+        const candidates = (Array.isArray(recent) ? recent : [])
+          .map((t) => ({
+            teamId: String(t?.id || '').trim().toLowerCase(),
+            teamName: String(t?.name || '').trim(),
+            viewerName: String(t?.user || '').trim()
+          }))
+          .filter((t) => t.teamId)
+          .slice(0, 12);
+        if (!candidates.length) {
+          renderPendingAdminCards();
+          return;
+        }
+        await Promise.all(candidates.map(async (c) => {
+          try {
+            const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(c.teamId));
+            if (!res.ok) return;
+            const data = await res.json();
+            if (isDeletedPayload(data)) return;
+            if (c.viewerName && Array.isArray(data?.members)) {
+              const stillMember = data.members.some((m) => {
+                if (!m) return false;
+                const memberName = typeof m === 'string' ? m : String(m.name || '').trim();
+                return memberName === c.viewerName;
+              });
+              if (!stillMember) {
+                try {
+                  const recentNow = getRecent();
+                  const nextRecent = (Array.isArray(recentNow) ? recentNow : [])
+                    .filter((t) => !(t && t.id === c.teamId && String(t.user || '').trim() === c.viewerName));
+                  localStorage.setItem(RECENT_KEY, JSON.stringify(nextRecent.map(({ id, name, user, lastVisited }) => ({ id, name, user, lastVisited }))));
+                  if (Array.isArray(serverRecentTeams)) serverRecentTeams = nextRecent;
+                  recentChanged = true;
+                } catch { }
+                removePendingAdminRequestsByTeam(c.teamId);
+                safeLocalRemove(c.teamId + ':' + PENDING_ADMIN_NAME_SUFFIX);
+                safeLocalRemove(c.teamId + ':' + PENDING_ADMIN_SET_AT_SUFFIX);
+                await removeMyGroupRecord(c.teamId);
+                return;
+              }
+            }
+            const pendingAdminName = String(data?.pendingAdminName || '').trim();
+            const pendingAdminSetAt = String(data?.pendingAdminSetAt || '').trim();
+            const teamName = String(data?.title || c.teamName || '').trim() || c.teamId;
+            if (pendingAdminName) {
+              upsertPendingAdminRequest({
+                teamId: c.teamId,
+                memberName: pendingAdminName,
+                teamName,
+                setAt: pendingAdminSetAt
+              });
+              safeLocalSet(c.teamId + ':' + PENDING_ADMIN_NAME_SUFFIX, pendingAdminName);
+              if (pendingAdminSetAt) safeLocalSet(c.teamId + ':' + PENDING_ADMIN_SET_AT_SUFFIX, pendingAdminSetAt);
+            } else {
+              removePendingAdminRequestsByTeam(c.teamId);
+              safeLocalRemove(c.teamId + ':' + PENDING_ADMIN_NAME_SUFFIX);
+              safeLocalRemove(c.teamId + ':' + PENDING_ADMIN_SET_AT_SUFFIX);
+            }
+          } catch { }
+        }));
+        renderPendingAdminCards();
+        if (recentChanged) renderRecentList();
+      }
 
       function renderRecentList() {
         let recent = getRecent();
@@ -3024,8 +3615,14 @@
           let membersForTeam = [];
           try { membersForTeam = JSON.parse(localStorage.getItem(t.id + ':volley-members') || '[]'); } catch { membersForTeam = []; }
           const me = membersForTeam.find(m => m && m.name === viewerName);
+          if (me && me.state === 'inactive') {
+            changed = true;
+            removeMyGroupRecord(t.id).catch(() => { });
+            return false;
+          }
           if (me) return true;
           changed = true;
+          removeMyGroupRecord(t.id).catch(() => { });
           return false;
         });
         if (changed) localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
@@ -3035,6 +3632,7 @@
           empty.style.cssText = 'padding:10px 2px;font-size:12px;color:var(--text-light);text-align:center';
           empty.textContent = '最近のグループはまだありません';
           recentList.appendChild(empty);
+          renderPendingAdminCards();
           return;
         }
         recent.forEach(t => {
@@ -3063,6 +3661,9 @@
           if (!viewerName) {
             activeStatusBadge.classList.add('recent-badge-pending');
             activeStatusBadge.textContent = 'ログイン情報なし';
+          } else if (me && me.state !== 'inactive' && me.pendingRemovalAt) {
+            activeStatusBadge.classList.add('recent-badge-pending');
+            activeStatusBadge.textContent = getPendingRemovalLabel(me.pendingRemovalAt) || '退会予定（管理者申請）';
           } else if (me && me.state === 'inactive') {
             activeStatusBadge.classList.add('recent-badge-inactive');
             activeStatusBadge.textContent = getInactiveCountdownLabel(me.inactivatedAt) || '退会中';
@@ -3115,52 +3716,70 @@
           const enterBtn = document.createElement('button');
           enterBtn.type = 'button';
           enterBtn.className = 'recent-enter-btn';
+          enterBtn.dataset.team = t.id;
+          enterBtn.dataset.viewer = viewerName;
+          enterBtn.dataset.group = displayName;
+          enterBtn.dataset.resumeInvite = '0';
+          enterBtn.dataset.pending = '0';
+          enterBtn.dataset.pendingMember = '';
           const pendingInvite = getInviteData();
           const canResumeInvite = !viewerName && pendingInvite && pendingInvite.id === t.id;
+          const hasPendingAdminRequest = hasPendingAdminRequestFor(t.id, viewerName);
+          const pendingAdminName = getPendingAdminNameForTeam(t.id);
           if (me && me.state === 'inactive') {
             enterBtn.textContent = '復帰待ち';
             enterBtn.disabled = true;
+          } else if (hasPendingAdminRequest) {
+            const pendingMemberName = pendingAdminName || viewerName;
+            enterBtn.textContent = '管理者変更申請があります';
+            enterBtn.dataset.pending = '1';
+            enterBtn.dataset.pendingMember = pendingMemberName;
           } else if (canResumeInvite) {
             enterBtn.textContent = '招待再開';
+            enterBtn.dataset.resumeInvite = '1';
           } else if (!viewerName || !hasLocalLogin(t.id)) {
             enterBtn.textContent = 'ログイン';
           } else {
             enterBtn.textContent = '入室';
           }
-          enterBtn.addEventListener('click', () => {
-            if (canResumeInvite) {
-              sessionStorage.setItem('inviteFromCard', '1');
-              location.href = '?team=' + encodeURIComponent(t.id);
-              return;
-            }
-            if (hasLocalLogin(t.id)) {
-              location.href = '?team=' + encodeURIComponent(t.id);
-              return;
-            }
-            const panel = document.getElementById('reloginPanel');
-            const createPanel = document.getElementById('createTeamPanel');
-            const recoverPanel = document.getElementById('recoverAdminPanel');
-            const reloginBtn = document.getElementById('openReloginBtn');
-            const teamInput = document.getElementById('reloginGroupId');
-            const nameInput = document.getElementById('reloginName');
-            const err = document.getElementById('reloginError');
-            panel.style.display = '';
-            setLobbyActionButtons(false, false, false, false);
-            if (createPanel) createPanel.style.display = 'none';
-            if (recoverPanel) recoverPanel.style.display = 'none';
-            if (reloginBtn) reloginBtn.style.display = '';
-            teamInput.value = t.id;
-            if (err) err.style.display = 'none';
-            setReloginMode('relogin');
-            nameInput.focus();
+          enterBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            handleRecentEnterButtonClick(enterBtn);
           });
           actionWrap.appendChild(enterBtn);
           item.appendChild(left);
           item.appendChild(actionWrap);
           recentList.appendChild(item);
         });
+        renderPendingAdminCards();
       }
-      renderRecentList();
+      // Server-first: show loading, GET from D1, fallback to localStorage
+      recentList.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--text-light)">読み込み中...</div>';
+      (async () => {
+        const ok = await loadServerRecent();
+        if (ok) {
+          // Server empty but localStorage has data → one-time migration
+          if (!serverRecentTeams.length) {
+            const local = getLocalRecent();
+            if (local.length) {
+              await syncLocalRecentToServer();
+              await loadServerRecent();
+            }
+          }
+        }
+        // Render: serverRecentTeams if available, else localStorage fallback
+        renderRecentList();
+        await refreshPendingAdminRequestsFromServer();
+        autoOpenPendingAdminQuickFlowIfNeeded();
+        if (_pendingAdminTeamParam && _pendingAdminNameParam && !_pendingAutoOpenedThisLoad) {
+          _pendingAutoOpenedThisLoad = true;
+          history.replaceState(null, '', location.pathname);
+          setTimeout(() => {
+            openPendingAdminQuickFlow(_pendingAdminTeamParam, _pendingAdminNameParam, _pendingAdminGroupParam || _pendingAdminTeamParam);
+          }, 0);
+        }
+      })();
 
       const help = document.createElement('div');
       help.className = 'lobby-help';
@@ -3168,11 +3787,10 @@
         '<details>' +
         '<summary>ログインについて</summary>' +
         '<ul style="margin:8px 0 0 16px;padding:0;font-size:12px;line-height:1.6;color:var(--text)">' +
-        '<li>ロビーで「グループIDからログイン」または「新規にグループを作る」を選びます。</li>' +
-        '<li>招待リンクから入った場合は、ロビーの招待カードから参加を開始します。</li>' +
-        '<li>初回参加後は、マイグループ履歴の「入室」からそのまま入れます。</li>' +
-        '<li>再ログイン時は、グループID・名前・PIN（4桁）が必要です。</li>' +
-        '<li>同じグループ内では、名前・PINは重複登録できません（退会中メンバー分を含む）。</li>' +
+        '<li>初回参加は「招待カード」または「グループIDからログイン → 新規参加」から行います。</li>' +
+        '<li>再ログインは、グループID・名前・PIN（4桁）が必要です。</li>' +
+        '<li>同じグループ内では、名前とPINは重複登録できません。</li>' +
+        '<li>管理者変更申請がある場合は、MY GROUPS の専用ボタンから受諾して進みます。</li>' +
         '<li>別端末で同じユーザーがログインすると、先にログインしていた端末はログアウトされます。</li>' +
         '</ul>' +
         '</details>' +
@@ -3182,7 +3800,8 @@
         '<li>練習・試合予定の作成、編集、削除</li>' +
         '<li>予定ごとの締切設定</li>' +
         '<li>メンバー管理（退会申請、申請取消、復帰、完全削除）</li>' +
-        '<li>管理者変更、管理者PIN再設定、グループ名変更、グループ削除</li>' +
+        '<li>管理者変更申請の送信（受諾後に新管理者が確定）</li>' +
+        '<li>グループ名変更、管理者PIN再設定、グループ削除</li>' +
         '</ul>' +
         '</details>' +
         '<details>' +
@@ -3194,15 +3813,15 @@
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・メンバーがPINを忘れた</strong>' +
-        '<ul class="faq-sublist"><li>「メンバーPINを忘れたとき」から、グループID・名前・復旧コードで本人確認してPINを表示できます</li><li>復旧コードがない場合は管理者にPIN再設定を依頼してください</li></ul>' +
+        '<ul class="faq-sublist"><li>「メンバーPINを変更する」から、グループID・名前・現在PINを入力して変更できます</li><li>現在PINが不明な場合は管理者に対応を依頼してください</li></ul>' +
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・管理者がPINを忘れた</strong>' +
-        '<ul class="faq-sublist"><li>「管理者PINを忘れたとき」から復旧コードで再設定できます</li></ul>' +
+        '<ul class="faq-sublist"><li>「管理者PINを忘れたとき」から復旧コードで再設定できます</li><li>復旧コードを知っている人は再設定できるため、第三者へ共有しないでください</li></ul>' +
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・退会/復帰について</strong>' +
-        '<ul class="faq-sublist"><li>退会申請後は24時間の猶予があり、その後退会中になります</li><li>退会中メンバーは管理者が復帰できます</li></ul>' +
+        '<ul class="faq-sublist"><li>管理者の退会申請後は24時間で退会中になります</li><li>退会中メンバーは管理者がいつでも復帰できます</li></ul>' +
         '</li>' +
         '<li>' +
         '<strong class="faq-title">・履歴を消した</strong>' +
@@ -3210,6 +3829,9 @@
         '</li>' +
         '</ul>' +
         '</details>';
+      if (IS_LINE_INAPP_BROWSER) {
+        help.style.display = 'none';
+      }
       lobby.appendChild(help);
 
       function closeLobbyHelpDetails() {
@@ -3258,6 +3880,14 @@
 
 
       // Event handlers — create new team
+      const createAgreeCheckbox = document.getElementById('createAgreeTermsPrivacy');
+      const lobbyCreateBtn = document.getElementById('lobbyCreateBtn');
+      const syncCreateAgreeState = () => {
+        if (!lobbyCreateBtn || !createAgreeCheckbox) return;
+        lobbyCreateBtn.disabled = !createAgreeCheckbox.checked;
+      };
+      if (createAgreeCheckbox) createAgreeCheckbox.addEventListener('change', syncCreateAgreeState);
+      syncCreateAgreeState();
       document.getElementById('lobbyAdminPw').addEventListener('input', e => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
       });
@@ -3269,6 +3899,13 @@
         if (!groupName) { errEl.textContent = 'グループ名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyGroupName').focus(); return; }
         if (!adminName) { errEl.textContent = '管理者名を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminName').focus(); return; }
         if (!/^\d{4}$/.test(adminPw)) { errEl.textContent = '4桁の数字を入力してください'; errEl.style.display = ''; document.getElementById('lobbyAdminPw').focus(); return; }
+        if (!createAgreeCheckbox || !createAgreeCheckbox.checked) {
+          errEl.textContent = '利用規約・プライバシーポリシーへの同意が必要です';
+          errEl.style.display = '';
+          if (createAgreeCheckbox) createAgreeCheckbox.focus();
+          syncCreateAgreeState();
+          return;
+        }
         const createdTeams = pruneCreatedTeams();
         if (createdTeams.length >= MAX_CREATED_TEAMS_PER_DEVICE) {
           errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
@@ -3280,42 +3917,84 @@
         errEl.style.display = 'none';
         const teamId = generateTeamId();
         const t = teamId + ':';
+        const ownerId = ensureOwnerId(teamId);
         const recoveryCode = generateRecoveryCode();
-        const team_data = {
-          teamId,
-          title: groupName,
-          adminName,
-          adminPw,
-          recoveryCode,
-          members: [{ name: adminName, pin: adminPw, state: 'active' }],
-          schedule: []
-        };
         try {
-          const createRes = await fetch(`${API_BASE}/api/team/create`, {
+          const createRes = await fetch(`${SYNC_API}?team=${encodeURIComponent(teamId)}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-recovery-code": recoveryCode },
             credentials: "include",
             body: JSON.stringify({
-              team_id: teamId,
-              team_data: JSON.stringify(team_data)
+              title: groupName,
+              members: [{ name: adminName, pin: adminPw, state: 'active' }],
+              schedule: [],
+              deadline: undefined,
+              adminName,
+              adminPw,
+              ownerId,
+              pendingAdminName: '',
+              pendingAdminSetAt: '',
+              agree_terms_privacy: '1',
+              recoveryCode,
+              loginSession: {
+                id: createSessionId(),
+                type: 'admin',
+                editor: adminName,
+                updatedAt: new Date().toISOString()
+              },
+              attendancePractice: {},
+              attendanceMatch: {}
             })
           });
-          if (createRes.status === 409) {
-            errEl.textContent = 'この端末で作成できるグループは' + MAX_CREATED_TEAMS_PER_DEVICE + '件までです';
+          if (!createRes.ok) {
+            let reason = '';
+            try {
+              const e = await createRes.json();
+              if (e && e.error) reason = '（' + e.error + '）';
+            } catch { }
+            errEl.textContent = 'グループ作成の保存に失敗しました' + reason;
             errEl.style.display = '';
-            renderCreateLimitHint();
             return;
           }
-          if (!createRes.ok) {
-            console.warn('[createTeam] worker API returned non-OK:', createRes.status);
-          }
         } catch (e) {
-          console.warn('[createTeam] worker API unavailable, fallback to local create', e);
+          errEl.textContent = 'グループ作成の通信に失敗しました。もう一度お試しください';
+          errEl.style.display = '';
+          return;
+        }
+        const acknowledged = await showRecoveryCodeModal(recoveryCode);
+        if (!acknowledged) {
+          try {
+            const serverDeletePayload = {
+              deleted: true,
+              deletedAt: new Date().toISOString()
+            };
+            const serverDeleteRes = await fetch(SYNC_API + '?team=' + encodeURIComponent(teamId), {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'x-recovery-code': recoveryCode },
+              body: JSON.stringify(serverDeletePayload)
+            });
+            if (!serverDeleteRes.ok) {
+              errEl.textContent = '作成の取り消しに失敗しました。通信状態を確認して再度お試しください（グループID: ' + teamId + '）';
+              errEl.style.display = '';
+              return;
+            }
+          } catch {
+            errEl.textContent = '作成の取り消しに失敗しました。通信状態を確認して再度お試しください（グループID: ' + teamId + '）';
+            errEl.style.display = '';
+            return;
+          }
+          localStorage.removeItem(t + OWNER_ID_SUFFIX);
+          errEl.textContent = '作成を取りやめました';
+          errEl.style.display = '';
+          return;
         }
         // Set up localStorage for the new team
         localStorage.setItem(t + 'volley-app-title', groupName);
         localStorage.setItem(t + 'volley-admin-pw', adminPw);
         localStorage.setItem(t + 'volley-admin-name', adminName);
+        localStorage.setItem(t + OWNER_ID_SUFFIX, ownerId);
+        localStorage.removeItem(t + PENDING_ADMIN_NAME_SUFFIX);
+        localStorage.removeItem(t + PENDING_ADMIN_SET_AT_SUFFIX);
         localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, recoveryCode);
         localStorage.setItem(t + 'volley-login-type', 'admin');
         localStorage.setItem(t + 'volley-editor', adminName);
@@ -3333,8 +4012,13 @@
         recent.unshift({ id: teamId, name: groupName, user: adminName, lastVisited: new Date().toISOString() });
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
         setCreatedTeams([teamId, ...createdTeams]);
+        await upsertMyGroupRecord(teamId, {
+          groupName,
+          aliasName: adminName,
+          role: 'admin',
+          status: 'active'
+        });
         renderCreateLimitHint();
-        await showRecoveryCodeModal(recoveryCode);
         location.href = '?team=' + encodeURIComponent(teamId);
       });
       document.getElementById('lobbyGroupName').addEventListener('keydown', e => {
@@ -3358,10 +4042,131 @@
         if (pinHelpBtn) pinHelpBtn.style.display = showPinHelp ? '' : 'none';
       }
 
+      function openLobbyJoinFlow(teamId) {
+        openInviteJoinModal(teamId);
+      }
+
+      let inviteJoinTeamId = '';
+      function ensureInviteJoinModal() {
+        let modal = document.getElementById('inviteJoinModal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'inviteJoinModal';
+        modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(15,23,42,0.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:1700;padding:14px';
+        modal.innerHTML =
+          '<div style="position:relative;width:min(420px,100%);max-height:calc(100dvh - 28px);overflow:auto;margin:0 auto;background:#fff;border-radius:16px;border:2px solid rgba(124,58,237,0.24);padding:14px;box-shadow:0 22px 44px rgba(15,23,42,0.28)">' +
+          '<button id="inviteJoinClose" type="button" aria-label="閉じる" style="position:absolute;top:8px;right:8px;width:40px;height:40px;border:none;border-radius:12px;background:#eef2ff;color:#4338ca;font-size:22px;font-weight:800;line-height:1;cursor:pointer">✕</button>' +
+          '<div style="font-size:15px;font-weight:800;color:var(--text);margin:2px 48px 10px 0">招待されたグループに参加</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+          '<div style="font-size:12px;color:var(--text-light)">招待ID</div>' +
+          '<div id="inviteJoinTeamIdLabel" style="font-size:12px;font-weight:700;color:var(--text-light);letter-spacing:0.2px"></div>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--text-light);margin-bottom:6px">グループ名</div>' +
+          '<div id="inviteJoinTeamLabel" style="margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#f8fafc;font-size:14px;font-weight:700;color:var(--text);word-break:break-all"></div>' +
+          '<input id="inviteJoinName" type="text" placeholder="あなたの名前" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="invite_name" style="width:100%;padding:11px 12px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;margin-bottom:8px;text-align:center">' +
+          '<input id="inviteJoinPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN（4桁数字）" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" name="invite_pin" style="width:100%;padding:11px 12px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;letter-spacing:4px;margin-bottom:8px;text-align:center">' +
+          '<label for="inviteJoinAgreeTermsPrivacy" style="display:flex;align-items:flex-start;gap:6px;margin:0 2px 8px;font-size:11px;line-height:1.5;color:var(--text)">' +
+          '<input id="inviteJoinAgreeTermsPrivacy" type="checkbox" style="margin-top:2px">' +
+          '<span><a href="/terms" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">利用規約</a>・<a href="/privacy" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline">プライバシーポリシー</a>に同意して参加</span>' +
+          '</label>' +
+          '<div id="inviteJoinError" style="display:none;font-size:12px;color:var(--absent);margin:2px 2px 10px;text-align:center"></div>' +
+          '<button id="inviteJoinSubmit" class="lobby-login-btn" style="margin:0" disabled>参加する</button>' +
+          '</div>';
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeInviteJoinModal();
+        });
+        document.body.appendChild(modal);
+        modal.querySelector('#inviteJoinPin').addEventListener('input', (e) => {
+          e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+        });
+        const inviteJoinAgree = modal.querySelector('#inviteJoinAgreeTermsPrivacy');
+        const inviteJoinSubmit = modal.querySelector('#inviteJoinSubmit');
+        const syncInviteJoinAgreeState = () => {
+          if (!inviteJoinSubmit || !inviteJoinAgree) return;
+          inviteJoinSubmit.disabled = !inviteJoinAgree.checked;
+        };
+        inviteJoinAgree?.addEventListener('change', syncInviteJoinAgreeState);
+        syncInviteJoinAgreeState();
+        modal.querySelector('#inviteJoinClose').addEventListener('click', closeInviteJoinModal);
+        modal.querySelector('#inviteJoinSubmit').addEventListener('click', async () => {
+          const nameEl = modal.querySelector('#inviteJoinName');
+          const pinEl = modal.querySelector('#inviteJoinPin');
+          const agreeEl = modal.querySelector('#inviteJoinAgreeTermsPrivacy');
+          const errEl = modal.querySelector('#inviteJoinError');
+          const teamId = String(inviteJoinTeamId || '').trim().toLowerCase();
+          const name = (nameEl.value || '').trim();
+          const pin = (pinEl.value || '').trim();
+          if (!agreeEl || !agreeEl.checked) {
+            errEl.textContent = '利用規約・プライバシーポリシーへの同意が必要です';
+            errEl.style.display = '';
+            return;
+          }
+          const setErr = (msg) => {
+            errEl.textContent = msg;
+            errEl.style.display = '';
+          };
+          await processLobbyLogin({ teamId, name, pin, mode: 'join', setErr, agreeTermsPrivacy: true });
+        });
+        return modal;
+      }
+
+      function openInviteJoinModal(teamId) {
+        inviteJoinTeamId = String(teamId || '').trim().toLowerCase();
+        if (!inviteJoinTeamId) return;
+        const modal = ensureInviteJoinModal();
+        const teamIdLabel = modal.querySelector('#inviteJoinTeamIdLabel');
+        const teamLabel = modal.querySelector('#inviteJoinTeamLabel');
+        const nameEl = modal.querySelector('#inviteJoinName');
+        const pinEl = modal.querySelector('#inviteJoinPin');
+        const agreeEl = modal.querySelector('#inviteJoinAgreeTermsPrivacy');
+        const submitEl = modal.querySelector('#inviteJoinSubmit');
+        const errEl = modal.querySelector('#inviteJoinError');
+        const pendingInvite = getInviteData();
+        const inviteName = String(pendingInvite?.name || '').trim();
+        teamIdLabel.textContent = inviteJoinTeamId;
+        teamLabel.textContent = inviteName || 'グループ名を取得中';
+        if (!inviteName) {
+          (async () => {
+            try {
+              const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(inviteJoinTeamId));
+              if (!res.ok) return;
+              const data = await res.json();
+              const fetchedName = String(data?.title || '').trim();
+              if (!fetchedName) return;
+              const currentInvite = getInviteData();
+              if (currentInvite && currentInvite.id === inviteJoinTeamId) {
+                setInviteData({ ...currentInvite, name: fetchedName, pending: true });
+              }
+              teamLabel.textContent = fetchedName;
+            } catch { }
+          })();
+        }
+        nameEl.value = '';
+        pinEl.value = '';
+        if (agreeEl) agreeEl.checked = false;
+        if (submitEl) submitEl.disabled = true;
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        nameEl.focus();
+      }
+
+      function closeInviteJoinModal() {
+        const modal = document.getElementById('inviteJoinModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        document.body.style.overflowY = 'auto';
+        document.body.style.overflowX = 'hidden';
+      }
+
       function setReloginMode(mode) {
         const panel = document.getElementById('reloginPanel');
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
+        const submitBtn = document.getElementById('reloginBtn');
+        const joinAgreeWrap = document.getElementById('reloginJoinAgreeWrap');
+        const joinAgreeCheckbox = document.getElementById('reloginJoinAgreeTermsPrivacy');
         const title = document.getElementById('reloginPanelTitle');
         const cancelSelectBtn = document.getElementById('cancelReloginSelectBtn');
         const form = document.getElementById('reloginFormArea');
@@ -3382,6 +4187,9 @@
         joinBtn.style.padding = '8px 10px';
         reloginBtn.style.fontSize = '12px';
         joinBtn.style.fontSize = '12px';
+        if (joinAgreeWrap) joinAgreeWrap.style.display = reloginActive ? 'none' : 'flex';
+        if (reloginActive && joinAgreeCheckbox) joinAgreeCheckbox.checked = false;
+        if (submitBtn) submitBtn.disabled = reloginActive ? false : !(joinAgreeCheckbox && joinAgreeCheckbox.checked);
       }
 
       function resetReloginSelection() {
@@ -3389,6 +4197,9 @@
         const form = document.getElementById('reloginFormArea');
         const reloginBtn = document.getElementById('modeReloginBtn');
         const joinBtn = document.getElementById('modeJoinBtn');
+        const submitBtn = document.getElementById('reloginBtn');
+        const joinAgreeWrap = document.getElementById('reloginJoinAgreeWrap');
+        const joinAgreeCheckbox = document.getElementById('reloginJoinAgreeTermsPrivacy');
         const title = document.getElementById('reloginPanelTitle');
         const cancelSelectBtn = document.getElementById('cancelReloginSelectBtn');
         if (panel) panel.dataset.mode = '';
@@ -3397,6 +4208,169 @@
         if (cancelSelectBtn) cancelSelectBtn.style.display = '';
         if (reloginBtn) reloginBtn.style.display = '';
         if (joinBtn) joinBtn.style.display = '';
+        if (joinAgreeWrap) joinAgreeWrap.style.display = 'none';
+        if (joinAgreeCheckbox) joinAgreeCheckbox.checked = false;
+        if (submitBtn) submitBtn.disabled = false;
+      }
+
+      function openReloginPanelFor(teamId, name) {
+        const panel = document.getElementById('reloginPanel');
+        const createPanel = document.getElementById('createTeamPanel');
+        const recoverPanel = document.getElementById('recoverAdminPanel');
+        const pinHelpPanel = document.getElementById('pinHelpPanel');
+        const teamInput = document.getElementById('reloginGroupId');
+        const nameInput = document.getElementById('reloginName');
+        const pinInput = document.getElementById('reloginPin');
+        const err = document.getElementById('reloginError');
+        if (!panel || !teamInput || !nameInput) return;
+        panel.style.display = '';
+        setLobbyActionButtons(false, false, false, false);
+        if (createPanel) createPanel.style.display = 'none';
+        if (recoverPanel) recoverPanel.style.display = 'none';
+        if (pinHelpPanel) pinHelpPanel.style.display = 'none';
+        teamInput.value = String(teamId || '').trim().toLowerCase();
+        nameInput.value = String(name || '').trim();
+        if (pinInput) pinInput.value = '';
+        if (err) {
+          err.textContent = '';
+          err.style.display = 'none';
+        }
+        setReloginMode('relogin');
+        if (pinInput) pinInput.focus();
+      }
+      function hasPendingAdminRequestFor(teamId, viewerName) {
+        const t = String(teamId || '').trim().toLowerCase();
+        const v = String(viewerName || '').trim();
+        if (!t || !v) return false;
+        const localPending = String(localStorage.getItem(t + ':' + PENDING_ADMIN_NAME_SUFFIX) || '').trim();
+        if (localPending && localPending === v) return true;
+        return readPendingAdminRequests().some(r =>
+          r && String(r.teamId || '').trim().toLowerCase() === t &&
+          String(r.memberName || '').trim() === v
+        );
+      }
+      function getPendingAdminNameForTeam(teamId) {
+        const t = String(teamId || '').trim().toLowerCase();
+        if (!t) return '';
+        const localPending = String(localStorage.getItem(t + ':' + PENDING_ADMIN_NAME_SUFFIX) || '').trim();
+        if (localPending) return localPending;
+        const req = readPendingAdminRequests().find(r => r && String(r.teamId || '').trim().toLowerCase() === t);
+        return String(req?.memberName || '').trim();
+      }
+      function hasPendingAdminRequestByTeam(teamId) {
+        const t = String(teamId || '').trim().toLowerCase();
+        if (!t) return false;
+        if (String(localStorage.getItem(t + ':' + PENDING_ADMIN_NAME_SUFFIX) || '').trim()) return true;
+        return readPendingAdminRequests().some(r => r && String(r.teamId || '').trim().toLowerCase() === t);
+      }
+      function openPendingAdminQuickFlow(teamId, name, groupName) {
+        const t = String(teamId || '').trim().toLowerCase();
+        const n = String(name || '').trim();
+        if (!t || !n) return;
+        // 多重起動ガード: 既存オーバーレイがあれば何もしない
+        if (document.getElementById('pendingAdminQuickOverlay')) return;
+        const overlay = document.createElement('div');
+        overlay.id = 'pendingAdminQuickOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:12000;padding:20px';
+        overlay.innerHTML =
+          '<div style="max-width:360px;width:100%;background:#fff;border-radius:16px;padding:16px 14px 14px;box-shadow:0 18px 44px rgba(15,23,42,0.28)">' +
+          '<div style="font-size:15px;font-weight:800;color:var(--text);line-height:1.6;margin-bottom:8px">「' + escapePendingText(groupName || t) + '」の管理者変更申請</div>' +
+          '<div style="font-size:12px;color:var(--text-light);line-height:1.6;margin-bottom:10px">現在のメンバーPINを入力して続行してください。</div>' +
+          '<input id="pendingAdminQuickPin" type="tel" inputmode="numeric" maxlength="4" placeholder="現在のPIN（4桁）" style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:12px;font-size:14px;outline:none;letter-spacing:4px;text-align:center">' +
+          '<div id="pendingAdminQuickErr" style="display:none;font-size:12px;color:var(--absent);margin:6px 2px 10px;text-align:center"></div>' +
+          '<button id="pendingAdminQuickGo" type="button" class="lobby-login-btn" style="margin-bottom:6px">受諾して続行</button>' +
+          '<button id="pendingAdminQuickCancel" type="button" class="lobby-create-btn">キャンセル</button>' +
+          '</div>';
+        document.body.appendChild(overlay);
+        const pinInput = overlay.querySelector('#pendingAdminQuickPin');
+        const errEl = overlay.querySelector('#pendingAdminQuickErr');
+        const close = () => overlay.remove();
+        pinInput?.addEventListener('input', (e) => {
+          e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+        });
+        overlay.querySelector('#pendingAdminQuickCancel')?.addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#pendingAdminQuickGo')?.addEventListener('click', async () => {
+          const pin = String(pinInput?.value || '').trim();
+          if (!/^\d{4}$/.test(pin)) {
+            if (errEl) { errEl.textContent = 'PINは4桁の数字で入力してください'; errEl.style.display = ''; }
+            return;
+          }
+          safeSessionSet(PENDING_ADMIN_ACCEPTED_KEY_PREFIX + t + ':' + n, '1');
+          if (errEl) errEl.style.display = 'none';
+          await processLobbyLogin({
+            teamId: t,
+            name: n,
+            pin,
+            mode: 'relogin',
+            setErr: (msg) => {
+              if (errEl) {
+                errEl.textContent = msg;
+                errEl.style.display = '';
+              }
+            }
+          });
+        });
+        pinInput?.focus();
+      }
+      function handleRecentEnterButtonClick(recentBtn) {
+        if (!recentBtn) return;
+        const teamId = String(recentBtn.dataset.team || '').trim().toLowerCase();
+        if (!teamId) return;
+        const viewerName = String(recentBtn.dataset.viewer || '').trim();
+        const groupName = String(recentBtn.dataset.group || localStorage.getItem(teamId + ':volley-app-title') || '').trim() || teamId;
+        const btnText = String(recentBtn.textContent || '').replace(/\s+/g, '');
+        const hasPendingLabel = btnText.includes('管理者変更申請');
+        const hasPendingRequest =
+          recentBtn.dataset.pending === '1' ||
+          hasPendingLabel ||
+          hasPendingAdminRequestFor(teamId, viewerName) ||
+          hasPendingAdminRequestByTeam(teamId);
+        if (hasPendingRequest) {
+          const pendingFromTeam = collectPendingAdminRequests().find(r => String(r?.teamId || '').trim().toLowerCase() === teamId);
+          const pendingMember = String(
+            recentBtn.dataset.pendingMember ||
+            getPendingAdminNameForTeam(teamId) ||
+            pendingFromTeam?.pendingAdminName ||
+            viewerName
+          ).trim();
+          if (!pendingMember) {
+            alert('管理者変更対象の名前を取得できません。ページを再読み込みしてください。');
+            return;
+          }
+          openPendingAdminQuickFlow(teamId, pendingMember, groupName);
+          return;
+        }
+
+        const pendingInvite = getInviteData();
+        const canResumeInvite = recentBtn.dataset.resumeInvite === '1'
+          || (!viewerName && pendingInvite && pendingInvite.id === teamId);
+        if (canResumeInvite) {
+          openLobbyJoinFlow(teamId);
+          return;
+        }
+
+        if (hasLocalLogin(teamId)) {
+          location.href = '?team=' + encodeURIComponent(teamId);
+          return;
+        }
+
+        const panel = document.getElementById('reloginPanel');
+        const createPanel = document.getElementById('createTeamPanel');
+        const recoverPanel = document.getElementById('recoverAdminPanel');
+        const reloginBtn = document.getElementById('openReloginBtn');
+        const teamInput = document.getElementById('reloginGroupId');
+        const nameInput = document.getElementById('reloginName');
+        const err = document.getElementById('reloginError');
+        panel.style.display = '';
+        setLobbyActionButtons(false, false, false, false);
+        if (createPanel) createPanel.style.display = 'none';
+        if (recoverPanel) recoverPanel.style.display = 'none';
+        if (reloginBtn) reloginBtn.style.display = '';
+        teamInput.value = teamId;
+        if (err) err.style.display = 'none';
+        setReloginMode('relogin');
+        nameInput.focus();
       }
 
       document.addEventListener('click', (e) => {
@@ -3483,8 +4457,25 @@
         let inviteData = getInviteData();
         if (!inviteData || !inviteData.id) { alert('招待データがありません'); return; }
         setInviteData({ ...inviteData, pending: true });
-        sessionStorage.setItem('inviteFromCard', '1');
-        location.href = '?team=' + encodeURIComponent(inviteData.id);
+        openLobbyJoinFlow(inviteData.id);
+      });
+
+      document.addEventListener('click', (e) => {
+        const recentBtn = e.target.closest('.recent-enter-btn');
+        if (!recentBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        handleRecentEnterButtonClick(recentBtn);
+      });
+
+      document.addEventListener('click', (e) => {
+        const acceptBtn = e.target.closest('.pending-admin-accept-btn');
+        if (!acceptBtn) return;
+        const teamId = String(acceptBtn.dataset.team || '').trim().toLowerCase();
+        const memberName = String(acceptBtn.dataset.member || '').trim();
+        if (!teamId || !memberName) return;
+        const groupName = String(acceptBtn.dataset.group || localStorage.getItem(teamId + ':volley-app-title') || '').trim() || teamId;
+        openPendingAdminQuickFlow(teamId, memberName, groupName);
       });
 
       document.getElementById('openReloginBtn').addEventListener('click', () => {
@@ -3522,84 +4513,108 @@
       document.getElementById('recoverNewPin').addEventListener('input', e => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
       });
-      document.getElementById('reloginBtn').addEventListener('click', async () => {
-        const err = document.getElementById('reloginError');
-        const teamId = document.getElementById('reloginGroupId').value.trim().toLowerCase();
-        const name = document.getElementById('reloginName').value.trim();
-        const pin = document.getElementById('reloginPin').value.trim();
+      document.getElementById('pinHelpCode').addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+      });
+      document.getElementById('pinHelpNewPin').addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+      });
+      const reloginJoinAgreeCheckbox = document.getElementById('reloginJoinAgreeTermsPrivacy');
+      const reloginSubmitBtn = document.getElementById('reloginBtn');
+      reloginJoinAgreeCheckbox?.addEventListener('change', () => {
         const mode = document.getElementById('reloginPanel')?.dataset.mode || '';
-        if (!mode) { err.textContent = '先に「再ログイン」または「新規参加」を選んでください'; err.style.display = ''; return; }
-        if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
-        if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
-        if (!/^\d{4}$/.test(pin)) { err.textContent = 'PINは4桁の数字で入力してください'; err.style.display = ''; return; }
+        if (!reloginSubmitBtn) return;
+        if (mode === 'join') reloginSubmitBtn.disabled = !reloginJoinAgreeCheckbox.checked;
+      });
+      async function processLobbyLogin({ teamId, name, pin, mode, setErr, agreeTermsPrivacy = false }) {
+        const errFn = typeof setErr === 'function' ? setErr : (() => { });
+        if (!mode) { errFn('先に「再ログイン」または「新規参加」を選んでください'); return; }
+        if (!teamId) { errFn('グループIDを入力してください'); return; }
+        if (!name) { errFn('名前を入力してください'); return; }
+        if (!/^\d{4}$/.test(pin)) { errFn('PINは4桁の数字で入力してください'); return; }
         if (mode === 'join' && hasLocalLogin(teamId)) {
-          err.textContent = 'この端末は既にこのグループで登録済みです。再ログインを選んでください';
-          err.style.display = '';
+          errFn('この端末は既にこのグループで登録済みです。再ログインを選んでください');
           return;
         }
-        err.style.display = 'none';
         try {
           const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
           const res = await fetch(api);
-          if (!res.ok) { err.textContent = 'グループが見つかりません'; err.style.display = ''; return; }
-          const data = await res.json();
-          if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
-          if (!Array.isArray(data?.members)) { err.textContent = 'グループデータを取得できません'; err.style.display = ''; return; }
+          if (!res.ok) { errFn('グループが見つかりません'); return; }
+          let data = await res.json();
+          const ownerId = ensureOwnerId(teamId, data?.ownerId || data?.owner_id || '');
+          if (isDeletedPayload(data)) { errFn('このグループは削除されています'); return; }
+          if (!Array.isArray(data?.members)) { errFn('グループデータを取得できません'); return; }
           const adminName = String(data?.adminName || '').trim();
-          const adminPw = String(data?.adminPw || '0000');
-          const isAdminLogin = name === adminName && pin === adminPw;
-          const members = (Array.isArray(data.members) ? data.members : []).map(normalizeMemberRecord).filter(Boolean);
+          const localAdminPw = String(localStorage.getItem(teamId + ':volley-admin-pw') || '').trim();
+          const adminPw = String(data?.adminPw || localAdminPw || '').trim();
+          const pendingAdminName = String(data?.pendingAdminName || '').trim();
+          let isAdminLogin = name === adminName && pin === adminPw;
+          const members = (Array.isArray(data.members) ? data.members : [])
+            .map((member) => {
+              if (!member) return null;
+              if (typeof member === 'string') return { name: member, pin: '', state: 'active' };
+              const out = { ...member };
+              out.name = String(out.name || '').trim();
+              out.pin = String(out.pin || '').trim();
+              out.state = out.state === 'inactive' ? 'inactive' : 'active';
+              return out;
+            })
+            .filter(Boolean);
+          let localMembers = [];
+          try {
+            localMembers = JSON.parse(localStorage.getItem(teamId + ':volley-members') || '[]');
+          } catch { localMembers = []; }
+          const localPinByName = new Map(
+            (Array.isArray(localMembers) ? localMembers : [])
+              .map((m) => ({
+                name: String(m?.name || '').trim(),
+                pin: String(m?.pin || '').trim()
+              }))
+              .filter((m) => m.name)
+              .map((m) => [m.name, m.pin])
+          );
+          const isPinUsedByOthers = (candidatePin, selfName) => {
+            const pinVal = String(candidatePin || '').trim();
+            if (!/^\d{4}$/.test(pinVal)) return false;
+            const inServer = members.some(m => m && m.name !== selfName && String(m.pin || '').trim() === pinVal);
+            if (inServer) return true;
+            const inLocal = (Array.isArray(localMembers) ? localMembers : [])
+              .some(m => m && String(m.name || '').trim() !== selfName && String(m.pin || '').trim() === pinVal);
+            return inLocal;
+          };
           const member = findMemberByName(members, name);
-          const reloginMode = (document.getElementById('reloginPanel')?.dataset.mode || 'join') === 'relogin';
-          const sessionPayload = {
+          const reloginMode = mode === 'relogin';
+          const pendingAcceptKey = PENDING_ADMIN_ACCEPTED_KEY_PREFIX + teamId + ':' + name;
+          let promotedToAdminByTransfer = false;
+          let sessionPayload = {
             id: createSessionId(),
             type: isAdminLogin ? 'admin' : 'member',
             editor: name,
             updatedAt: new Date().toISOString()
           };
           if (!isAdminLogin) {
-            if (name === adminName) {
-              err.textContent = '管理者PINが違います';
-              err.style.display = '';
-              return;
-            }
+            if (name === adminName) { errFn('管理者PINが違います'); return; }
             if (reloginMode) {
-              if (!member) {
-                err.textContent = 'この名前は登録されていません（新規参加を選んでください）';
-                err.style.display = '';
-                return;
-              }
-              if (member.state === 'inactive') {
-                err.textContent = 'この名前は退会中です。管理者に復帰を依頼してください';
-                err.style.display = '';
-                return;
-              }
-              if (String(member.pin || '') !== pin) {
-                err.textContent = 'PINが違います';
-                err.style.display = '';
-                return;
-              }
+              if (!member) { errFn('この名前は登録されていません（新規参加を選んでください）'); return; }
+              if (member.state === 'inactive') { errFn('この名前は退会中です。管理者に復帰を依頼してください'); return; }
+              const memberPin = String(member.pin || localPinByName.get(name) || '').trim();
+              if (memberPin && memberPin !== pin) { errFn('PINが違います'); return; }
             } else {
+              if (!agreeTermsPrivacy) {
+                errFn('利用規約・プライバシーポリシーへの同意が必要です');
+                return;
+              }
               if (member) {
-                err.textContent = member.state === 'inactive'
+                errFn(member.state === 'inactive'
                   ? 'この名前は退会中メンバーが使用中です。管理者に復帰を依頼してください'
-                  : 'この名前は登録済みです。再ログインを選んでください';
-                err.style.display = '';
+                  : 'この名前は登録済みです。再ログインを選んでください');
                 return;
               }
-              const samePin = members.find(m => m && String(m.pin || '') === pin);
-              if (samePin) {
-                err.textContent = samePin.state === 'inactive'
-                  ? 'このPINは退会中メンバーが使用中です。管理者に復帰を依頼してください'
-                  : 'このPINはすでに使われています';
-                err.style.display = '';
+              if (isPinUsedByOthers(pin, name)) {
+                errFn('このPINはすでに使われています');
                 return;
               }
-              if (pin === adminPw) {
-                err.textContent = '管理者PINと同じPINは使えません';
-                err.style.display = '';
-                return;
-              }
+              if (/^\d{4}$/.test(adminPw) && pin === adminPw) { errFn('このPINはすでに使用されています。別のPINにしてください'); return; }
               members.push({ name, pin, state: 'active' });
               const payload = {
                 title: data?.title || '',
@@ -3607,7 +4622,11 @@
                 schedule: Array.isArray(data?.schedule) ? data.schedule : [],
                 deadline: data?.deadline || undefined,
                 adminName: data?.adminName || '',
-                adminPw: data?.adminPw || '0000',
+                adminPw: adminPw || undefined,
+                ownerId,
+                pendingAdminName: data?.pendingAdminName || '',
+                pendingAdminSetAt: data?.pendingAdminSetAt || '',
+                ...(agreeTermsPrivacy ? { agree_terms_privacy: '1' } : {}),
                 recoveryCode: data?.recoveryCode || '',
                 loginSession: sessionPayload,
                 attendancePractice: data?.attendancePractice || {},
@@ -3615,34 +4634,160 @@
               };
               const saveRes = await fetch(api, {
                 method: 'POST',
-                headers: { 'content-type': 'application/json' },
+                headers: { 'content-type': 'application/json', 'x-recovery-code': data?.recoveryCode || '' },
                 body: JSON.stringify(payload)
               });
               if (!saveRes.ok) {
-                err.textContent = '新規参加の登録に失敗しました';
-                err.style.display = '';
+                let reason = '';
+                try {
+                  const e = await saveRes.json();
+                  if (e && e.error) reason = '（' + e.error + '）';
+                } catch { }
+                errFn('新規参加の登録に失敗しました' + reason);
                 return;
               }
             }
           }
+
+          const isPendingAdminCandidate = !!pendingAdminName && pendingAdminName === name;
+          if (isPendingAdminCandidate && !isAdminLogin) {
+            if (!reloginMode) { errFn('管理者確定のため「再ログイン」で入ってください'); return; }
+            let accepted = safeSessionGet(pendingAcceptKey) === '1';
+            if (!accepted) {
+              const acceptedNow = await lobbyConfirm('管理者変更の申請があります。受諾してこのまま続行しますか？');
+              if (!acceptedNow) {
+                errFn('申請を受諾すると管理者確定に進めます');
+                return;
+              }
+              safeSessionSet(pendingAcceptKey, '1');
+              accepted = true;
+            }
+            if (!accepted) { errFn('申請受諾に失敗しました。もう一度お試しください'); return; }
+            if (!member || member.state === 'inactive') {
+              errFn('この名前は有効なメンバーではありません。現管理者に確認してください。');
+              return;
+            }
+            const memberPin = String(member.pin || localPinByName.get(name) || '').trim();
+            if (memberPin && memberPin !== pin) {
+              errFn('PINが違います');
+              return;
+            }
+            let nextAdminPin = '';
+            for (;;) {
+              const entered = (window.prompt('管理者変更を確定します。新しい管理者PIN（4桁）を設定してください', '') || '').trim();
+              if (!entered) { errFn('管理者変更をキャンセルしました'); return; }
+              if (!/^\d{4}$/.test(entered)) {
+                alert('管理者PINは4桁の数字で入力してください。');
+                continue;
+              }
+              if (entered === adminPw) {
+                alert('現在の管理者PINと同じ番号は設定できません。別の4桁にしてください。');
+                continue;
+              }
+              if (isPinUsedByOthers(entered, name)) {
+                alert('このPINは他のメンバーが使用中です。別の4桁にしてください。');
+                continue;
+              }
+              nextAdminPin = entered;
+              break;
+            }
+            const target = members.find(m => m && m.name === name);
+            if (target) target.pin = nextAdminPin;
+            const rotatedCode = generateRecoveryCode();
+            sessionPayload = { ...sessionPayload, type: 'admin', updatedAt: new Date().toISOString() };
+            const activationPayload = {
+              title: data?.title || '',
+              members,
+              schedule: Array.isArray(data?.schedule) ? data.schedule : [],
+              deadline: data?.deadline || undefined,
+              adminName: name,
+              adminPw: nextAdminPin,
+              ownerId,
+              pendingAdminName: '',
+              pendingAdminSetAt: '',
+              recoveryCode: rotatedCode,
+              loginSession: sessionPayload,
+              attendancePractice: data?.attendancePractice || {},
+              attendanceMatch: data?.attendanceMatch || {}
+            };
+            const activationRes = await fetch(api, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'x-recovery-code': data?.recoveryCode || '' },
+              body: JSON.stringify(activationPayload)
+            });
+            if (!activationRes.ok) { errFn('管理者変更の確定に失敗しました'); return; }
+            data = activationPayload;
+            isAdminLogin = true;
+            promotedToAdminByTransfer = true;
+            safeSessionRemove(pendingAcceptKey);
+            removePendingAdminRequest(teamId, name);
+            document.getElementById('pendingAdminQuickOverlay')?.remove();
+            await showRecoveryCodeModal(rotatedCode);
+          }
+
           const t = teamId + ':';
-          if (data.title) localStorage.setItem(t + 'volley-app-title', data.title);
-          localStorage.setItem(t + 'volley-members', JSON.stringify(members));
-          if (Array.isArray(data.schedule)) localStorage.setItem(t + 'volley-schedule', JSON.stringify(data.schedule));
-          if (data.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(data.deadline));
-          if (data.adminName) localStorage.setItem(t + 'volley-admin-name', data.adminName);
-          if (data.adminPw) localStorage.setItem(t + 'volley-admin-pw', data.adminPw);
-          if (typeof data.recoveryCode === 'string' && data.recoveryCode) localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
-          localStorage.setItem(t + 'volley-editor', name);
-          localStorage.setItem(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
-          localStorage.setItem(t + 'volley-login-session', JSON.stringify(sessionPayload));
+          if (data.title) safeLocalSet(t + 'volley-app-title', data.title);
+          safeLocalSet(t + 'volley-members', JSON.stringify(members));
+          if (Array.isArray(data.schedule)) safeLocalSet(t + 'volley-schedule', JSON.stringify(data.schedule));
+          if (data.deadline) safeLocalSet(t + 'volley-deadline', JSON.stringify(data.deadline));
+          if (data.adminName) safeLocalSet(t + 'volley-admin-name', data.adminName);
+          if (data.adminPw) safeLocalSet(t + 'volley-admin-pw', data.adminPw);
+          safeLocalSet(t + OWNER_ID_SUFFIX, ownerId);
+          if (data.pendingAdminName) safeLocalSet(t + PENDING_ADMIN_NAME_SUFFIX, data.pendingAdminName);
+          else safeLocalRemove(t + PENDING_ADMIN_NAME_SUFFIX);
+          if (data.pendingAdminSetAt) safeLocalSet(t + PENDING_ADMIN_SET_AT_SUFFIX, data.pendingAdminSetAt);
+          else safeLocalRemove(t + PENDING_ADMIN_SET_AT_SUFFIX);
+          if (typeof data.recoveryCode === 'string' && data.recoveryCode) safeLocalSet(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
+          safeLocalSet(t + SELF_PIN_SUFFIX, isAdminLogin ? String(data.adminPw || '').trim() : pin);
+          safeLocalSet(t + 'volley-editor', name);
+          safeLocalSet(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
+          safeLocalSet(t + 'volley-login-session', JSON.stringify(sessionPayload));
+          await upsertMyGroupRecord(teamId, {
+            groupName: String(data.title || '').trim(),
+            aliasName: name,
+            role: isAdminLogin ? 'admin' : 'member',
+            status: member && member.state === 'inactive' ? 'inactive' : 'active'
+          });
           clearInviteForTeam(teamId);
-          sessionStorage.removeItem('inviteFromCard');
+          safeSessionRemove('inviteFromCard');
+          closeInviteJoinModal();
+          if (promotedToAdminByTransfer) {
+            alert('管理者変更が完了しました。あなたが管理者としてログインしました。');
+          }
           location.href = '?team=' + encodeURIComponent(teamId);
-        } catch {
-          err.textContent = '通信エラーが発生しました';
-          err.style.display = '';
+        } catch (e) {
+          const detail = e && typeof e.message === 'string' ? e.message : 'unknown';
+          console.error('[processLobbyLogin] failed', e);
+          errFn(SHOW_DETAILED_ERRORS ? ('通信エラーが発生しました（' + detail + '）') : '通信エラーが発生しました');
         }
+      }
+
+      document.getElementById('reloginBtn').addEventListener('click', async () => {
+        const err = document.getElementById('reloginError');
+        const teamId = document.getElementById('reloginGroupId').value.trim().toLowerCase();
+        const name = document.getElementById('reloginName').value.trim();
+        const pin = document.getElementById('reloginPin').value.trim();
+        const mode = document.getElementById('reloginPanel')?.dataset.mode || '';
+        const agreeTermsPrivacy = mode === 'join'
+          ? !!document.getElementById('reloginJoinAgreeTermsPrivacy')?.checked
+          : false;
+        err.style.display = 'none';
+        if (mode === 'join' && !agreeTermsPrivacy) {
+          err.textContent = '利用規約・プライバシーポリシーへの同意が必要です';
+          err.style.display = '';
+          return;
+        }
+        await processLobbyLogin({
+          teamId,
+          name,
+          pin,
+          mode,
+          agreeTermsPrivacy,
+          setErr: (msg) => {
+            err.textContent = msg;
+            err.style.display = '';
+          }
+        });
       });
 
       document.getElementById('recoverSubmitBtn').addEventListener('click', async () => {
@@ -3654,6 +4799,14 @@
         if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
         if (!recoveryCode) { err.textContent = '復旧コードを入力してください'; err.style.display = ''; return; }
         if (!/^\d{4}$/.test(newPin)) { err.textContent = '新しい管理者PINは4桁の数字で入力してください'; err.style.display = ''; return; }
+        const state = getRecoveryState(teamId);
+        if (state.locked) {
+          const mins = Math.max(1, Math.ceil(state.remainingMs / 60000));
+          err.textContent = '試行回数が多いため、' + mins + '分後に再試行してください';
+          err.style.display = '';
+          appendRecoveryAudit(teamId, 'recover_admin_pin_locked', 'lock=' + mins + 'min');
+          return;
+        }
         err.style.display = 'none';
         try {
           const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
@@ -3663,11 +4816,19 @@
           if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
           const serverCode = normalizeRecoveryCode(data?.recoveryCode);
           if (!serverCode || serverCode !== recoveryCode) {
-            err.textContent = '復旧コードが一致しません';
+            const fail = noteRecoveryFailure(teamId);
+            if (fail.locked) {
+              err.textContent = '復旧コードの入力失敗が多いため、15分後に再試行してください';
+            } else {
+              err.textContent = '復旧コードが一致しません（残り' + fail.remaining + '回）';
+            }
             err.style.display = '';
+            appendRecoveryAudit(teamId, 'recover_admin_pin_failed', 'code_mismatch');
             return;
           }
+          clearRecoveryFailures(teamId);
           const rotatedCode = generateRecoveryCode();
+          const ownerId = ensureOwnerId(teamId, data?.ownerId || data?.owner_id || '');
           const payload = {
             title: data?.title || '',
             members: Array.isArray(data?.members) ? data.members : [],
@@ -3675,6 +4836,9 @@
             deadline: data?.deadline || undefined,
             adminName: data?.adminName || '',
             adminPw: newPin,
+            ownerId,
+            pendingAdminName: data?.pendingAdminName || '',
+            pendingAdminSetAt: data?.pendingAdminSetAt || '',
             recoveryCode: rotatedCode,
             loginSession: data?.loginSession || null,
             attendancePractice: data?.attendancePractice || {},
@@ -3682,7 +4846,7 @@
           };
           const saveRes = await fetch(api, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'application/json', 'x-recovery-code': recoveryCode },
             body: JSON.stringify(payload)
           });
           if (!saveRes.ok) { err.textContent = 'PINの更新に失敗しました'; err.style.display = ''; return; }
@@ -3691,12 +4855,18 @@
           if (payload.title) localStorage.setItem(t + 'volley-app-title', payload.title);
           localStorage.setItem(t + 'volley-admin-pw', newPin);
           if (payload.adminName) localStorage.setItem(t + 'volley-admin-name', payload.adminName);
+          localStorage.setItem(t + OWNER_ID_SUFFIX, ownerId);
+          if (payload.pendingAdminName) localStorage.setItem(t + PENDING_ADMIN_NAME_SUFFIX, payload.pendingAdminName);
+          else localStorage.removeItem(t + PENDING_ADMIN_NAME_SUFFIX);
+          if (payload.pendingAdminSetAt) localStorage.setItem(t + PENDING_ADMIN_SET_AT_SUFFIX, payload.pendingAdminSetAt);
+          else localStorage.removeItem(t + PENDING_ADMIN_SET_AT_SUFFIX);
           localStorage.setItem(t + ADMIN_RECOVERY_SUFFIX, rotatedCode);
           if (payload.deadline) localStorage.setItem(t + 'volley-deadline', JSON.stringify(payload.deadline));
           localStorage.setItem(t + 'volley-members', JSON.stringify(payload.members || []));
           localStorage.setItem(t + 'volley-schedule', JSON.stringify(payload.schedule || []));
 
           await showRecoveryCodeModal(rotatedCode);
+          appendRecoveryAudit(teamId, 'recover_admin_pin_success', 'pin_rotated');
           alert('管理者PINを更新しました。');
           location.href = '?team=' + encodeURIComponent(teamId);
         } catch {
@@ -3705,22 +4875,18 @@
         }
       });
 
-      let pinHelpTimer = null;
       document.getElementById('pinHelpSubmitBtn').addEventListener('click', async () => {
         const err = document.getElementById('pinHelpError');
         const resEl = document.getElementById('pinHelpResult');
         const teamId = (document.getElementById('pinHelpTeamId').value || '').trim().toLowerCase();
         const name = (document.getElementById('pinHelpName').value || '').trim();
-        const normalizeRecoveryCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const recoveryCode = normalizeRecoveryCode(document.getElementById('pinHelpCode').value);
+        const currentPin = (document.getElementById('pinHelpCode').value || '').trim();
+        const newPin = (document.getElementById('pinHelpNewPin').value || '').trim();
         if (!teamId) { err.textContent = 'グループIDを入力してください'; err.style.display = ''; return; }
         if (!name) { err.textContent = '名前を入力してください'; err.style.display = ''; return; }
-        if (!recoveryCode) {
-          err.textContent = '復旧コードがない場合は管理者にPIN再設定を依頼してください';
-          err.style.display = '';
-          if (resEl) resEl.style.display = 'none';
-          return;
-        }
+        if (!/^\d{4}$/.test(currentPin)) { err.textContent = '現在のPINは4桁の数字で入力してください'; err.style.display = ''; return; }
+        if (!/^\d{4}$/.test(newPin)) { err.textContent = '新しいPINは4桁の数字で入力してください'; err.style.display = ''; return; }
+        if (currentPin === newPin) { err.textContent = '現在のPINと同じです。別のPINを入力してください'; err.style.display = ''; return; }
         err.style.display = 'none';
         if (resEl) resEl.style.display = 'none';
         try {
@@ -3730,35 +4896,121 @@
           const data = await r.json();
           if (!Array.isArray(data?.members)) { err.textContent = 'メンバー情報を取得できません'; err.style.display = ''; return; }
           if (isDeletedPayload(data)) { err.textContent = 'このグループは削除されています'; err.style.display = ''; return; }
-          const serverCode = normalizeRecoveryCode(data?.recoveryCode);
-          if (!serverCode || serverCode !== recoveryCode) {
-            err.textContent = '復旧コードが一致しません';
-            err.style.display = '';
-            return;
-          }
-          const target = data.members.map(normalizeMemberRecord).find(m => m && m.name === name);
+          const members = (Array.isArray(data?.members) ? data.members : [])
+            .map((member) => {
+              if (!member) return null;
+              if (typeof member === 'string') return { name: member, pin: '', state: 'active' };
+              const out = { ...member };
+              out.name = String(out.name || '').trim();
+              out.pin = String(out.pin || '').trim();
+              out.state = out.state === 'inactive' ? 'inactive' : 'active';
+              return out;
+            })
+            .filter(Boolean);
+          let localMembers = [];
+          try {
+            localMembers = JSON.parse(localStorage.getItem(teamId + ':volley-members') || '[]');
+          } catch { localMembers = []; }
+          const localPinByName = new Map(
+            (Array.isArray(localMembers) ? localMembers : [])
+              .map((m) => ({
+                name: String(m?.name || '').trim(),
+                pin: String(m?.pin || '').trim()
+              }))
+              .filter((m) => m.name)
+              .map((m) => [m.name, m.pin])
+          );
+          const target = members.find(m => m && m.name === name);
           if (!target || target.state === 'inactive') {
             err.textContent = 'この名前は利用できません。管理者に確認してください';
             err.style.display = '';
             return;
           }
-          if (!/^\d{4}$/.test(String(target.pin || ''))) {
-            err.textContent = 'PINが未設定です。管理者に再設定を依頼してください';
+          const mergedMembers = members.map((m) => {
+            if (!m) return m;
+            const serverPin = String(m.pin || '').trim();
+            const localPin = String(localPinByName.get(String(m.name || '').trim()) || '').trim();
+            return { ...m, pin: /^\d{4}$/.test(serverPin) ? serverPin : localPin };
+          });
+          const mergedTarget = mergedMembers.find(m => m && m.name === name);
+          let storedPin = String((mergedTarget && mergedTarget.pin) || '').trim();
+          if (!/^\d{4}$/.test(storedPin)) {
+            const t = teamId + ':';
+            const editorName = String(localStorage.getItem(t + 'volley-editor') || '').trim();
+            const loginType = String(localStorage.getItem(t + 'volley-login-type') || '').trim();
+            const selfPin = String(localStorage.getItem(t + SELF_PIN_SUFFIX) || '').trim();
+            const adminPinLocal = String(localStorage.getItem(t + 'volley-admin-pw') || '').trim();
+            if (editorName === name && /^\d{4}$/.test(selfPin)) {
+              storedPin = selfPin;
+            } else if (editorName === name && loginType === 'admin' && /^\d{4}$/.test(adminPinLocal)) {
+              storedPin = adminPinLocal;
+            }
+          }
+          if (!/^\d{4}$/.test(storedPin)) {
+            err.textContent = '現在のPINを確認できません。この端末で再ログイン後に再試行するか、管理者にPIN再設定を依頼してください';
             err.style.display = '';
             return;
           }
+          if (storedPin !== currentPin) {
+            err.textContent = '現在のPINが違います';
+            err.style.display = '';
+            return;
+          }
+          const duplicated = mergedMembers.some(m => m && m.name !== name && String(m.pin || '').trim() === newPin);
+          if (duplicated) {
+            err.textContent = 'そのPINは他のメンバーが使用中です。別のPINにしてください';
+            err.style.display = '';
+            return;
+          }
+          const t = teamId + ':';
+          const adminPw = String(data?.adminPw || localStorage.getItem(t + 'volley-admin-pw') || '').trim();
+          if (/^\d{4}$/.test(adminPw) && newPin === adminPw) {
+            err.textContent = 'そのPINはすでに使用されています。別のPINにしてください';
+            err.style.display = '';
+            return;
+          }
+          target.pin = newPin;
+          const isAdminTarget = String(data?.adminName || '').trim() === name;
+          const ownerId = ensureOwnerId(teamId, data?.ownerId || data?.owner_id || '');
+          const payload = {
+            title: data?.title || '',
+            members,
+            schedule: Array.isArray(data?.schedule) ? data.schedule : [],
+            deadline: data?.deadline || undefined,
+            adminName: data?.adminName || '',
+            adminPw: isAdminTarget ? newPin : (adminPw || undefined),
+            ownerId,
+            pendingAdminName: data?.pendingAdminName || '',
+            pendingAdminSetAt: data?.pendingAdminSetAt || '',
+            recoveryCode: data?.recoveryCode || '',
+            loginSession: data?.loginSession || null,
+            attendancePractice: data?.attendancePractice || {},
+            attendanceMatch: data?.attendanceMatch || {}
+          };
+          const saveRes = await fetch(api, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-recovery-code': data?.recoveryCode || '' },
+            body: JSON.stringify(payload)
+          });
+          if (!saveRes.ok) {
+            let reason = '';
+            try {
+              const e = await saveRes.json();
+              if (e && e.error) reason = '（' + e.error + '）';
+            } catch { }
+            err.textContent = 'PINの変更に失敗しました' + reason;
+            err.style.display = '';
+            return;
+          }
+          localStorage.setItem(t + 'volley-members', JSON.stringify(members));
+          const editorName = String(localStorage.getItem(t + 'volley-editor') || '').trim();
+          const loginType = String(localStorage.getItem(t + 'volley-login-type') || '').trim();
+          if (loginType === 'member' && editorName === name) localStorage.setItem(t + SELF_PIN_SUFFIX, newPin);
+          if (isAdminTarget) localStorage.setItem(t + 'volley-admin-pw', newPin);
           if (resEl) {
-            resEl.textContent = 'PIN: ' + target.pin + '（3秒後に隠れます）';
+            resEl.textContent = 'PINを変更しました';
             resEl.style.display = '';
           }
-          appendSecurityLog('pin_reveal_lobby_help', name, teamId);
-          if (pinHelpTimer) clearTimeout(pinHelpTimer);
-          pinHelpTimer = setTimeout(() => {
-            if (resEl) {
-              resEl.textContent = 'PIN: ••••';
-              resEl.style.display = 'none';
-            }
-          }, 3000);
         } catch {
           err.textContent = '通信エラーが発生しました';
           err.style.display = '';
@@ -3767,6 +5019,7 @@
 
 
     } else {
+      document.querySelectorAll('[data-legal-footer]').forEach((el) => el.remove());
       document.body.classList.remove('lobby-mode');
       ensureGlobalCopyrightFooter();
       setGlobalCopyrightVisible(true);
@@ -3781,9 +5034,6 @@
           deleted.push(teamId);
           localStorage.setItem(DELETED_TEAMS_KEY, JSON.stringify(deleted));
         }
-      }
-      function isDeletedPayload(data) {
-        return !!(data && (data.deleted === true || data.deletedAt));
       }
       (function checkDeleted() {
         const deleted = getDeletedTeams();
@@ -3811,7 +5061,7 @@
         localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
       })();
 
-      sessionStorage.removeItem('inviteFromCard');
+      safeSessionRemove('inviteFromCard');
 
       // Guard: if logged in but not a member of this team, clear login
       (function guardTeamMember() {
@@ -3831,8 +5081,11 @@
         }
       })();
 
-      window.onerror = function (msg, src, line, col) {
-        alert('エラー: ' + msg + '\n行: ' + line + ' 列: ' + col);
+      window.onerror = function (msg, src, line, col, err) {
+        var safeSrc = typeof src === 'string' ? src.split('?')[0] : '';
+        var safeMsg = String(msg || '').slice(0, 160).replace(/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/ig, '[redacted-email]');
+        console.error('Error:', safeMsg, safeSrc, 'L' + line + ':' + col, err?.name || '');
+        return false;
       };
 
       const _T = _teamParam + ':';
@@ -3842,10 +5095,29 @@
       const STORAGE_ADMINS = _T + 'volley-admins';
       const STORAGE_ADMIN_NAME = _T + 'volley-admin-name';
       const STORAGE_ADMIN_RECOVERY = _T + ADMIN_RECOVERY_SUFFIX;
+      const STORAGE_OWNER_ID = _T + OWNER_ID_SUFFIX;
+      const STORAGE_SELF_PIN = _T + SELF_PIN_SUFFIX;
+      const STORAGE_PENDING_ADMIN_NAME = _T + PENDING_ADMIN_NAME_SUFFIX;
+      const STORAGE_PENDING_ADMIN_SET_AT = _T + PENDING_ADMIN_SET_AT_SUFFIX;
       const STORAGE_LOGIN_SESSION = _T + 'volley-login-session';
       const STORAGE_MEMBER_FILTER = _T + 'volley-member-filter';
 
       function getAdminName() { return (localStorage.getItem(STORAGE_ADMIN_NAME) || '').trim(); }
+
+      var __toastEl = null, __toastTimer = 0;
+      function showToast(msg, ms) {
+        if (!__toastEl) {
+          __toastEl = document.createElement('div');
+          __toastEl.setAttribute('role', 'status');
+          __toastEl.setAttribute('aria-live', 'polite');
+          __toastEl.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;background:#1f2937;color:#fff;font-size:13px;font-weight:700;border-radius:12px;z-index:15000;pointer-events:none;opacity:0;transition:opacity .2s;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+          document.body.appendChild(__toastEl);
+        }
+        clearTimeout(__toastTimer);
+        __toastEl.textContent = msg;
+        __toastEl.style.opacity = '1';
+        __toastTimer = setTimeout(function () { __toastEl.style.opacity = '0'; }, ms || 2000);
+      }
 
       const STORAGE_LOGIN_TYPE = _T + 'volley-login-type';
       const STORAGE_SECURITY_LOG = _T + 'volley-security-log';
@@ -3872,6 +5144,11 @@
       function setLoginState(type, editorName) {
         localStorage.setItem(STORAGE_EDITOR, editorName);
         localStorage.setItem(STORAGE_LOGIN_TYPE, type);
+        if (type === 'member') {
+          const current = loadMembers().find(m => m && m.name === editorName);
+          const pin = String((current && current.pin) || '').trim();
+          if (/^\d{4}$/.test(pin)) localStorage.setItem(_teamParam + ':' + SELF_PIN_SUFFIX, pin);
+        }
         localStorage.setItem(STORAGE_LOGIN_SESSION, JSON.stringify({
           id: createSessionId(),
           type,
@@ -3879,7 +5156,7 @@
           updatedAt: new Date().toISOString()
         }));
         clearInviteForTeam(_teamParam);
-        sessionStorage.removeItem('inviteFromCard');
+        safeSessionRemove('inviteFromCard');
       }
 
       function clearLoginState() {
@@ -4024,21 +5301,6 @@
       }
 
       // --- Data ---
-      function normalizeMemberRecord(member) {
-        if (!member) return null;
-        if (typeof member === 'string') return { name: member, state: 'active' };
-        const out = { ...member };
-        if (out.role != null) delete out.role;
-        out.name = String(out.name || '').trim();
-        out.pin = String(out.pin || '').trim();
-        if (out.state !== 'inactive') out.state = 'active';
-        if (out.pendingRemovalAt && typeof out.pendingRemovalAt !== 'string') out.pendingRemovalAt = '';
-        if (out.pendingRemovalReason && typeof out.pendingRemovalReason !== 'string') out.pendingRemovalReason = '';
-        if (out.pendingRemovalBy && typeof out.pendingRemovalBy !== 'string') out.pendingRemovalBy = '';
-        if (out.inactivatedAt && typeof out.inactivatedAt !== 'string') out.inactivatedAt = '';
-        return out;
-      }
-
       function loadMembers() {
         const raw = localStorage.getItem(STORAGE_MEMBERS);
         let arr = raw ? JSON.parse(raw) : DEFAULT_MEMBERS.slice();
@@ -4048,10 +5310,6 @@
       function saveMembers(members) { localStorage.setItem(STORAGE_MEMBERS, JSON.stringify(members)); }
       function activeMembers(members) { return (members || []).filter(m => m && m.state !== 'inactive'); }
       function inactiveMembers(members) { return (members || []).filter(m => m && m.state === 'inactive'); }
-      function findMemberByName(members, name) {
-        const key = String(name || '').trim();
-        return (members || []).find(m => m && String(m.name || '').trim() === key) || null;
-      }
 
       function applyPendingRemovalRules() {
         const members = loadMembers();
@@ -4736,8 +5994,8 @@
           }
           return;
         }
-        const adminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
-        if (pin === adminPw) { showLoginError('このPINは管理者PIN（4桁）と重複するため使えません'); return; }
+        const adminPw = String(localStorage.getItem(STORAGE_ADMIN_PW) || '').trim();
+        if (/^\d{4}$/.test(adminPw) && pin === adminPw) { showLoginError('このPINは管理者PIN（4桁）と重複するため使えません'); return; }
 
         if (!(await customConfirm(name + 'さんとして参加しますか？'))) return;
 
@@ -4765,9 +6023,13 @@
 
       document.getElementById('adminModalSave').addEventListener('click', () => {
         const newPw = document.getElementById('adminNewPwInput').value;
+        if (newPw && !/^\d{4}$/.test(newPw)) {
+          showToast('PINは4桁の数字で入力してください');
+          return;
+        }
         if (newPw) localStorage.setItem(STORAGE_ADMIN_PW, newPw);
         closeAdminModal();
-        alert('保存しました');
+        showToast('保存しました');
         render();
       });
 
@@ -4781,7 +6043,7 @@
       function showTransferRecoveryCodeModal(recoveryCode, newAdminName) {
         return new Promise(resolve => {
           const ov = document.createElement('div');
-          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+          ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:13000;padding:20px';
           ov.innerHTML =
             '<div style="width:min(520px,100%);background:#fff;border:1px solid rgba(124,58,237,0.2);border-radius:16px;box-shadow:0 24px 56px rgba(76,29,149,0.22);padding:18px">' +
             '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:10px">管理者を変更しました</div>' +
@@ -4844,6 +6106,8 @@
           return String(localStorage.getItem(STORAGE_ADMIN_PW) || '').trim();
         }
         if (type === 'member') {
+          const selfPin = String(localStorage.getItem(STORAGE_SELF_PIN) || '').trim();
+          if (/^\d{4}$/.test(selfPin)) return selfPin;
           const m = loadMembers().find(x => x && x.name === name);
           return String((m && m.pin) || '').trim();
         }
@@ -4975,7 +6239,7 @@
         err.style.display = 'none';
         let deleteSyncFailed = false;
         try {
-          const deleteRes = await fetch(`${API_BASE}/api/team/delete`, {
+          const deleteRes = await fetch(`/api/team/delete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -4999,6 +6263,8 @@
           deadline: getDeadlineRules(),
           adminName: '',
           adminPw: '0000',
+          pendingAdminName: '',
+          pendingAdminSetAt: '',
           recoveryCode: '',
           loginSession: null,
           attendancePractice: {},
@@ -5006,7 +6272,7 @@
         };
         const serverDeleteRes = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'x-recovery-code': localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '' },
           body: JSON.stringify(serverDeletePayload)
         });
         if (!serverDeleteRes.ok) {
@@ -5014,6 +6280,14 @@
           err.style.display = '';
           return;
         }
+        try {
+          await fetch('/api/sync/my-groups', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ action: 'remove', team_id: _teamParam })
+          });
+        } catch {}
         // Mark team as deleted
         markTeamDeletedLocally(_teamParam);
         // Remove from recent teams
@@ -5023,8 +6297,8 @@
         } catch { }
         // Clear all team data
         [STORAGE_MEMBERS, STORAGE_MODE, STORAGE_EDITOR, STORAGE_ADMINS, STORAGE_ADMIN_PW, STORAGE_ADMIN_NAME, STORAGE_ADMIN_RECOVERY,
-          STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, _T + 'volley-app-title',
-          ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
+          STORAGE_OWNER_ID, STORAGE_PENDING_ADMIN_NAME, STORAGE_PENDING_ADMIN_SET_AT, STORAGE_LOGIN_TYPE, STORAGE_DEADLINE, STORAGE_SCHEDULE, _T + 'volley-app-title',
+          STORAGE_SELF_PIN, ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
         setCreatedTeams(getCreatedTeams().filter(id => id !== _teamParam));
         deleteGroupModal.classList.remove('show');
         location.href = location.pathname;
@@ -5373,7 +6647,7 @@
         }).join('');
 
         const inactiveSection = inactive.length > 0
-          ? '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中（復帰可能）</div>' + inactiveHtml
+          ? '<div style="font-size:12px;font-weight:700;color:var(--text-light);margin:14px 0 4px">退会中</div>' + inactiveHtml
           : '';
 
         list.innerHTML =
@@ -5508,58 +6782,29 @@
         if (!nextAdmin) { alert('選択したメンバーが見つかりません'); return; }
         const newAdminName = String(nextAdmin.name || '').trim();
         if (!newAdminName) { alert('選択したメンバーが見つかりません'); return; }
-        const nextAdminPin = String(nextAdmin.pin || '').trim();
-        if (!/^\d{4}$/.test(nextAdminPin)) {
-          alert('新しい管理者のPIN（4桁）が未設定です。先にメンバーPINを設定してください。');
-          return;
-        }
-        const oldAdminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '0000';
-        const ok = await customConfirm('「' + newAdminName + '」を新しい管理者にします。\n\n変更後はあなたの管理者権限は失われます。\n管理者PINは「' + newAdminName + '」さんのPIN（4桁）に切り替わります。\n復旧コードは再発行されます。\n\nよろしいですか？');
+        const ok = await customConfirm('「' + newAdminName + '」を次期管理者に設定します。\n\nこの時点では管理者は切り替わりません。\n「' + newAdminName + '」さんがロビーで再ログインし、新しい管理者PIN（4桁）を設定した時点で確定します。\n\nよろしいですか？');
         if (!ok) return;
 
-        const prevMembers = ms.map(m => ({ ...m }));
-        const prevAdminName = localStorage.getItem(STORAGE_ADMIN_NAME) || '';
-        const prevAdminPw = localStorage.getItem(STORAGE_ADMIN_PW) || '';
-        const prevRecovery = localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '';
-        const prevLoginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
-        const prevEditor = localStorage.getItem(STORAGE_EDITOR) || '';
-        const prevSession = localStorage.getItem(STORAGE_LOGIN_SESSION) || '';
-        const rotatedRecoveryCode = generateRecoveryCode();
-        ms.forEach(m => {
-          if (m && m.role != null) delete m.role;
-        });
-        let oldAdminMember = ms.find(m => m && m.name === oldAdmin);
-        if (!oldAdminMember) {
-          oldAdminMember = { name: oldAdmin, pin: oldAdminPw };
-          ms.unshift(oldAdminMember);
-        } else if (!/^\d{4}$/.test(String(oldAdminMember.pin || ''))) {
-          oldAdminMember.pin = oldAdminPw;
-        }
-        saveMembers(ms);
-        localStorage.setItem(STORAGE_ADMIN_NAME, newAdminName);
-        localStorage.setItem(STORAGE_ADMIN_PW, nextAdminPin);
-        localStorage.setItem(STORAGE_ADMIN_RECOVERY, rotatedRecoveryCode);
-        setLoginState('member', oldAdmin);
+        const prevPendingAdminName = localStorage.getItem(STORAGE_PENDING_ADMIN_NAME) || '';
+        const prevPendingAdminSetAt = localStorage.getItem(STORAGE_PENDING_ADMIN_SET_AT) || '';
+        const pendingSetAt = new Date().toISOString();
+
+        localStorage.setItem(STORAGE_PENDING_ADMIN_NAME, newAdminName);
+        localStorage.setItem(STORAGE_PENDING_ADMIN_SET_AT, pendingSetAt);
         document.getElementById('changeAdminPanel').style.display = 'none';
         document.getElementById('memberSettingsModal').classList.remove('show');
-        updateLoginStatus();
         render();
         const synced = await syncToServer();
         if (!synced) {
-          saveMembers(prevMembers);
-          localStorage.setItem(STORAGE_ADMIN_NAME, prevAdminName);
-          localStorage.setItem(STORAGE_ADMIN_PW, prevAdminPw);
-          localStorage.setItem(STORAGE_ADMIN_RECOVERY, prevRecovery);
-          if (prevLoginType) localStorage.setItem(STORAGE_LOGIN_TYPE, prevLoginType); else localStorage.removeItem(STORAGE_LOGIN_TYPE);
-          if (prevEditor) localStorage.setItem(STORAGE_EDITOR, prevEditor); else localStorage.removeItem(STORAGE_EDITOR);
-          if (prevSession) localStorage.setItem(STORAGE_LOGIN_SESSION, prevSession); else localStorage.removeItem(STORAGE_LOGIN_SESSION);
-          updateLoginStatus();
+          if (prevPendingAdminName) localStorage.setItem(STORAGE_PENDING_ADMIN_NAME, prevPendingAdminName);
+          else localStorage.removeItem(STORAGE_PENDING_ADMIN_NAME);
+          if (prevPendingAdminSetAt) localStorage.setItem(STORAGE_PENDING_ADMIN_SET_AT, prevPendingAdminSetAt);
+          else localStorage.removeItem(STORAGE_PENDING_ADMIN_SET_AT);
           render();
-          alert('管理者変更の同期に失敗したため、変更を元に戻しました。通信状態を確認して再度お試しください。');
+          alert('管理者変更リクエストの同期に失敗したため、変更を元に戻しました。通信状態を確認して再度お試しください。');
           return;
         }
-        await showTransferRecoveryCodeModal(rotatedRecoveryCode, newAdminName);
-        alert('管理者変更が完了しました。\n新しい管理者はメンバーPIN（4桁）でログインできます。');
+        alert('管理者変更リクエストを送信しました。\n「' + newAdminName + '」さんがロビーで再ログインして新しい管理者PINを設定すると、管理者変更が確定します。');
       });
 
       // --- Invite Link (popup) ---
@@ -5634,9 +6879,39 @@
         try {
           const rt = JSON.parse(localStorage.getItem('volley-recent-teams')) || [];
           const entry = rt.find(t => t.id === _teamParam);
-          if (entry) { entry.name = v; localStorage.setItem('volley-recent-teams', JSON.stringify(rt)); }
+          if (entry) {
+            entry.name = v;
+          } else {
+            rt.unshift({
+              id: _teamParam,
+              name: v,
+              user: String(localStorage.getItem(_T + 'volley-editor') || '').trim(),
+              lastVisited: new Date().toISOString()
+            });
+          }
+          localStorage.setItem('volley-recent-teams', JSON.stringify(rt));
         } catch { }
-        syncToServer();
+        await syncToServer();
+        try {
+          const loginType = String(localStorage.getItem(_T + 'volley-login-type') || '').trim();
+          const aliasName = String(localStorage.getItem(_T + 'volley-editor') || '').trim();
+          const upsertRes = await fetch('/api/sync/my-groups', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              action: 'upsert',
+              team_id: String(_teamParam || '').trim().toLowerCase(),
+              group_name: v,
+              alias_name: aliasName,
+              role: loginType === 'admin' ? 'admin' : 'member',
+              status: 'active'
+            })
+          });
+          if (!upsertRes.ok) {
+            console.warn('[group-name] my-groups upsert failed:', upsertRes.status);
+          }
+        } catch { }
         closeGroupNameModal();
       }
       document.getElementById('groupNameCancel').addEventListener('click', closeGroupNameModal);
@@ -5661,6 +6936,9 @@
           deadline: getDeadlineRules(),
           adminName: getAdminName(),
           adminPw: localStorage.getItem(STORAGE_ADMIN_PW) || '0000',
+          ownerId: ensureOwnerId(_teamParam),
+          pendingAdminName: localStorage.getItem(STORAGE_PENDING_ADMIN_NAME) || '',
+          pendingAdminSetAt: localStorage.getItem(STORAGE_PENDING_ADMIN_SET_AT) || '',
           recoveryCode: localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '',
           loginSession: getLoginSession(),
           attendancePractice: JSON.parse(localStorage.getItem(ATTENDANCE_KEYS.practice) || '{}'),
@@ -5700,12 +6978,23 @@
           }
         }
       }
+      const rc = localStorage.getItem(_teamParam + ':' + STORAGE_ADMIN_RECOVERY) || localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '';
+      if (!rc) { showToast('復旧コードが未設定です。同期できません'); return false; }
       const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'x-recovery-code': rc },
             body: JSON.stringify(buildSyncData())
           });
-          return res.ok;
+          if (res.ok) return true;
+          if (res.status === 409) {
+            var body = await res.json().catch(function () { return null; });
+            if (body && body.code === 'RECOVERY_NOT_CONFIGURED') {
+              showToast('このチームは復旧コード未設定です。管理者へ連絡してください');
+              return false;
+            }
+          }
+          if (res.status === 403) showToast('認証に失敗しました。再ログインしてください');
+          return false;
         } catch (e) { return false; }
       }
 
@@ -5718,7 +7007,6 @@
       }
 
       function applyServerData(data) {
-        console.log('[applyServerData] members=', Array.isArray(data?.members) ? data.members.length : 'no-members', 'loginType=', localStorage.getItem(STORAGE_LOGIN_TYPE), 'editor=', localStorage.getItem(STORAGE_EDITOR));
         if (!data) return false;
         if (isDeletedPayload(data)) {
           markTeamDeletedLocally(_teamParam);
@@ -5826,6 +7114,46 @@
           const local = localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '';
           if (data.recoveryCode !== local) { localStorage.setItem(STORAGE_ADMIN_RECOVERY, data.recoveryCode); changed = true; }
         }
+        // Owner id: immutable identifier for billing/ownership model
+        if (typeof data.ownerId === 'string' && data.ownerId) {
+          const localOwner = localStorage.getItem(STORAGE_OWNER_ID) || '';
+          if (data.ownerId !== localOwner) { localStorage.setItem(STORAGE_OWNER_ID, data.ownerId); changed = true; }
+        } else {
+          const localOwner = localStorage.getItem(STORAGE_OWNER_ID) || '';
+          if (!localOwner) {
+            localStorage.setItem(STORAGE_OWNER_ID, ensureOwnerId(_teamParam));
+            changed = true;
+          }
+        }
+        const pendingAdminName = String(data.pendingAdminName || '').trim();
+        const localPendingAdmin = String(localStorage.getItem(STORAGE_PENDING_ADMIN_NAME) || '').trim();
+        if (pendingAdminName !== localPendingAdmin) {
+          if (pendingAdminName) localStorage.setItem(STORAGE_PENDING_ADMIN_NAME, pendingAdminName);
+          else localStorage.removeItem(STORAGE_PENDING_ADMIN_NAME);
+          changed = true;
+        }
+        if (!pendingAdminName) removePendingAdminRequestsByTeam(_teamParam);
+        const pendingAdminSetAt = String(data.pendingAdminSetAt || '').trim();
+        const localPendingSetAt = String(localStorage.getItem(STORAGE_PENDING_ADMIN_SET_AT) || '').trim();
+        if (pendingAdminSetAt !== localPendingSetAt) {
+          if (pendingAdminSetAt) localStorage.setItem(STORAGE_PENDING_ADMIN_SET_AT, pendingAdminSetAt);
+          else localStorage.removeItem(STORAGE_PENDING_ADMIN_SET_AT);
+          changed = true;
+        }
+        const loginType = localStorage.getItem(STORAGE_LOGIN_TYPE) || '';
+        const editorName = (localStorage.getItem(STORAGE_EDITOR) || '').trim();
+        if (loginType === 'member' && editorName && pendingAdminName && editorName === pendingAdminName) {
+          upsertPendingAdminRequest({
+            teamId: _teamParam,
+            memberName: pendingAdminName,
+            teamName: String(data.title || localStorage.getItem(STORAGE_TITLE) || _teamParam || '').trim() || _teamParam,
+            setAt: pendingAdminSetAt
+          });
+          clearLoginState();
+          alert('管理者変更の申請があります。ロビーの申請カードから受諾して再ログインしてください。');
+          location.href = location.pathname;
+          return true;
+        }
         // Attendance: per-member, newer _editedAt wins
         function mergeAttendance(serverAtt, key) {
           if (!serverAtt || Object.keys(serverAtt).length === 0) return;
@@ -5862,6 +7190,10 @@
 
       (async () => {
         const data = await syncFromServer();
+        if (!data) {
+          // Keep current screen for invite/relogin flow even when initial sync fails.
+          // Login modal flow and subsequent retries can still recover.
+        }
         if (applyServerData(data)) {
           // Reload UI with server data
           const titleEl = document.getElementById('appTitle');
@@ -5896,12 +7228,16 @@
         if (e.key !== 'Escape') return;
         if (loginModal.classList.contains('show')) { backToLobbyFromLogin(); return; }
         if (adminModal.classList.contains('show')) { closeAdminModal(); return; }
-        if (document.getElementById('settingsModal').classList.contains('show')) { closeSettingsModal(); return; }
-        if (document.getElementById('modal').classList.contains('show')) { closeModal(); return; }
-        if (document.getElementById('userMenu').classList.contains('show')) { document.getElementById('userMenu').classList.remove('show'); return; }
+        if (document.getElementById('settingsModal')?.classList.contains('show')) { closeSettingsModal(); return; }
+        { const modalEl = document.getElementById('modal'); if (modalEl?.classList.contains('show')) { if (typeof closeModal === 'function') closeModal(); else modalEl.classList.remove('show'); return; } }
+        if (document.getElementById('userMenu')?.classList.contains('show')) { document.getElementById('userMenu').classList.remove('show'); return; }
       });
     }
   </script>
+  <footer style="margin-top:40px;padding:20px 0;text-align:center;font-size:12px;color:#666;">
+    <a href="/terms" style="margin-right:15px;color:#666;text-decoration:none;">利用規約</a>
+    <a href="/privacy" style="color:#666;text-decoration:none;">プライバシーポリシー</a>
+  </footer>
 </body>
 
 </html>
