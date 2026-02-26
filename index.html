@@ -2265,7 +2265,7 @@
 <body>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const MAINTENANCE_MODE = false;
+      const MAINTENANCE_MODE = true;
 
       if (MAINTENANCE_MODE) {
         document.body.innerHTML = `
@@ -3004,22 +3004,32 @@
           '<button id="updatesModalClose" type="button" style="border:none;background:#eef2ff;color:#4338ca;font-weight:700;border-radius:10px;padding:5px 10px;cursor:pointer;">閉じる</button>' +
           '</div>' +
           '<div style="padding:14px 16px 16px;overflow:auto;line-height:1.7;color:#111;font-size:13px;">' +
+          '<h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;">2026-02-26 🔐 セキュリティ強化アップデート</h2>' +
+          '<ul style="margin:0 0 10px 18px;padding:0;font-size:13px;">' +
+          '<li>出欠データ同期で既存チームの復旧コード認証を必須化</li>' +
+          '<li>復旧コード未設定時は同期を拒否（RECOVERY_NOT_CONFIGURED）</li>' +
+          '<li>復旧コード不一致時は同期を拒否（RECOVERY_CODE_MISMATCH）</li>' +
+          '<li>復旧コード一致時のみ同期処理を継続</li>' +
+          '<li>復旧コードはサーバー側でハッシュ化保存し、安全に照合</li>' +
+          '<li>認証失敗時は fail-closed（安全側）で処理を中断</li>' +
+          '<li>サーバー間認証を強化し、不正アクセス時のエラーコードを統一</li>' +
+          '</ul>' +
+          '<p style="margin:0 0 14px;font-size:12px;color:#4b5563;">※既存チームで復旧コード未設定の場合は、設定後に同期をご利用ください。</p>' +
           '<h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;">2026-02-24 🔧 UX・導線アップデート（β）</h2>' +
           '<ul style="margin:0 0 10px 18px;padding:0;font-size:13px;">' +
-          '<li>ロビー表示が崩れる不具合を修正</li>' +
-          '<li>LINE内ブラウザでは案内専用ロビーを表示</li>' +
-          '<li>「ブラウザで開く」ボタンの動作を改善（iPhone/Android対応）</li>' +
-          '<li>外部ブラウザ遷移時に招待カード情報を引き継ぐよう修正</li>' +
+          '<li>ロビー表示のレイアウト不具合を修正</li>' +
+          '<li>LINE内ブラウザでは案内専用ロビーを表示する仕様に改善</li>' +
+          '<li>「ブラウザで開く」ボタンの動作を最適化（iPhone / Android対応）</li>' +
+          '<li>外部ブラウザ遷移時の招待情報引き継ぎを改善</li>' +
           '</ul>' +
           '<h2 style="margin:0 0 8px;font-size:18px;line-height:1.4;">2026-02-23 🔐 セキュリティアップデート（β）</h2>' +
           '<ul style="margin:0 0 10px 18px;padding:0;font-size:13px;">' +
-          '<li>保存APIの直接アクセスを無効化</li>' +
-          '<li>フロント経由の代理保存方式へ変更</li>' +
-          '<li>書き込みAPIに認証トークンを導入</li>' +
-          '<li>機密情報（adminPw / recoveryCode / pin）をGETレスポンスから除外</li>' +
-          '<li>外部サイトからの不正アクセスを防止（CORS制限）</li>' +
+          '<li>データ保存処理の安全性を強化</li>' +
+          '<li>書き込み処理に追加の保護機構を導入</li>' +
+          '<li>機密情報のレスポンス出力を制限</li>' +
+          '<li>不正アクセス対策を強化</li>' +
           '</ul>' +
-          '<p style="margin:0 0 14px;font-size:12px;color:#4b5563;">※ユーザー操作への影響はありません。</p>' +
+          '<p style="margin:0 0 14px;font-size:12px;color:#4b5563;">※通常のご利用方法に変更はありません。</p>' +
           '<p style="margin:0;font-size:12px;color:#4b5563;">※既存の更新履歴は保持しています。</p>' +
           '</div>' +
           '</div>';
@@ -3754,6 +3764,41 @@
         });
         renderPendingAdminCards();
       }
+      let _missingRecentSweepRunning = false;
+      async function sweepMissingRecentTeams() {
+        if (_missingRecentSweepRunning) return;
+        _missingRecentSweepRunning = true;
+        try {
+          const recentNow = getRecent();
+          if (!Array.isArray(recentNow) || !recentNow.length) return;
+          const next = [];
+          let changed = false;
+          for (const t of recentNow.slice(0, 20)) {
+            const id = String(t?.id || '').trim().toLowerCase();
+            if (!id) { changed = true; continue; }
+            try {
+              const res = await fetch(SYNC_API + '?team=' + encodeURIComponent(id));
+              if (res.status === 404) {
+                changed = true;
+                markTeamDeletedLocally(id);
+                removePendingAdminRequestsByTeam(id);
+                safeLocalRemove(id + ':' + PENDING_ADMIN_NAME_SUFFIX);
+                safeLocalRemove(id + ':' + PENDING_ADMIN_SET_AT_SUFFIX);
+                await removeMyGroupRecord(id);
+                continue;
+              }
+            } catch {}
+            next.push(t);
+          }
+          if (!changed) return;
+          const compact = next.map(({ id, name, user, lastVisited, status }) => ({ id, name, user, lastVisited, status }));
+          if (Array.isArray(serverRecentTeams)) serverRecentTeams = compact;
+          localStorage.setItem(RECENT_KEY, JSON.stringify(compact.map(({ id, name, user, lastVisited }) => ({ id, name, user, lastVisited }))));
+          renderRecentList();
+        } finally {
+          _missingRecentSweepRunning = false;
+        }
+      }
       // Server-first: show loading, GET from D1, fallback to localStorage
       recentList.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:var(--text-light)">読み込み中...</div>';
       (async () => {
@@ -3771,6 +3816,7 @@
         // Render: serverRecentTeams if available, else localStorage fallback
         renderRecentList();
         await refreshPendingAdminRequestsFromServer();
+        await sweepMissingRecentTeams();
         autoOpenPendingAdminQuickFlowIfNeeded();
         if (_pendingAdminTeamParam && _pendingAdminNameParam && !_pendingAutoOpenedThisLoad) {
           _pendingAutoOpenedThisLoad = true;
@@ -3915,49 +3961,76 @@
         }
         if (!(await lobbyConfirm('以下の内容で作成します。\n\nグループ名: ' + groupName + '\n管理者名: ' + adminName + '\nパスワード: ' + adminPw + '\n\nよろしいですか？'))) return;
         errEl.style.display = 'none';
-        const teamId = generateTeamId();
-        const t = teamId + ':';
-        const ownerId = ensureOwnerId(teamId);
         const recoveryCode = generateRecoveryCode();
-        try {
-          const createRes = await fetch(`${SYNC_API}?team=${encodeURIComponent(teamId)}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-recovery-code": recoveryCode },
-            credentials: "include",
-            body: JSON.stringify({
-              title: groupName,
-              members: [{ name: adminName, pin: adminPw, state: 'active' }],
-              schedule: [],
-              deadline: undefined,
-              adminName,
-              adminPw,
-              ownerId,
-              pendingAdminName: '',
-              pendingAdminSetAt: '',
-              agree_terms_privacy: '1',
-              recoveryCode,
-              loginSession: {
-                id: createSessionId(),
-                type: 'admin',
-                editor: adminName,
-                updatedAt: new Date().toISOString()
-              },
-              attendancePractice: {},
-              attendanceMatch: {}
-            })
-          });
-          if (!createRes.ok) {
-            let reason = '';
+        let teamId = '';
+        let t = '';
+        let ownerId = '';
+        let createRes = null;
+        let createReason = '';
+        for (let attempt = 0; attempt < 3; attempt++) {
+          teamId = generateTeamId();
+          t = teamId + ':';
+          ownerId = ensureOwnerId(teamId);
+          createReason = '';
+          try {
+            createRes = await fetch(`${SYNC_API}?team=${encodeURIComponent(teamId)}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-recovery-code": recoveryCode },
+              credentials: "include",
+              body: JSON.stringify({
+                title: groupName,
+                members: [{ name: adminName, pin: adminPw, state: 'active' }],
+                schedule: [],
+                deadline: undefined,
+                adminName,
+                adminPw,
+                ownerId,
+                pendingAdminName: '',
+                pendingAdminSetAt: '',
+                agree_terms_privacy: '1',
+                recoveryCode,
+                loginSession: {
+                  id: createSessionId(),
+                  type: 'admin',
+                  editor: adminName,
+                  updatedAt: new Date().toISOString()
+                },
+                attendancePractice: {},
+                attendanceMatch: {}
+              })
+            });
+          } catch {
+            createRes = null;
+          }
+          if (createRes && createRes.ok) break;
+          let code = '';
+          if (createRes) {
             try {
               const e = await createRes.json();
-              if (e && e.error) reason = '（' + e.error + '）';
-            } catch { }
-            errEl.textContent = 'グループ作成の保存に失敗しました' + reason;
+              code = String((e && (e.error || e.code)) || '').trim();
+            } catch { code = ''; }
+            createReason = code ? ('（' + code + '）') : ('（HTTP ' + createRes.status + '）');
+            const retryable =
+              createRes.status === 403 ||
+              createRes.status === 404 ||
+              createRes.status === 409 ||
+              code === 'TEAM_ID_ALREADY_EXISTS' ||
+              code === 'RECOVERY_CODE_MISMATCH' ||
+              code === 'RECOVERY_NOT_CONFIGURED' ||
+              code === 'NOT_FOUND';
+            if (!retryable || attempt === 2) {
+              errEl.textContent = 'グループ作成の保存に失敗しました' + createReason;
+              errEl.style.display = '';
+              return;
+            }
+          } else if (attempt === 2) {
+            errEl.textContent = 'グループ作成の通信に失敗しました。もう一度お試しください';
             errEl.style.display = '';
             return;
           }
-        } catch (e) {
-          errEl.textContent = 'グループ作成の通信に失敗しました。もう一度お試しください';
+        }
+        if (!createRes || !createRes.ok) {
+          errEl.textContent = 'グループ作成の保存に失敗しました' + createReason;
           errEl.style.display = '';
           return;
         }
@@ -4539,11 +4612,21 @@
         try {
           const api = SYNC_API + '?team=' + encodeURIComponent(teamId);
           const res = await fetch(api);
-          if (!res.ok) { errFn('グループが見つかりません'); return; }
+          if (!res.ok) {
+            if (res.status === 404) { errFn('グループが見つかりません'); return; }
+            if (res.status === 401 || res.status === 403) { errFn('認証に失敗しました。時間をおいて再試行してください'); return; }
+            errFn('通信エラーが発生しました');
+            return;
+          }
           let data = await res.json();
           const ownerId = ensureOwnerId(teamId, data?.ownerId || data?.owner_id || '');
           if (isDeletedPayload(data)) { errFn('このグループは削除されています'); return; }
           if (!Array.isArray(data?.members)) { errFn('グループデータを取得できません'); return; }
+          const recoveryCodeForSync = String(
+            localStorage.getItem(teamId + ':' + ADMIN_RECOVERY_SUFFIX) ||
+            data?.recoveryCode ||
+            ''
+          ).trim();
           const adminName = String(data?.adminName || '').trim();
           const localAdminPw = String(localStorage.getItem(teamId + ':volley-admin-pw') || '').trim();
           const adminPw = String(data?.adminPw || localAdminPw || '').trim();
@@ -4583,6 +4666,10 @@
             return inLocal;
           };
           const member = findMemberByName(members, name);
+          const adminMemberPin = String(member?.pin || localPinByName.get(name) || '').trim();
+          if (!isAdminLogin && name === adminName && !/^\d{4}$/.test(adminPw) && adminMemberPin && adminMemberPin === pin) {
+            isAdminLogin = true;
+          }
           const reloginMode = mode === 'relogin';
           const pendingAcceptKey = PENDING_ADMIN_ACCEPTED_KEY_PREFIX + teamId + ':' + name;
           let promotedToAdminByTransfer = false;
@@ -4627,21 +4714,21 @@
                 pendingAdminName: data?.pendingAdminName || '',
                 pendingAdminSetAt: data?.pendingAdminSetAt || '',
                 ...(agreeTermsPrivacy ? { agree_terms_privacy: '1' } : {}),
-                recoveryCode: data?.recoveryCode || '',
+                recoveryCode: recoveryCodeForSync,
                 loginSession: sessionPayload,
                 attendancePractice: data?.attendancePractice || {},
                 attendanceMatch: data?.attendanceMatch || {}
               };
               const saveRes = await fetch(api, {
                 method: 'POST',
-                headers: { 'content-type': 'application/json', 'x-recovery-code': data?.recoveryCode || '' },
+                headers: { 'content-type': 'application/json', 'x-recovery-code': recoveryCodeForSync },
                 body: JSON.stringify(payload)
               });
               if (!saveRes.ok) {
                 let reason = '';
                 try {
                   const e = await saveRes.json();
-                  if (e && e.error) reason = '（' + e.error + '）';
+                  if (e && (e.error || e.code)) reason = '（' + (e.error || e.code) + '）';
                 } catch { }
                 errFn('新規参加の登録に失敗しました' + reason);
                 return;
@@ -4712,7 +4799,7 @@
             };
             const activationRes = await fetch(api, {
               method: 'POST',
-              headers: { 'content-type': 'application/json', 'x-recovery-code': data?.recoveryCode || '' },
+              headers: { 'content-type': 'application/json', 'x-recovery-code': recoveryCodeForSync },
               body: JSON.stringify(activationPayload)
             });
             if (!activationRes.ok) { errFn('管理者変更の確定に失敗しました'); return; }
@@ -4732,13 +4819,14 @@
           if (data.deadline) safeLocalSet(t + 'volley-deadline', JSON.stringify(data.deadline));
           if (data.adminName) safeLocalSet(t + 'volley-admin-name', data.adminName);
           if (data.adminPw) safeLocalSet(t + 'volley-admin-pw', data.adminPw);
+          else if (isAdminLogin && /^\d{4}$/.test(pin)) safeLocalSet(t + 'volley-admin-pw', pin);
           safeLocalSet(t + OWNER_ID_SUFFIX, ownerId);
           if (data.pendingAdminName) safeLocalSet(t + PENDING_ADMIN_NAME_SUFFIX, data.pendingAdminName);
           else safeLocalRemove(t + PENDING_ADMIN_NAME_SUFFIX);
           if (data.pendingAdminSetAt) safeLocalSet(t + PENDING_ADMIN_SET_AT_SUFFIX, data.pendingAdminSetAt);
           else safeLocalRemove(t + PENDING_ADMIN_SET_AT_SUFFIX);
           if (typeof data.recoveryCode === 'string' && data.recoveryCode) safeLocalSet(t + ADMIN_RECOVERY_SUFFIX, data.recoveryCode);
-          safeLocalSet(t + SELF_PIN_SUFFIX, isAdminLogin ? String(data.adminPw || '').trim() : pin);
+          safeLocalSet(t + SELF_PIN_SUFFIX, isAdminLogin ? String(data.adminPw || pin || '').trim() : pin);
           safeLocalSet(t + 'volley-editor', name);
           safeLocalSet(t + 'volley-login-type', isAdminLogin ? 'admin' : 'member');
           safeLocalSet(t + 'volley-login-session', JSON.stringify(sessionPayload));
@@ -6234,7 +6322,7 @@
           err.style.display = '';
           return;
         }
-        if (!confirm('本当にグループを削除しますか？\nこの操作は元に戻せません。')) return;
+        if (!confirm('本当にグループを削除しますか？\n対象グループID: ' + _teamParam + '\nこの操作は元に戻せません。')) return;
         const err = document.getElementById('deleteGroupError');
         err.style.display = 'none';
         let deleteSyncFailed = false;
@@ -6254,31 +6342,53 @@
         if (deleteSyncFailed) {
           console.warn('[deleteGroup] helper delete API failed. fallback to SYNC_API delete tombstone');
         }
-        const serverDeletePayload = {
-          deleted: true,
-          deletedAt: new Date().toISOString(),
-          title: '',
-          members: [],
-          schedule: [],
-          deadline: getDeadlineRules(),
-          adminName: '',
-          adminPw: '0000',
-          pendingAdminName: '',
-          pendingAdminSetAt: '',
-          recoveryCode: '',
-          loginSession: null,
-          attendancePractice: {},
-          attendanceMatch: {}
-        };
-        const serverDeleteRes = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-recovery-code': localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '' },
-          body: JSON.stringify(serverDeletePayload)
-        });
-        if (!serverDeleteRes.ok) {
-          err.textContent = 'サーバー削除に失敗しました。通信状態を確認して再度お試しください';
-          err.style.display = '';
-          return;
+        if (deleteSyncFailed) {
+          const serverDeletePayload = {
+            deleted: true,
+            deletedAt: new Date().toISOString(),
+            title: '',
+            members: [],
+            schedule: [],
+            deadline: getDeadlineRules(),
+            adminName: '',
+            adminPw: '0000',
+            pendingAdminName: '',
+            pendingAdminSetAt: '',
+            recoveryCode: '',
+            loginSession: null,
+            attendancePractice: {},
+            attendanceMatch: {}
+          };
+          let recoveryCodeForDelete = String(localStorage.getItem(STORAGE_ADMIN_RECOVERY) || '').trim();
+          if (!recoveryCodeForDelete) {
+            const entered = (window.prompt('グループ削除には復旧コードが必要です。復旧コードを入力してください。', '') || '').trim();
+            if (!entered) {
+              err.textContent = '復旧コードが未入力のため削除できません';
+              err.style.display = '';
+              return;
+            }
+            recoveryCodeForDelete = entered;
+            localStorage.setItem(STORAGE_ADMIN_RECOVERY, recoveryCodeForDelete);
+          }
+          const serverDeleteRes = await fetch(SYNC_API + '?team=' + encodeURIComponent(_teamParam), {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-recovery-code': recoveryCodeForDelete },
+            body: JSON.stringify(serverDeletePayload)
+          });
+          if (!serverDeleteRes.ok) {
+            if (serverDeleteRes.status === 404) {
+              // Already deleted on server side. Continue local cleanup.
+            } else {
+            let reason = '';
+            try {
+              const body = await serverDeleteRes.json();
+              if (body?.error || body?.code) reason = '（' + (body.error || body.code) + '）';
+            } catch {}
+            err.textContent = 'サーバー削除に失敗しました。通信状態を確認して再度お試しください' + reason;
+            err.style.display = '';
+            return;
+            }
+          }
         }
         try {
           await fetch('/api/sync/my-groups', {
@@ -6301,6 +6411,7 @@
           STORAGE_SELF_PIN, ATTENDANCE_KEYS.practice, ATTENDANCE_KEYS.match, _T + 'volley-attendance'].forEach(k => localStorage.removeItem(k));
         setCreatedTeams(getCreatedTeams().filter(id => id !== _teamParam));
         deleteGroupModal.classList.remove('show');
+        alert('グループを削除しました（ID: ' + _teamParam + '）');
         location.href = location.pathname;
       });
 
