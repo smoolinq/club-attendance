@@ -385,39 +385,46 @@ export default {
       const probeHeaders = new Headers();
       if (writeToken) probeHeaders.set("authorization", `Bearer ${writeToken}`);
 
-      let teamExists = true;
       let currentData = null;
+      let probe = null;
       try {
-        const probe = await fetch(upstreamUrl, { method: "GET", headers: probeHeaders });
-        teamExists = probe.ok;
-        if (probe.ok) {
-          currentData = await probe.json();
-        }
+        probe = await fetch(upstreamUrl, { method: "GET", headers: probeHeaders });
       } catch {
-        teamExists = true;
+        return json(
+          { ok: false, error: "サーバー確認に失敗しました。時間をおいて再試行してください", code: "UPSTREAM_UNAVAILABLE" },
+          503
+        );
       }
-      if (!teamExists) {
-        const agreed = await readConsentFromRequest(request);
-        if (!agreed) {
-          return json({ ok: false, error: "利用規約・プライバシーポリシーへの同意が必要です" }, 400);
-        }
-      } else {
-        // --- recoveryCode authentication (existing teams only) ---
-        const clientCode = String(
-          request.headers.get("x-recovery-code") ||
-          (parsedBody && typeof parsedBody === "object" ? parsedBody.recoveryCode : "") ||
-          ""
-        ).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const serverCode = String(currentData?.recoveryCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-        if (!serverCode) {
-          return json(
-            { ok: false, error: "このチームは復旧コード未設定です。管理者へ連絡してください", code: "RECOVERY_NOT_CONFIGURED" },
-            409
-          );
-        }
-        if (!clientCode || clientCode !== serverCode) {
-          return json({ ok: false, error: "認証に失敗しました" }, 403);
-        }
+      if (!probe || !probe.ok) {
+        return json(
+          { ok: false, error: "サーバー確認に失敗しました。時間をおいて再試行してください", code: "UPSTREAM_UNAVAILABLE" },
+          503
+        );
+      }
+      try {
+        currentData = await probe.json();
+      } catch {
+        return json(
+          { ok: false, error: "サーバー確認に失敗しました。時間をおいて再試行してください", code: "UPSTREAM_UNAVAILABLE" },
+          503
+        );
+      }
+
+      // --- recoveryCode authentication (existing teams only) ---
+      const clientCode = String(
+        request.headers.get("x-recovery-code") ||
+        (parsedBody && typeof parsedBody === "object" ? parsedBody.recoveryCode : "") ||
+        ""
+      ).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const serverCode = String(currentData?.recoveryCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (!serverCode) {
+        return json(
+          { ok: false, error: "このチームは復旧コード未設定です。管理者へ連絡してください", code: "RECOVERY_NOT_CONFIGURED" },
+          409
+        );
+      }
+      if (!clientCode || clientCode !== serverCode) {
+        return json({ ok: false, error: "認証に失敗しました" }, 403);
       }
       if (currentData) {
         try {
