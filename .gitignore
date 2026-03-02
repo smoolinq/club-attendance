@@ -7,3 +7,6 @@ build/
 *.tmp
 
 .wrangler/
+
+# Sensitive files
+出欠ちゃんアプリTOKEN.txt
